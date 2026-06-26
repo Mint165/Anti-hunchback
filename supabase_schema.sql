@@ -56,6 +56,9 @@ CREATE TABLE IF NOT EXISTS sessions (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
+-- Create Index on Sessions Date to optimize queries
+CREATE INDEX IF NOT EXISTS idx_sessions_date ON sessions(date);
+
 -- Disable Row Level Security (RLS) for simple setup (or configure public RLS policies)
 ALTER TABLE calibration DISABLE ROW LEVEL SECURITY;
 ALTER TABLE settings DISABLE ROW LEVEL SECURITY;
