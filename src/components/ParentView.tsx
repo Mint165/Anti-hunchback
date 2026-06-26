@@ -233,24 +233,27 @@ export const ParentView: React.FC = () => {
   const healthPrediction = getHealthPrediction();
 
   return (
-    <div className="flex-1 p-6 overflow-y-auto bg-gray-50">
+    <div className="min-h-full p-6 lg:p-8" style={{ background: 'var(--bg-page)' }}>
       
       {/* Page Header */}
       <div className="mb-8">
-        <span className="text-xs font-semibold text-purple-600 uppercase tracking-widest bg-purple-100 px-3 py-1 rounded-full">Phụ Huynh Dashboard</span>
-        <h1 className="text-3xl font-black mt-2">Bảng điều khiển Giám sát Từ xa 🏠</h1>
-        <p className="text-gray-500 text-sm">Theo dõi tư thế, khoảng cách an toàn và tình trạng mệt mỏi của con.</p>
+        <div className="flex items-center gap-2 mb-2">
+          <span className="text-xs font-bold uppercase tracking-widest px-3 py-1 rounded-full"
+            style={{ background: '#ede9fe', color: '#7c3aed' }}>Phụ Huynh Dashboard</span>
+        </div>
+        <h1 className="text-2xl font-black text-gray-800">Giám sát Từ xa 🏠</h1>
+        <p className="text-gray-400 text-sm font-medium mt-0.5">Theo dõi tư thế, khoảng cách an toàn và tình trạng mệt mỏi của con.</p>
       </div>
 
       {/* Grid: Live monitoring vs Metrics Analytics */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         
         {/* Left Column: Real-time Connection status */}
         <div className="flex flex-col gap-6">
           
           {/* Real-time Status Card */}
-          <div className="glass-card p-6 flex flex-col items-center text-center">
-            <h3 className="text-sm font-semibold text-gray-500 mb-6 uppercase tracking-wider">Trạng thái ngồi học trực tiếp</h3>
+          <div className="widget-card p-6 flex flex-col items-center text-center">
+            <h3 className="widget-label mb-6">Trạng thái ngồi học trực tiếp</h3>
             
             {/* Pulsing indicator */}
             <div className="relative mb-6">
@@ -313,8 +316,8 @@ export const ParentView: React.FC = () => {
           </div>
 
           {/* Health Analysis Prediction */}
-          <div className="glass-card p-5">
-            <h3 className="text-sm font-semibold text-gray-500 mb-3 flex items-center gap-1.5">
+          <div className="widget-card p-5">
+            <h3 className="text-sm font-semibold text-gray-600 mb-3 flex items-center gap-1.5">
               <Heart size={16} className="text-red-500" /> DỰ BÁO SỨC KHỎE (PHI)
             </h3>
             <div className="flex items-center justify-between mb-2">
@@ -337,8 +340,8 @@ export const ParentView: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             
             {/* Posture Pie Distribution (Recharts) */}
-            <div className="glass-card p-5 md:col-span-1 flex flex-col justify-between">
-              <h3 className="text-sm font-semibold text-gray-500 mb-4 uppercase tracking-wider">Tỷ lệ tư thế ngồi</h3>
+            <div className="widget-card p-5 md:col-span-1 flex flex-col justify-between">
+              <h3 className="widget-label mb-4">Tỷ lệ tư thế ngồi</h3>
               <div className="h-44 flex items-center justify-center relative">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
@@ -377,8 +380,8 @@ export const ParentView: React.FC = () => {
             </div>
 
             {/* PHI Score & Time Trend over the week (Recharts Area) */}
-            <div className="glass-card p-5 md:col-span-2">
-              <h3 className="text-sm font-semibold text-gray-500 mb-4 uppercase tracking-wider">Xu hướng điểm sức khỏe PHI</h3>
+            <div className="widget-card p-5 md:col-span-2">
+              <h3 className="widget-label mb-4">Xu hướng điểm sức khỏe PHI</h3>
               <div className="h-48">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={trendData}>
@@ -401,7 +404,7 @@ export const ParentView: React.FC = () => {
           </div>
 
           {/* Interactive Notifications panel */}
-          <div className="glass-card p-6 flex-1">
+          <div className="widget-card p-6 flex-1">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
                 <Bell size={16} className="text-purple-500 animate-swing" /> Nhật ký cảnh báo & mỏi mắt

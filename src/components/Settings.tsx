@@ -45,13 +45,16 @@ export const Settings: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 p-6 overflow-y-auto bg-gray-50">
+    <div className="min-h-full p-6 lg:p-8" style={{ background: 'var(--bg-page)' }}>
       
       {/* Page Header */}
       <div className="mb-8">
-        <span className="text-xs font-semibold text-gray-500 uppercase tracking-widest bg-gray-200 px-3 py-1 rounded-full">Cài đặt</span>
-        <h1 className="text-3xl font-black mt-2">Cấu hình Hệ thống ⚙️</h1>
-        <p className="text-gray-500 text-sm">Điều chỉnh các ngưỡng cảnh báo và khoảng thời gian cho AI đo lường.</p>
+        <div className="flex items-center gap-2 mb-2">
+          <span className="text-xs font-bold uppercase tracking-widest px-3 py-1 rounded-full"
+            style={{ background: '#F3F4F6', color: '#6B7280' }}>Cài đặt</span>
+        </div>
+        <h1 className="text-2xl font-black text-gray-800">Cấu hình Hệ thống ⚙️</h1>
+        <p className="text-gray-400 text-sm font-medium mt-0.5">Điều chỉnh các ngưỡng cảnh báo và khoảng thời gian cho AI đo lường.</p>
       </div>
 
       <div className="max-w-2xl bg-white rounded-3xl p-8 border border-gray-100 shadow-sm">
