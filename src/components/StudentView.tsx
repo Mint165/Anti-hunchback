@@ -266,16 +266,16 @@ export const StudentView: React.FC = () => {
 
   if (!calibration) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-full p-8">
-        <div className="premium-card max-w-2xl w-full text-center p-12">
-          <h2 className="text-3xl font-black text-gray-800 mb-2">Bắt đầu phiên học</h2>
-          <p className="text-gray-500 mb-8">Hệ thống AI sẽ hiệu chỉnh để nhận diện tư thế chuẩn của bạn.</p>
-          <div className="relative w-80 h-56 bg-gray-900 rounded-2xl overflow-hidden shadow-2xl mb-6 mx-auto border border-gray-200">
-            <video ref={videoRef} className="w-full h-full object-cover scale-x-[-1]" autoPlay playsInline muted />
+      <div className="calibration-container">
+        <div className="premium-card calibration-card">
+          <h2 className="calibration-title">Bắt đầu phiên học</h2>
+          <p className="calibration-desc">Hệ thống AI sẽ hiệu chỉnh để nhận diện tư thế chuẩn của bạn.</p>
+          <div className="calibration-video-wrapper">
+            <video ref={videoRef} className="calibration-video" autoPlay playsInline muted />
             {isLoading && (
-              <div className="absolute inset-0 bg-gray-900/75 flex flex-col items-center justify-center text-white gap-3">
-                <div className="w-8 h-8 border-3 border-green-400 border-t-transparent rounded-full animate-spin" />
-                <span className="text-sm font-semibold">Đang tải AI Engine...</span>
+              <div className="calibration-loading">
+                <div className="spinner" />
+                <span>Đang tải AI Engine...</span>
               </div>
             )}
           </div>
@@ -324,59 +324,51 @@ export const StudentView: React.FC = () => {
         </div>
       )}
 
-      <div className="max-w-[1400px] mx-auto">
+      <div className="sv-container">
         
         {/* Header Controls */}
-        <div className="flex justify-between items-center mb-6">
-          <div className="relative w-full max-w-md">
-             <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
-                <svg className="w-5 h-5 text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 20">
-                    <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"/>
+        <div className="sv-header">
+          <div className="sv-search">
+             <div className="sv-search-icon">
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"/>
                 </svg>
              </div>
-             <input type="text" className="w-full pl-12 pr-4 py-3 rounded-full bg-white border border-gray-100 shadow-sm outline-none focus:ring-2 focus:ring-purple-300 transition-all font-medium text-gray-600" placeholder="Search features..." />
+             <input type="text" className="sv-search-input" placeholder="Search features..." />
           </div>
           
-          <div className="flex items-center gap-4">
-            <button onClick={() => setIsAudioEnabled(!isAudioEnabled)} className="w-12 h-12 bg-white rounded-full flex items-center justify-center text-gray-400 hover:text-purple-600 shadow-sm transition-all">
+          <div className="sv-actions">
+            <button onClick={() => setIsAudioEnabled(!isAudioEnabled)} className="sv-audio-btn">
               {isAudioEnabled ? <Volume2 size={20} /> : <VolumeX size={20} />}
             </button>
-            <button onClick={() => setCalibration(null)} className="pill-tag pill-primary py-3 px-5">
-              <RefreshCw size={16} /> <span className="hidden sm:inline">Hiệu chỉnh lại</span>
+            <button onClick={() => setCalibration(null)} className="pill-tag pill-primary">
+              <RefreshCw size={16} /> <span>Hiệu chỉnh lại</span>
             </button>
           </div>
         </div>
 
         {/* Hero Banner */}
-        <div className="hero-banner mb-8">
-          <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-            <div>
-              <h1 className="text-4xl font-black mb-3">You're closer than you think!</h1>
-              <p className="text-white/90 text-base font-medium max-w-lg leading-relaxed mb-6">
-                Chỉ còn vài XP nữa là bạn đạt cấp độ tiếp theo. Hãy duy trì tư thế thẳng lưng và tập trung học tập để bứt phá bảng xếp hạng.
-              </p>
-              <button className="btn-primary" onClick={handleEndSession}>
-                Lưu Phiên Học
-              </button>
+        <div className="hero-banner">
+          <div className="hero-content">
+            <div className="hero-text">
+              <h1>You're closer than you think!</h1>
+              <p>Chỉ còn vài XP nữa là bạn đạt cấp độ tiếp theo. Hãy duy trì tư thế thẳng lưng và tập trung học tập để bứt phá bảng xếp hạng.</p>
+              <button className="btn-primary" onClick={handleEndSession}>Lưu Phiên Học</button>
             </div>
             
-            <div className="flex flex-col gap-3 shrink-0">
-              <div className="bg-white/10 border border-white/20 backdrop-blur-md px-5 py-3 rounded-2xl flex items-center gap-4">
-                <div className="w-10 h-10 bg-yellow-400 text-yellow-900 rounded-full flex items-center justify-center font-black">
-                  🔥
-                </div>
+            <div className="hero-stats">
+              <div className="hero-stat-card">
+                <div className="hero-stat-icon" style={{ background: '#facc15', color: '#713f12' }}>🔥</div>
                 <div>
-                  <div className="text-white font-bold text-lg">{userStats.streak} Days Streak</div>
-                  <div className="text-white/70 text-xs font-semibold uppercase tracking-wider">Fast Learner</div>
+                  <div className="hero-stat-val">{userStats.streak} Days Streak</div>
+                  <div className="hero-stat-lbl">Fast Learner</div>
                 </div>
               </div>
-              <div className="bg-white/10 border border-white/20 backdrop-blur-md px-5 py-3 rounded-2xl flex items-center gap-4">
-                <div className="w-10 h-10 bg-blue-400 text-blue-900 rounded-full flex items-center justify-center font-black">
-                  ⭐
-                </div>
+              <div className="hero-stat-card">
+                <div className="hero-stat-icon" style={{ background: '#60a5fa', color: '#1e3a8a' }}>⭐</div>
                 <div>
-                  <div className="text-white font-bold text-lg">Level {userStats.level}</div>
-                  <div className="text-white/70 text-xs font-semibold uppercase tracking-wider">Current Rank</div>
+                  <div className="hero-stat-val">Level {userStats.level}</div>
+                  <div className="hero-stat-lbl">Current Rank</div>
                 </div>
               </div>
             </div>
@@ -384,12 +376,12 @@ export const StudentView: React.FC = () => {
         </div>
 
         {/* 3-Column Premium Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="sv-grid">
           
           {/* Column 1: Progress & Pet */}
-          <div className="flex flex-col gap-6">
+          <div className="sv-col">
             
-            <div className="premium-card relative overflow-hidden group cursor-pointer border-b-4 border-b-purple-500">
+            <div className="premium-card xp-card">
               <div className="card-title"><Trophy size={18} className="text-purple-500" /> Cấp Độ & Kinh Nghiệm</div>
               <div className="flex items-center gap-5 mt-4">
                  <div className="text-5xl font-black text-gray-800">{userStats.level}</div>
@@ -405,27 +397,27 @@ export const StudentView: React.FC = () => {
               </div>
             </div>
 
-            <div className="premium-card text-center flex flex-col items-center border-b-4 border-b-blue-400">
-               <div className="w-24 h-24 bg-blue-50 rounded-full flex items-center justify-center mb-4 shadow-inner border border-blue-100">
-                 <div className="scale-150 origin-center -translate-y-2">
+            <div className="premium-card pet-card">
+               <div className="pet-circle">
+                 <div className="pet-model">
                     <OliverPet state={getPetState()} size={64} />
                  </div>
                </div>
-               <h3 className="font-bold text-gray-800 text-lg mb-1">Thú Cưng Oliver</h3>
-               <p className="text-gray-400 text-sm font-medium mb-4">Theo dõi bạn học tập thời gian thực</p>
-               <div className="pill-tag bg-blue-100 text-blue-700">Trạng thái: {getPetState() === 'good' ? 'Vui vẻ' : getPetState() === 'slouch' ? 'Buồn bã' : 'Đang nhắc nhở'}</div>
+               <h3>Thú Cưng Oliver</h3>
+               <p>Theo dõi bạn học tập thời gian thực</p>
+               <div className="pill-tag pill-secondary">Trạng thái: {getPetState() === 'good' ? 'Vui vẻ' : getPetState() === 'slouch' ? 'Buồn bã' : 'Đang nhắc nhở'}</div>
             </div>
 
-            <div className="premium-card">
+            <div className="premium-card timer-card">
               <div className="card-title">Bộ đếm thời gian</div>
-              <div className="flex justify-center gap-3 font-mono text-4xl font-black text-gray-800 mt-6 mb-4">
-                 <div className="bg-gray-50 px-4 py-3 rounded-xl border border-gray-100 shadow-sm">{hh[0]}</div>
-                 <div className="bg-gray-50 px-4 py-3 rounded-xl border border-gray-100 shadow-sm">{hh[1]}</div>
-                 <div className="text-gray-300 py-3">:</div>
-                 <div className="bg-gray-50 px-4 py-3 rounded-xl border border-gray-100 shadow-sm">{mm[0]}</div>
-                 <div className="bg-gray-50 px-4 py-3 rounded-xl border border-gray-100 shadow-sm">{mm[1]}</div>
+              <div className="timer-display">
+                 <div className="timer-digit">{hh[0]}</div>
+                 <div className="timer-digit">{hh[1]}</div>
+                 <div className="timer-colon">:</div>
+                 <div className="timer-digit">{mm[0]}</div>
+                 <div className="timer-digit">{mm[1]}</div>
               </div>
-              <div className="flex justify-center gap-10 text-xs font-bold text-gray-400 uppercase tracking-widest mb-6">
+              <div className="timer-labels">
                 <span>Giờ</span><span>Phút</span>
               </div>
               <button className="btn-secondary w-full" onClick={() => setStretchBreakTriggered(true)}>
@@ -436,13 +428,13 @@ export const StudentView: React.FC = () => {
           </div>
 
           {/* Column 2: Central Ring & Camera */}
-          <div className="flex flex-col gap-6">
+          <div className="sv-col">
             
-            <div className="premium-card flex flex-col items-center justify-center p-10 border-t-4 border-t-green-400">
-              <div className="card-title w-full text-center justify-center mb-6">Daily Goal Left</div>
+            <div className="premium-card ring-card">
+              <div className="card-title">Daily Goal Left</div>
               
-              <div className={`relative w-64 h-64 flex justify-center items-center mb-8 ${healthScore >= 80 ? 'score-ring-good' : ''}`}>
-                <svg className="absolute inset-0 w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+              <div className={`score-ring-wrapper ${healthScore >= 80 ? 'score-ring-good' : ''}`}>
+                <svg className="score-ring-svg" viewBox="0 0 100 100">
                   <circle cx="50" cy="50" r="44" fill="none" stroke="#F3F4F6" strokeWidth="6" />
                   <circle
                     cx="50" cy="50" r="44" fill="none"
@@ -451,41 +443,40 @@ export const StudentView: React.FC = () => {
                     strokeDasharray="276"
                     strokeDashoffset={276 - (276 * healthScore) / 100}
                     strokeLinecap="round"
-                    className="transition-all duration-1000 ease-out"
+                    className="score-ring-progress"
                   />
                 </svg>
-                <div className="flex flex-col items-center justify-center">
-                  <span className="text-gray-400 font-bold tracking-widest text-xs uppercase mb-1">PHI SCORE</span>
-                  <span className="text-7xl font-black text-gray-800 tracking-tighter">{healthScore}</span>
+                <div className="score-ring-text">
+                  <span className="score-ring-lbl">PHI SCORE</span>
+                  <span className="score-ring-val">{healthScore}</span>
                 </div>
                 
-                {/* Play button overlay from image 1 */}
-                <div className="absolute -left-2 top-1/2 -translate-y-1/2 w-12 h-12 bg-green-400 rounded-full text-white flex items-center justify-center shadow-[0_4px_12px_rgba(74,222,128,0.5)]">
-                   <Play size={20} fill="currentColor" className="ml-1" />
+                <div className="score-play-btn">
+                   <Play size={20} fill="currentColor" />
                 </div>
               </div>
               
-              <div className="bg-gray-50 rounded-full px-6 py-3 font-bold text-gray-400 text-sm shadow-inner border border-gray-100 w-full text-center">
+              <div className="score-footer">
                  Duy trì màu xanh để bảo vệ sức khỏe
               </div>
             </div>
 
-            <div className="premium-card">
-               <div className="flex justify-between items-center mb-4">
-                 <div className="card-title m-0">Camera AI</div>
-                 <button onClick={() => setShowCamera(!showCamera)} className={`pill-tag ${showCamera ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-600'}`}>
+            <div className="premium-card camera-card">
+               <div className="camera-header">
+                 <div className="card-title">Camera AI</div>
+                 <button onClick={() => setShowCamera(!showCamera)} className={`pill-tag ${showCamera ? 'camera-off-pill' : 'camera-on-pill'}`}>
                    {showCamera ? 'Tắt' : 'Bật'}
                  </button>
                </div>
-               <div className="relative w-full rounded-xl overflow-hidden bg-gray-900 border-2 border-gray-100 shadow-inner" style={{ height: '180px' }}>
+               <div className="camera-wrapper">
                  <video
                     ref={videoRef}
-                    className={`w-full h-full object-cover scale-x-[-1] transition-opacity duration-300 ${!showCamera ? 'opacity-0' : 'opacity-100'}`}
+                    className={`camera-video ${!showCamera ? 'hidden' : ''}`}
                     autoPlay playsInline muted
                  />
                  {!showCamera && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400">
-                      <CameraOff size={24} className="mb-2" />
+                    <div className="camera-placeholder">
+                      <CameraOff size={24} />
                     </div>
                  )}
                </div>
@@ -494,56 +485,56 @@ export const StudentView: React.FC = () => {
           </div>
 
           {/* Column 3: Leaderboard / Live Stats Table */}
-          <div className="flex flex-col gap-6">
+          <div className="sv-col">
             
-            <div className="premium-card border-l-4 border-l-yellow-400">
-               <div className="flex justify-between items-center mb-6">
+            <div className="premium-card leaderboard-card">
+               <div className="leaderboard-header">
                   <div className="card-title m-0">Live Leaderboard</div>
-                  <div className="pill-tag bg-yellow-100 text-yellow-700 text-[10px]">REAL TIME</div>
+                  <div className="pill-tag pill-realtime">REAL TIME</div>
                </div>
 
-               <div className="overflow-x-auto">
-                 <table className="w-full text-sm text-left">
-                   <thead className="text-xs text-gray-400 uppercase bg-gray-50 rounded-lg font-bold">
+               <div className="table-wrapper">
+                 <table className="sv-table">
+                   <thead>
                      <tr>
-                       <th className="px-4 py-3 rounded-l-lg">Metric</th>
-                       <th className="px-4 py-3 text-center">Goal</th>
-                       <th className="px-4 py-3 rounded-r-lg text-right">Status</th>
+                       <th className="th-left">Metric</th>
+                       <th className="th-center">Goal</th>
+                       <th className="th-right">Status</th>
                      </tr>
                    </thead>
                    <tbody>
-                     <tr className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                       <td className="px-4 py-4 font-bold text-gray-800 flex items-center gap-3">
-                         <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-lg">🏃</div>
+                     <tr>
+                       <td className="td-metric">
+                         <div className="metric-icon" style={{ background: '#dbeafe', color: '#2563eb' }}>🏃</div>
                          Khoảng cách
                        </td>
-                       <td className="px-4 py-4 text-center font-bold text-gray-400">&gt; 50 cm</td>
-                       <td className="px-4 py-4 text-right">
-                         <span className={`pill-tag ${metrics && metrics.eyeDistanceCm < 50 ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>
+                       <td className="td-goal">&gt; 50 cm</td>
+                       <td className="td-status">
+                         <span className={`pill-tag ${metrics && metrics.eyeDistanceCm < 50 ? 'pill-fail' : 'pill-pass'}`}>
                             {metrics ? metrics.eyeDistanceCm : 60} cm
                          </span>
                        </td>
                      </tr>
-                     <tr className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                       <td className="px-4 py-4 font-bold text-gray-800 flex items-center gap-3">
-                         <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 text-lg">🧍</div>
+                     <tr>
+                       <td className="td-metric">
+                         <div className="metric-icon" style={{ background: '#f3e8ff', color: '#9333ea' }}>🧍</div>
                          Lưng (Slouch)
                        </td>
-                       <td className="px-4 py-4 text-center font-bold text-gray-400">&lt; 15°</td>
-                       <td className="px-4 py-4 text-right">
-                         <span className={`pill-tag ${metrics && metrics.slouchAngle > 15 ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>
+                       <td className="td-goal">&lt; 15°</td>
+                       <td className="td-status">
+                         <span className={`pill-tag ${metrics && metrics.slouchAngle > 15 ? 'pill-fail' : 'pill-pass'}`}>
                             {metrics ? Math.round(metrics.slouchAngle) : 0}°
                          </span>
                        </td>
                      </tr>
-                     <tr className="hover:bg-gray-50 transition-colors">
-                       <td className="px-4 py-4 font-bold text-gray-800 flex items-center gap-3">
-                         <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 text-lg">🧘</div>
+                     <tr>
+                       <td className="td-metric">
+                         <div className="metric-icon" style={{ background: '#ffedd5', color: '#ea580c' }}>🧘</div>
                          Cúi cổ (Neck)
                        </td>
-                       <td className="px-4 py-4 text-center font-bold text-gray-400">&lt; 20°</td>
-                       <td className="px-4 py-4 text-right">
-                         <span className={`pill-tag ${metrics && metrics.neckAngle > 20 && !metrics.isWritingMode ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>
+                       <td className="td-goal">&lt; 20°</td>
+                       <td className="td-status">
+                         <span className={`pill-tag ${metrics && metrics.neckAngle > 20 && !metrics.isWritingMode ? 'pill-fail' : 'pill-pass'}`}>
                             {metrics ? Math.round(metrics.neckAngle) : 0}°
                          </span>
                        </td>
@@ -553,15 +544,15 @@ export const StudentView: React.FC = () => {
                </div>
             </div>
 
-            <div className="premium-card">
+            <div className="premium-card tips-card">
               <div className="card-title"><Info size={18} className="text-blue-500" /> Get Help</div>
-              <div className="flex items-center gap-4 bg-gray-50 p-4 rounded-xl mb-5">
-                <div className="flex -space-x-3">
-                   {['bg-red-200','bg-green-200','bg-blue-200'].map((c,i)=><div key={i} className={`w-10 h-10 rounded-full border-2 border-white shadow-sm ${c}`} />)}
+              <div className="tips-banner">
+                <div className="tips-avatars">
+                   {['bg-red-200','bg-green-200','bg-blue-200'].map((c,i)=><div key={i} className={`tip-avatar ${c}`} />)}
                 </div>
-                <div className="text-sm font-bold text-gray-800">
+                <div className="tips-text">
                   3 AI Tips for you
-                  <div className="text-xs text-gray-400 font-medium">on completing your next step</div>
+                  <div className="tips-subtext">on completing your next step</div>
                 </div>
               </div>
               <button className="btn-secondary w-full" style={{ background: '#00d285' }}>

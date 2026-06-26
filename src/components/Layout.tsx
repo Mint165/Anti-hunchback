@@ -17,7 +17,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTa
   ] as const;
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden">
+    <div className="app-container">
 
       {/* ─── Sidebar Navigation ─────────────────────────── */}
       <aside className="premium-sidebar">
@@ -30,7 +30,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTa
           </div>
         </div>
 
-        <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 pl-4">
+        <div className="sidebar-section-title">
           Main Menu
         </div>
 
@@ -53,13 +53,13 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTa
         </nav>
 
         {/* Bottom User Area or Footer */}
-        <div className="mt-auto pt-6 border-t border-gray-100 flex items-center gap-3 px-2">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-purple-100 to-blue-100 flex items-center justify-center text-purple-600 font-bold shadow-sm">
+        <div className="sidebar-footer">
+          <div className="user-avatar">
             H
           </div>
-          <div className="flex-1">
-            <div className="text-sm font-bold text-gray-800">Học Sinh</div>
-            <div className="text-xs text-gray-400 font-medium">Pro Plan</div>
+          <div className="user-info">
+            <div className="user-name">Học Sinh</div>
+            <div className="user-plan">Pro Plan</div>
           </div>
         </div>
       </aside>
