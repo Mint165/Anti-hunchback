@@ -1,0 +1,149 @@
+/* Design System & Global Styles */
+:root {
+  --primary: #4EAD63;
+  --primary-light: #E8F5EC;
+  --primary-hover: #3E9451;
+  
+  --purple: #7E5BEF;
+  --purple-light: #F3EFFF;
+  --purple-hover: #6743D7;
+
+  --warning: #FFAA2C;
+  --warning-light: #FFF5E6;
+  
+  --danger: #FF5E5E;
+  --danger-light: #FFEBEB;
+  --danger-glow: rgba(255, 94, 94, 0.4);
+
+  --text-primary: #1F2937;
+  --text-secondary: #4B5563;
+  --text-muted: #9CA3AF;
+  
+  --bg-gradient: linear-gradient(135deg, #F0F6F1 0%, #E7EFF9 50%, #F5EFFF 100%);
+  --sidebar-bg: #FFFFFF;
+  --card-bg: rgba(255, 255, 255, 0.85);
+  --border-color: rgba(229, 231, 235, 0.6);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 16px -6px rgba(0, 0, 0, 0.03);
+  --shadow-lg: 0 20px 40px -10px rgba(0, 0, 0, 0.08);
+
+  --font-sans: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Dark mode fallback variables */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text-primary: #F9FAFB;
+    --text-secondary: #E5E7EB;
+    --text-muted: #9CA3AF;
+    --bg-gradient: linear-gradient(135deg, #111827 0%, #1F2937 100%);
+    --sidebar-bg: #1F2937;
+    --card-bg: rgba(31, 41, 55, 0.8);
+    --border-color: rgba(75, 85, 99, 0.4);
+    --primary-light: rgba(78, 173, 99, 0.15);
+    --purple-light: rgba(126, 91, 239, 0.15);
+    --warning-light: rgba(255, 170, 44, 0.15);
+    --danger-light: rgba(255, 94, 94, 0.15);
+  }
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--bg-gradient);
+  color: var(--text-primary);
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--text-muted);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+}
+
+/* Utility Layouts */
+#root {
+  display: flex;
+  min-height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+}
+
+/* Glassmorphism Cards */
+.glass-card {
+  background: var(--card-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  box-shadow: var(--shadow-md);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card:hover {
+  box-shadow: var(--shadow-lg);
+}
+
+/* Screen Red Alert Glow Border */
+.screen-alert-glow {
+  animation: red-pulse 1.5s infinite alternate;
+}
+
+@keyframes red-pulse {
+  0% {
+    box-shadow: inset 0 0 15px rgba(255, 94, 94, 0.3);
+  }
+  100% {
+    box-shadow: inset 0 0 35px rgba(255, 94, 94, 0.9);
+  }
+}
+
+/* Active Shield Glow for Pet */
+.shield-active-glow {
+  filter: drop-shadow(0 0 8px rgba(78, 173, 99, 0.5));
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-5px); }
+  100% { transform: translateY(0px); }
+}
+
+/* Shaking animation for extreme warning */
+.shake-warn {
+  animation: shake 0.5s ease-in-out infinite;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+  20%, 40%, 60%, 80% { transform: translateX(4px); }
+}
+
+/* Fade in styles */
+.fade-in {
+  animation: fadeIn 0.4s ease-out forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
