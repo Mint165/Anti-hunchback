@@ -252,7 +252,7 @@ export const ParentView: React.FC = () => {
         <div className="flex flex-col gap-6">
           
           {/* Real-time Status Card */}
-          <div className="widget-card p-6 flex flex-col items-center text-center">
+          <div className="premium-card p-6 flex flex-col items-center text-center">
             <h3 className="widget-label mb-6">Trạng thái ngồi học trực tiếp</h3>
             
             {/* Pulsing indicator */}
@@ -316,7 +316,7 @@ export const ParentView: React.FC = () => {
           </div>
 
           {/* Health Analysis Prediction */}
-          <div className="widget-card p-5">
+          <div className="premium-card p-5">
             <h3 className="text-sm font-semibold text-gray-600 mb-3 flex items-center gap-1.5">
               <Heart size={16} className="text-red-500" /> DỰ BÁO SỨC KHỎE (PHI)
             </h3>
@@ -340,7 +340,7 @@ export const ParentView: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             
             {/* Posture Pie Distribution (Recharts) */}
-            <div className="widget-card p-5 md:col-span-1 flex flex-col justify-between">
+            <div className="premium-card p-5 md:col-span-1 flex flex-col justify-between">
               <h3 className="widget-label mb-4">Tỷ lệ tư thế ngồi</h3>
               <div className="h-44 flex items-center justify-center relative">
                 <ResponsiveContainer width="100%" height="100%">
@@ -380,7 +380,7 @@ export const ParentView: React.FC = () => {
             </div>
 
             {/* PHI Score & Time Trend over the week (Recharts Area) */}
-            <div className="widget-card p-5 md:col-span-2">
+            <div className="premium-card p-5 md:col-span-2">
               <h3 className="widget-label mb-4">Xu hướng điểm sức khỏe PHI</h3>
               <div className="h-48">
                 <ResponsiveContainer width="100%" height="100%">
@@ -404,7 +404,7 @@ export const ParentView: React.FC = () => {
           </div>
 
           {/* Interactive Notifications panel */}
-          <div className="widget-card p-6 flex-1">
+          <div className="premium-card p-6 flex-1">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
                 <Bell size={16} className="text-purple-500 animate-swing" /> Nhật ký cảnh báo & mỏi mắt

@@ -57,7 +57,7 @@ export const Settings: React.FC = () => {
         <p className="text-gray-400 text-sm font-medium mt-0.5">Điều chỉnh các ngưỡng cảnh báo và khoảng thời gian cho AI đo lường.</p>
       </div>
 
-      <div className="max-w-2xl bg-white rounded-3xl p-8 border border-gray-100 shadow-sm">
+      <div className="premium-card max-w-2xl">
         
         {/* Posture Thresholds Section */}
         <h3 className="text-lg font-bold text-gray-800 mb-6 border-b border-gray-100 pb-3 flex items-center gap-2">

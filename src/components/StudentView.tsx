@@ -1,7 +1,7 @@
-// Student Workspace Component
+// Student Workspace Component - Premium Dashboard
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Check, Shield, AlertTriangle, RefreshCw, Trophy, BookOpen, Volume2, VolumeX, Camera, CameraOff } from 'lucide-react';
+import { AlertTriangle, RefreshCw, Trophy, BookOpen, Volume2, VolumeX, CameraOff, Play, Info } from 'lucide-react';
 import { useMediaPipe } from '../hooks/useMediaPipe';
 import { analyzePosture, calculateHealthScore } from '../services/postureAI';
 import type { CalibrationData, PostureMetrics } from '../services/postureAI';
@@ -30,7 +30,6 @@ export const StudentView: React.FC = () => {
   const [showCamera, setShowCamera] = useState<boolean>(true);
   const [isAudioEnabled, setIsAudioEnabled] = useState<boolean>(true);
 
-  // States for timers and notifications
   const [sessionStartTime, setSessionStartTime] = useState<number>(Date.now());
   const [totalSessionMinutes, setTotalSessionMinutes] = useState<number>(0);
   const [badPostureSeconds, setBadPostureSeconds] = useState<number>(0);
@@ -38,21 +37,17 @@ export const StudentView: React.FC = () => {
   const [stretchBreakTriggered, setStretchBreakTriggered] = useState<boolean>(false);
   const [eyeExerciseTriggered, setEyeExerciseTriggered] = useState<boolean>(false);
 
-  // Statistics accumulators for the session
   const [warningsCount, setWarningsCount] = useState<number>(0);
   const [blinkCount, setBlinkCount] = useState<number>(0);
   const [fidgetCount, setFidgetCount] = useState<number>(0);
   const [goodPostureCount, setGoodPostureCount] = useState<number>(0);
   const [totalTicks, setTotalTicks] = useState<number>(0);
 
-  // Gamification states
   const [userStats, setUserStats] = useState(loadUserStats());
   const [badges, setBadges] = useState<Badge[]>(getBadgesStatus());
 
-  // Movement history for fidget calculation
   const movementHistoryRef = useRef<{ x: number; y: number }[]>([]);
 
-  // Load calibration and settings on mount
   useEffect(() => {
     const savedCalibration = loadCalibration();
     if (savedCalibration.baseEyeDistance !== 80 || localStorage.getItem('oliver_calibration_data')) {
@@ -60,7 +55,6 @@ export const StudentView: React.FC = () => {
     }
   }, []);
 
-  // Sync webcam stream to video element when model is ready
   useEffect(() => {
     if (isModelReady && videoRef.current) {
       startCamera(videoRef.current);
@@ -68,7 +62,6 @@ export const StudentView: React.FC = () => {
     return () => stopCamera();
   }, [isModelReady, startCamera, stopCamera]);
 
-  // Session Duration Timer
   useEffect(() => {
     const interval = setInterval(() => {
       const mins = Math.floor((Date.now() - sessionStartTime) / 60000);
@@ -89,7 +82,6 @@ export const StudentView: React.FC = () => {
     return () => clearInterval(interval);
   }, [sessionStartTime, stretchBreakTriggered, eyeExerciseTriggered]);
 
-  // Main real-time AI processing loop
   useEffect(() => {
     if (!isModelReady || !calibration) return;
 
@@ -269,487 +261,316 @@ export const StudentView: React.FC = () => {
     setTotalTicks(0);
     setUserStats(loadUserStats());
     setBadges(getBadgesStatus());
-    alert('Buổi học đã hoàn thành! Dữ liệu đã được lưu trữ và đồng bộ.');
+    alert('Buổi học đã hoàn thành! Dữ liệu đã được lưu trữ.');
   };
 
-  // ── Calibration Screen ──────────────────────────────────────────
   if (!calibration) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-full p-8"
-        style={{ background: 'linear-gradient(145deg, #f0fdf4 0%, #eff6ff 100%)' }}>
-        <div className="relative w-80 h-56 bg-gray-900 rounded-3xl overflow-hidden shadow-2xl mb-6 border-4 border-white">
-          <video
-            ref={videoRef}
-            className="w-full h-full object-cover scale-x-[-1]"
-            autoPlay
-            playsInline
-            muted
-          />
-          {isLoading && (
-            <div className="absolute inset-0 bg-gray-900/75 flex flex-col items-center justify-center text-white gap-3">
-              <div className="w-8 h-8 border-3 border-green-400 border-t-transparent rounded-full animate-spin" />
-              <span className="text-sm font-semibold">Đang tải AI Engine...</span>
-            </div>
-          )}
+      <div className="flex flex-col items-center justify-center min-h-full p-8">
+        <div className="premium-card max-w-2xl w-full text-center p-12">
+          <h2 className="text-3xl font-black text-gray-800 mb-2">Bắt đầu phiên học</h2>
+          <p className="text-gray-500 mb-8">Hệ thống AI sẽ hiệu chỉnh để nhận diện tư thế chuẩn của bạn.</p>
+          <div className="relative w-80 h-56 bg-gray-900 rounded-2xl overflow-hidden shadow-2xl mb-6 mx-auto border border-gray-200">
+            <video ref={videoRef} className="w-full h-full object-cover scale-x-[-1]" autoPlay playsInline muted />
+            {isLoading && (
+              <div className="absolute inset-0 bg-gray-900/75 flex flex-col items-center justify-center text-white gap-3">
+                <div className="w-8 h-8 border-3 border-green-400 border-t-transparent rounded-full animate-spin" />
+                <span className="text-sm font-semibold">Đang tải AI Engine...</span>
+              </div>
+            )}
+          </div>
+          <Calibration poseLandmarks={poseLandmarks} faceLandmarks={faceLandmarks} onCalibrationComplete={handleCalibrationComplete} isModelReady={isModelReady} />
         </div>
-        <Calibration
-          poseLandmarks={poseLandmarks}
-          faceLandmarks={faceLandmarks}
-          onCalibrationComplete={handleCalibrationComplete}
-          isModelReady={isModelReady}
-        />
       </div>
     );
   }
 
-  // ── PHI Score ring color helper
-  const scoreColor = healthScore >= 80 ? '#4ADE80' : healthScore >= 60 ? '#FBBF24' : '#FF5E5E';
-  const scoreRingOffset = 289 - (289 * healthScore) / 100;
-  const hoursLogged = Math.round(userStats.totalStudyTime / 60);
+  const scoreColor = healthScore >= 80 ? '#00d285' : healthScore >= 60 ? '#FFAA2C' : '#FF5E5E';
   const hh = Math.floor(totalSessionMinutes / 60).toString().padStart(2, '0');
   const mm = (totalSessionMinutes % 60).toString().padStart(2, '0');
 
-  // ── Main Dashboard ──────────────────────────────────────────────
   return (
-    <div
-      className={`min-h-full p-6 lg:p-8 ${alertLevel === 'light' ? 'screen-alert-glow' : ''} ${alertLevel === 'strong' ? 'shake-warn' : ''}`}
-      style={{ background: 'var(--bg-page)' }}
-    >
-      {/* Eye Exercise Overlay */}
-      {eyeExerciseTriggered && (
-        <EyeExercise
-          isBlinking={metrics?.isBlinking || false}
-          onComplete={handleEyeExerciseComplete}
-        />
-      )}
-
-      {/* Stretch Break Lock Screen */}
+    <div className={`min-h-full ${alertLevel === 'light' ? 'screen-alert-glow' : ''} ${alertLevel === 'strong' ? 'shake-warn' : ''}`}>
+      
+      {/* Overlays */}
+      {eyeExerciseTriggered && <EyeExercise isBlinking={metrics?.isBlinking || false} onComplete={handleEyeExerciseComplete} />}
       {stretchBreakTriggered && (
-        <div className="fixed inset-0 z-50 bg-gray-950/90 backdrop-blur-2xl flex flex-col items-center justify-center text-white text-center p-8">
+        <div className="fixed inset-0 z-50 bg-gray-900/95 backdrop-blur-3xl flex flex-col items-center justify-center text-white text-center p-8">
           <div className="w-24 h-24 bg-green-500/20 rounded-full flex items-center justify-center text-green-400 mb-6 animate-pulse">
             <BookOpen size={48} />
           </div>
-          <h2 className="text-4xl font-extrabold mb-4">Đã Học Liên Tục 45 Phút!</h2>
-          <p className="text-gray-300 text-lg mb-8 max-w-md">
+          <h2 className="text-5xl font-black mb-4 tracking-tight">Đã Học 45 Phút!</h2>
+          <p className="text-gray-300 text-xl mb-10 max-w-lg leading-relaxed">
             Cơ thể của bạn cần nghỉ ngơi. Hãy đứng dậy vươn vai, đi uống nước hoặc vận động nhẹ trong 1–2 phút nhé!
           </p>
-          <button
-            onClick={() => setStretchBreakTriggered(false)}
-            className="px-8 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-2xl shadow-md transition-all"
-          >
+          <button onClick={() => setStretchBreakTriggered(false)} className="btn-secondary text-lg px-10 py-4 shadow-[0_8px_32px_rgba(74,222,128,0.4)]">
             Tôi đã vận động xong
           </button>
         </div>
       )}
 
-      {/* Strong Warn Overlay */}
       {alertLevel === 'strong' && (
-        <div className="fixed inset-0 z-40 bg-red-900/40 backdrop-blur-md flex flex-col items-center justify-center text-white text-center p-4">
-          <div className="glass-card border border-red-500 bg-red-950/40 p-8 rounded-3xl max-w-md shadow-2xl animate-bounce">
-            <AlertTriangle size={64} className="text-red-500 mx-auto mb-4" />
-            <h2 className="text-3xl font-black mb-2">TƯ THẾ SAI NGHIÊM TRỌNG</h2>
-            <p className="text-red-100 text-base mb-6">
+        <div className="fixed inset-0 z-40 bg-red-900/40 backdrop-blur-xl flex flex-col items-center justify-center text-white text-center p-4">
+          <div className="premium-card bg-red-950/80 border border-red-500 p-10 max-w-lg shadow-[0_32px_64px_rgba(255,94,94,0.4)] animate-bounce">
+            <AlertTriangle size={72} className="text-red-500 mx-auto mb-6 drop-shadow-[0_0_15px_rgba(255,94,94,0.5)]" />
+            <h2 className="text-4xl font-black mb-4">TƯ THẾ SAI NGHIÊM TRỌNG</h2>
+            <p className="text-red-100 text-lg mb-8 leading-relaxed font-medium">
               Bạn đã ngồi sai tư thế liên tục hơn 2 phút! Hãy điều chỉnh lại khoảng cách và thẳng lưng ngay để bảo vệ cột sống và thị lực.
             </p>
-            <button
-              onClick={() => { setAlertLevel('none'); setBadPostureSeconds(0); }}
-              className="px-8 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl shadow-lg transition-all"
-            >
+            <button onClick={() => { setAlertLevel('none'); setBadPostureSeconds(0); }} className="btn-primary w-full bg-red-500 text-white border-none py-4 text-lg">
               Tôi Đã Sửa Tư Thế
             </button>
           </div>
         </div>
       )}
 
-      {/* ── Dashboard Grid ───────────────────────────────── */}
       <div className="max-w-[1400px] mx-auto">
-
-        {/* Header row */}
+        
+        {/* Header Controls */}
         <div className="flex justify-between items-center mb-6">
-          <div>
-            <h1 className="text-2xl font-black text-gray-800 leading-tight">Dashboard Học Tập</h1>
-            <p className="text-sm text-gray-400 font-medium mt-0.5">Theo dõi tư thế & sức khỏe học đường theo thời gian thực</p>
+          <div className="relative w-full max-w-md">
+             <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
+                <svg className="w-5 h-5 text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 20">
+                    <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"/>
+                </svg>
+             </div>
+             <input type="text" className="w-full pl-12 pr-4 py-3 rounded-full bg-white border border-gray-100 shadow-sm outline-none focus:ring-2 focus:ring-purple-300 transition-all font-medium text-gray-600" placeholder="Search features..." />
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setIsAudioEnabled(!isAudioEnabled)}
-              className={`nav-action-btn ${isAudioEnabled ? 'active' : ''}`}
-              title={isAudioEnabled ? 'Tắt âm thanh cảnh báo' : 'Bật âm thanh cảnh báo'}
-            >
-              {isAudioEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
+          
+          <div className="flex items-center gap-4">
+            <button onClick={() => setIsAudioEnabled(!isAudioEnabled)} className="w-12 h-12 bg-white rounded-full flex items-center justify-center text-gray-400 hover:text-purple-600 shadow-sm transition-all">
+              {isAudioEnabled ? <Volume2 size={20} /> : <VolumeX size={20} />}
             </button>
-            <button
-              onClick={() => setCalibration(null)}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-gray-600 hover:text-green-700 transition-all rounded-xl"
-              style={{ background: '#F3F4F6', border: '1px solid #E5E7EB' }}
-            >
-              <RefreshCw size={14} /> Hiệu chỉnh lại
+            <button onClick={() => setCalibration(null)} className="pill-tag pill-primary py-3 px-5">
+              <RefreshCw size={16} /> <span className="hidden sm:inline">Hiệu chỉnh lại</span>
             </button>
           </div>
         </div>
 
-        {/* 3-Column Masonry Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 items-start">
-
-          {/* ══ COLUMN 1 ════════════════════════════════════ */}
-          <div className="flex flex-col gap-5">
-
-            {/* Widget: 7-Day Snapshot */}
-            <div className="widget-card p-6">
-              <h3 className="widget-label flex items-center gap-2 mb-5">
-                📅 Tổng Kết 7 Ngày
-              </h3>
-              <div className="space-y-4">
-                {/* Hours */}
-                <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 rounded-2xl flex items-center justify-center font-black text-xl shadow-sm"
-                    style={{ background: 'linear-gradient(135deg, #fef9c3, #fef08a)', color: '#d97706', border: '1px solid #fde68a' }}>
-                    {hoursLogged}
-                  </div>
-                  <div className="flex-1">
-                    <div className="text-base font-extrabold text-gray-800">Giờ học</div>
-                    <div className="text-xs font-semibold text-gray-400">Đã ghi nhận</div>
-                  </div>
-                  <div className="text-sm font-bold" style={{ color: '#4ADE80' }}>↗ 8%</div>
-                </div>
-
-                {/* Streak */}
-                <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 rounded-2xl flex items-center justify-center font-black text-xl shadow-sm"
-                    style={{ background: 'linear-gradient(135deg, #fef9c3, #fef08a)', color: '#d97706', border: '1px solid #fde68a' }}>
-                    {userStats.streak}
-                  </div>
-                  <div className="flex-1">
-                    <div className="text-base font-extrabold text-gray-800">Chuỗi ngày</div>
-                    <div className="text-xs font-semibold text-gray-400">Liên tiếp hoàn thành</div>
-                  </div>
-                  <div className="text-sm font-bold" style={{ color: '#FF5E5E' }}>↘ -5%</div>
-                </div>
-
-                {/* Level */}
-                <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 rounded-2xl flex items-center justify-center font-black text-xl shadow-sm"
-                    style={{ background: 'linear-gradient(135deg, #fef9c3, #fef08a)', color: '#d97706', border: '1px solid #fde68a' }}>
-                    {userStats.level}
-                  </div>
-                  <div className="flex-1">
-                    <div className="text-base font-extrabold text-gray-800">Cấp độ</div>
-                    <div className="text-xs font-semibold text-gray-400">Xếp hạng hiện tại</div>
-                  </div>
-                  <div className="text-sm font-bold" style={{ color: '#4ADE80' }}>↗ 10%</div>
-                </div>
-              </div>
-            </div>
-
-            {/* Widget: Session Timer & Rank */}
-            <div className="widget-card p-6">
-              <div className="flex items-center justify-between mb-5">
-                <h3 className="text-base font-extrabold text-gray-800">Phiên Học</h3>
-                <span className="w-8 h-8 rounded-xl font-bold text-sm text-white flex items-center justify-center shadow-sm"
-                  style={{ background: 'linear-gradient(135deg, #fbbf24, #f59e0b)', border: '2px solid #fde68a' }}>
-                  {userStats.level}
-                </span>
-              </div>
-
-              {/* Stats row */}
-              <div className="flex justify-between items-center mb-5 pb-5" style={{ borderBottom: '1px solid #F3F4F6' }}>
-                <div className="text-center">
-                  <div className="text-2xl font-black text-gray-800">{userStats.streak}</div>
-                  <div className="widget-label mt-1">Ngày</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-black text-gray-800">{hoursLogged}</div>
-                  <div className="widget-label mt-1">Giờ</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-black text-gray-800">{userStats.badges.length}</div>
-                  <div className="widget-label mt-1">Huy hiệu</div>
-                </div>
-              </div>
-
-              {/* Timer digits */}
-              <div className="flex flex-col items-center mb-5">
-                <div className="widget-label mb-3">Thời gian phiên học</div>
-                <div className="flex gap-2 font-black text-gray-800 font-mono text-2xl">
-                  {[hh[0], hh[1]].map((d, i) => (
-                    <div key={`h${i}`} className="w-11 h-13 rounded-xl flex items-center justify-center"
-                      style={{ background: '#F9FAFB', border: '1px solid #E5E7EB', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.04)' }}>
-                      {d}
-                    </div>
-                  ))}
-                  <span className="pt-1 text-gray-300">:</span>
-                  {[mm[0], mm[1]].map((d, i) => (
-                    <div key={`m${i}`} className="w-11 h-13 rounded-xl flex items-center justify-center"
-                      style={{ background: '#F9FAFB', border: '1px solid #E5E7EB', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.04)' }}>
-                      {d}
-                    </div>
-                  ))}
-                </div>
-                <div className="flex gap-14 mt-2 widget-label">
-                  <span>Giờ</span><span>Phút</span>
-                </div>
-              </div>
-
-              <button
-                onClick={handleEndSession}
-                className="w-full py-3.5 font-bold text-white rounded-2xl shadow-md transition-all flex justify-center items-center gap-2 hover:opacity-90"
-                style={{ background: 'linear-gradient(135deg, #4ADE80, #22c55e)', boxShadow: '0 4px 12px rgba(74, 222, 128, 0.35)' }}
-              >
-                <RefreshCw size={16} /> Kết thúc & Đồng bộ
+        {/* Hero Banner */}
+        <div className="hero-banner mb-8">
+          <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+            <div>
+              <h1 className="text-4xl font-black mb-3">You're closer than you think!</h1>
+              <p className="text-white/90 text-base font-medium max-w-lg leading-relaxed mb-6">
+                Chỉ còn vài XP nữa là bạn đạt cấp độ tiếp theo. Hãy duy trì tư thế thẳng lưng và tập trung học tập để bứt phá bảng xếp hạng.
+              </p>
+              <button className="btn-primary" onClick={handleEndSession}>
+                Lưu Phiên Học
               </button>
             </div>
-
-            {/* Widget: Badges */}
-            <div className="widget-card p-6">
-              <h3 className="widget-label flex items-center gap-2 mb-5">
-                <Trophy size={14} /> Huy Hiệu Đạt Được
-              </h3>
-              <div className="space-y-3">
-                {badges.map((badge) => (
-                  <div key={badge.id} className="flex items-center gap-3 pb-3 last:pb-0" style={{ borderBottom: '1px solid #F9FAFB' }}>
-                    <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0`}
-                      style={{ background: badge.unlocked ? '#ede9fe' : '#F3F4F6', color: badge.unlocked ? '#7c3aed' : '#9CA3AF' }}>
-                      {badge.unlocked ? <Check size={15} /> : <Shield size={15} />}
-                    </div>
-                    <div className="min-w-0">
-                      <div className="text-sm font-bold text-gray-800 truncate">{badge.name}</div>
-                      <div className="text-xs text-gray-400 truncate">{badge.description}</div>
-                    </div>
-                  </div>
-                ))}
+            
+            <div className="flex flex-col gap-3 shrink-0">
+              <div className="bg-white/10 border border-white/20 backdrop-blur-md px-5 py-3 rounded-2xl flex items-center gap-4">
+                <div className="w-10 h-10 bg-yellow-400 text-yellow-900 rounded-full flex items-center justify-center font-black">
+                  🔥
+                </div>
+                <div>
+                  <div className="text-white font-bold text-lg">{userStats.streak} Days Streak</div>
+                  <div className="text-white/70 text-xs font-semibold uppercase tracking-wider">Fast Learner</div>
+                </div>
               </div>
+              <div className="bg-white/10 border border-white/20 backdrop-blur-md px-5 py-3 rounded-2xl flex items-center gap-4">
+                <div className="w-10 h-10 bg-blue-400 text-blue-900 rounded-full flex items-center justify-center font-black">
+                  ⭐
+                </div>
+                <div>
+                  <div className="text-white font-bold text-lg">Level {userStats.level}</div>
+                  <div className="text-white/70 text-xs font-semibold uppercase tracking-wider">Current Rank</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 3-Column Premium Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          
+          {/* Column 1: Progress & Pet */}
+          <div className="flex flex-col gap-6">
+            
+            <div className="premium-card relative overflow-hidden group cursor-pointer border-b-4 border-b-purple-500">
+              <div className="card-title"><Trophy size={18} className="text-purple-500" /> Cấp Độ & Kinh Nghiệm</div>
+              <div className="flex items-center gap-5 mt-4">
+                 <div className="text-5xl font-black text-gray-800">{userStats.level}</div>
+                 <div className="flex-1">
+                   <div className="flex justify-between text-sm font-bold mb-2">
+                     <span className="text-gray-400">Tiến trình</span>
+                     <span className="text-purple-600">{userStats.xp} / {userStats.level * 1000} XP</span>
+                   </div>
+                   <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
+                     <div className="h-full bg-gradient-to-r from-purple-400 to-purple-600 rounded-full transition-all duration-1000" style={{ width: `${Math.min(100, (userStats.xp / (userStats.level * 1000)) * 100)}%` }} />
+                   </div>
+                 </div>
+              </div>
+            </div>
+
+            <div className="premium-card text-center flex flex-col items-center border-b-4 border-b-blue-400">
+               <div className="w-24 h-24 bg-blue-50 rounded-full flex items-center justify-center mb-4 shadow-inner border border-blue-100">
+                 <div className="scale-150 origin-center -translate-y-2">
+                    <OliverPet state={getPetState()} size={64} />
+                 </div>
+               </div>
+               <h3 className="font-bold text-gray-800 text-lg mb-1">Thú Cưng Oliver</h3>
+               <p className="text-gray-400 text-sm font-medium mb-4">Theo dõi bạn học tập thời gian thực</p>
+               <div className="pill-tag bg-blue-100 text-blue-700">Trạng thái: {getPetState() === 'good' ? 'Vui vẻ' : getPetState() === 'slouch' ? 'Buồn bã' : 'Đang nhắc nhở'}</div>
+            </div>
+
+            <div className="premium-card">
+              <div className="card-title">Bộ đếm thời gian</div>
+              <div className="flex justify-center gap-3 font-mono text-4xl font-black text-gray-800 mt-6 mb-4">
+                 <div className="bg-gray-50 px-4 py-3 rounded-xl border border-gray-100 shadow-sm">{hh[0]}</div>
+                 <div className="bg-gray-50 px-4 py-3 rounded-xl border border-gray-100 shadow-sm">{hh[1]}</div>
+                 <div className="text-gray-300 py-3">:</div>
+                 <div className="bg-gray-50 px-4 py-3 rounded-xl border border-gray-100 shadow-sm">{mm[0]}</div>
+                 <div className="bg-gray-50 px-4 py-3 rounded-xl border border-gray-100 shadow-sm">{mm[1]}</div>
+              </div>
+              <div className="flex justify-center gap-10 text-xs font-bold text-gray-400 uppercase tracking-widest mb-6">
+                <span>Giờ</span><span>Phút</span>
+              </div>
+              <button className="btn-secondary w-full" onClick={() => setStretchBreakTriggered(true)}>
+                Tạm dừng 5 phút
+              </button>
             </div>
 
           </div>
 
-          {/* ══ COLUMN 2 ════════════════════════════════════ */}
-          <div className="flex flex-col gap-5">
-
-            {/* Achievement Toast */}
-            <div className="widget-card p-4 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-11 h-11 relative overflow-hidden rounded-full flex items-center justify-center flex-shrink-0"
-                  style={{ background: '#f5f3ff', border: '1px solid #e9d5ff' }}>
-                  <div className="scale-75 origin-center -translate-y-1">
-                    <OliverPet state={getPetState()} size={56} />
-                  </div>
-                </div>
-                <div>
-                  <div className="widget-label">Thành tích mới</div>
-                  <div className="text-sm font-extrabold text-gray-800">Oliver đã ghi nhận phiên học 🎉</div>
-                </div>
-              </div>
-              <div className="text-xs font-bold px-2 py-1 rounded-lg flex-shrink-0"
-                style={{ background: '#f0fdf4', color: '#15803d' }}>
-                Vừa xong
-              </div>
-            </div>
-
-            {/* PHI Score Ring */}
-            <div className="widget-card p-8 flex flex-col items-center">
-              {/* Ring */}
-              <div className={`relative w-56 h-56 mb-6 flex justify-center items-center ${healthScore >= 80 ? 'score-ring-good' : ''}`}>
+          {/* Column 2: Central Ring & Camera */}
+          <div className="flex flex-col gap-6">
+            
+            <div className="premium-card flex flex-col items-center justify-center p-10 border-t-4 border-t-green-400">
+              <div className="card-title w-full text-center justify-center mb-6">Daily Goal Left</div>
+              
+              <div className={`relative w-64 h-64 flex justify-center items-center mb-8 ${healthScore >= 80 ? 'score-ring-good' : ''}`}>
                 <svg className="absolute inset-0 w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                  <circle cx="50" cy="50" r="46" fill="none" stroke="#F3F4F6" strokeWidth="6" />
+                  <circle cx="50" cy="50" r="44" fill="none" stroke="#F3F4F6" strokeWidth="6" />
                   <circle
-                    cx="50" cy="50" r="46" fill="none"
+                    cx="50" cy="50" r="44" fill="none"
                     stroke={scoreColor}
                     strokeWidth="6"
-                    strokeDasharray="289"
-                    strokeDashoffset={scoreRingOffset}
+                    strokeDasharray="276"
+                    strokeDashoffset={276 - (276 * healthScore) / 100}
                     strokeLinecap="round"
                     className="transition-all duration-1000 ease-out"
                   />
                 </svg>
                 <div className="flex flex-col items-center justify-center">
-                  <span className="widget-label mb-1">PHI SCORE</span>
-                  <span className="text-6xl font-black text-gray-800">{healthScore}</span>
-                  <span className="text-xs font-bold mt-1" style={{ color: scoreColor }}>
-                    {healthScore >= 80 ? '✓ Tư thế tốt' : healthScore >= 60 ? '⚠ Cần điều chỉnh' : '✗ Sai tư thế'}
-                  </span>
+                  <span className="text-gray-400 font-bold tracking-widest text-xs uppercase mb-1">PHI SCORE</span>
+                  <span className="text-7xl font-black text-gray-800 tracking-tighter">{healthScore}</span>
+                </div>
+                
+                {/* Play button overlay from image 1 */}
+                <div className="absolute -left-2 top-1/2 -translate-y-1/2 w-12 h-12 bg-green-400 rounded-full text-white flex items-center justify-center shadow-[0_4px_12px_rgba(74,222,128,0.5)]">
+                   <Play size={20} fill="currentColor" className="ml-1" />
                 </div>
               </div>
-
-              {/* Camera toggle pill */}
-              <div className="flex items-center gap-3 rounded-full px-3 py-2 mb-5"
-                style={{ background: '#F9FAFB', border: '1px solid #E5E7EB' }}>
-                <button
-                  onClick={() => setShowCamera(!showCamera)}
-                  className="w-9 h-9 rounded-full text-white flex items-center justify-center shadow-md transition-all hover:scale-105"
-                  style={{ background: 'linear-gradient(135deg, #4ADE80, #22c55e)', boxShadow: '0 2px 8px rgba(74,222,128,0.4)' }}
-                >
-                  {showCamera ? <Camera size={15} fill="currentColor" /> : <CameraOff size={15} fill="currentColor" />}
-                </button>
-                <span className="widget-label tracking-wide pr-2">
-                  {showCamera ? 'Ẩn camera' : 'Hiện camera'}
-                </span>
+              
+              <div className="bg-gray-50 rounded-full px-6 py-3 font-bold text-gray-400 text-sm shadow-inner border border-gray-100 w-full text-center">
+                 Duy trì màu xanh để bảo vệ sức khỏe
               </div>
+            </div>
 
-              {/* Streak dots */}
-              <div className="flex items-center gap-1.5 mb-3">
-                {['T2','T3','T4','T5','T6','T7','CN'].map((day, idx) => {
-                  const isCompleted = idx < Math.min(userStats.streak, 7);
-                  const isToday = idx === Math.min(userStats.streak, 7) - 1;
-                  return (
-                    <div key={idx}
-                      className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-extrabold"
-                      style={{
-                        background: isToday
-                          ? 'linear-gradient(135deg, #fb923c, #f97316)'
-                          : isCompleted ? '#ffedd5' : '#F3F4F6',
-                        color: isToday ? '#fff' : isCompleted ? '#ea580c' : '#9CA3AF',
-                        boxShadow: isToday ? '0 2px 8px rgba(249,115,22,0.4)' : 'none',
-                      }}>
-                      {day[0]}
+            <div className="premium-card">
+               <div className="flex justify-between items-center mb-4">
+                 <div className="card-title m-0">Camera AI</div>
+                 <button onClick={() => setShowCamera(!showCamera)} className={`pill-tag ${showCamera ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-600'}`}>
+                   {showCamera ? 'Tắt' : 'Bật'}
+                 </button>
+               </div>
+               <div className="relative w-full rounded-xl overflow-hidden bg-gray-900 border-2 border-gray-100 shadow-inner" style={{ height: '180px' }}>
+                 <video
+                    ref={videoRef}
+                    className={`w-full h-full object-cover scale-x-[-1] transition-opacity duration-300 ${!showCamera ? 'opacity-0' : 'opacity-100'}`}
+                    autoPlay playsInline muted
+                 />
+                 {!showCamera && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400">
+                      <CameraOff size={24} className="mb-2" />
                     </div>
-                  );
-                })}
-                <div className="text-xs font-black ml-1 px-2 py-1 rounded-lg"
-                  style={{ background: '#fff7ed', color: '#ea580c' }}>x2</div>
-              </div>
-
-              <p className="text-center text-xs font-semibold text-gray-400">
-                Tiếp tục chuỗi ngày.<br />Duy trì tư thế tốt mỗi ngày.
-              </p>
-            </div>
-
-            {/* XP Progress */}
-            <div className="widget-card p-5">
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
-                  style={{ background: '#eff6ff', color: '#3b82f6' }}>
-                  <Shield size={18} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="widget-label mb-1">Cấp {userStats.level + 1}</div>
-                  <div className="text-sm font-extrabold text-gray-800 mb-2">
-                    Còn {Math.max(0, userStats.level * 1000 - userStats.xp)} XP nữa
-                  </div>
-                  <div className="w-full h-2.5 rounded-full overflow-hidden" style={{ background: '#F3F4F6' }}>
-                    <div
-                      className="h-full rounded-full transition-all duration-700"
-                      style={{
-                        width: `${Math.min(100, (userStats.xp / (userStats.level * 1000)) * 100)}%`,
-                        background: 'linear-gradient(90deg, #4ADE80, #22c55e)',
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
+                 )}
+               </div>
             </div>
 
           </div>
 
-          {/* ══ COLUMN 3 ════════════════════════════════════ */}
-          <div className="flex flex-col gap-5">
+          {/* Column 3: Leaderboard / Live Stats Table */}
+          <div className="flex flex-col gap-6">
+            
+            <div className="premium-card border-l-4 border-l-yellow-400">
+               <div className="flex justify-between items-center mb-6">
+                  <div className="card-title m-0">Live Leaderboard</div>
+                  <div className="pill-tag bg-yellow-100 text-yellow-700 text-[10px]">REAL TIME</div>
+               </div>
 
-            {/* Quick Tips */}
-            <div className="widget-card p-6">
-              <h3 className="widget-label flex items-center gap-2 mb-4">
-                <span className="text-lg">💡</span> Mẹo Sức Khỏe
-              </h3>
-              <div className="flex -space-x-2.5 mb-4">
-                {['bg-green-100', 'bg-blue-100', 'bg-purple-100'].map((c, i) => (
-                  <div key={i} className={`w-8 h-8 rounded-full border-2 border-white ${c}`} />
-                ))}
-                <div className="w-8 h-8 rounded-full border-2 border-white bg-orange-100 flex items-center justify-center text-xs font-bold text-orange-500">+3</div>
-              </div>
-              <p className="text-sm font-bold text-gray-800 mb-1.5">3 mẹo dành cho bạn hôm nay</p>
-              <p className="text-xs font-medium text-gray-400 mb-5 leading-relaxed">
-                Ngồi thẳng lưng và giữ khoảng cách 60cm để bảo vệ mắt. Vươn vai sau mỗi 20 phút.
-              </p>
-              <button className="w-full py-3 font-bold text-white rounded-2xl shadow-md transition-all hover:opacity-90"
-                style={{ background: 'linear-gradient(135deg, #4ADE80, #22c55e)', boxShadow: '0 4px 12px rgba(74,222,128,0.3)' }}>
-                Xem chi tiết ➔
-              </button>
+               <div className="overflow-x-auto">
+                 <table className="w-full text-sm text-left">
+                   <thead className="text-xs text-gray-400 uppercase bg-gray-50 rounded-lg font-bold">
+                     <tr>
+                       <th className="px-4 py-3 rounded-l-lg">Metric</th>
+                       <th className="px-4 py-3 text-center">Goal</th>
+                       <th className="px-4 py-3 rounded-r-lg text-right">Status</th>
+                     </tr>
+                   </thead>
+                   <tbody>
+                     <tr className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                       <td className="px-4 py-4 font-bold text-gray-800 flex items-center gap-3">
+                         <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-lg">🏃</div>
+                         Khoảng cách
+                       </td>
+                       <td className="px-4 py-4 text-center font-bold text-gray-400">&gt; 50 cm</td>
+                       <td className="px-4 py-4 text-right">
+                         <span className={`pill-tag ${metrics && metrics.eyeDistanceCm < 50 ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>
+                            {metrics ? metrics.eyeDistanceCm : 60} cm
+                         </span>
+                       </td>
+                     </tr>
+                     <tr className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                       <td className="px-4 py-4 font-bold text-gray-800 flex items-center gap-3">
+                         <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 text-lg">🧍</div>
+                         Lưng (Slouch)
+                       </td>
+                       <td className="px-4 py-4 text-center font-bold text-gray-400">&lt; 15°</td>
+                       <td className="px-4 py-4 text-right">
+                         <span className={`pill-tag ${metrics && metrics.slouchAngle > 15 ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>
+                            {metrics ? Math.round(metrics.slouchAngle) : 0}°
+                         </span>
+                       </td>
+                     </tr>
+                     <tr className="hover:bg-gray-50 transition-colors">
+                       <td className="px-4 py-4 font-bold text-gray-800 flex items-center gap-3">
+                         <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 text-lg">🧘</div>
+                         Cúi cổ (Neck)
+                       </td>
+                       <td className="px-4 py-4 text-center font-bold text-gray-400">&lt; 20°</td>
+                       <td className="px-4 py-4 text-right">
+                         <span className={`pill-tag ${metrics && metrics.neckAngle > 20 && !metrics.isWritingMode ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>
+                            {metrics ? Math.round(metrics.neckAngle) : 0}°
+                         </span>
+                       </td>
+                     </tr>
+                   </tbody>
+                 </table>
+               </div>
             </div>
 
-            {/* AI Camera Feed */}
-            <div className="widget-card p-6 flex flex-col">
-              <h3 className="widget-label flex items-center gap-2 mb-4">
-                <Camera size={13} /> Camera AI Theo Dõi Tư Thế
-              </h3>
-
-              <div className="relative w-full rounded-2xl overflow-hidden mb-4 flex-shrink-0"
-                style={{ height: '144px', background: '#111827', border: '3px solid #F9FAFB' }}>
-                <video
-                  ref={videoRef}
-                  className={`w-full h-full object-cover scale-x-[-1] transition-opacity duration-300 ${!showCamera ? 'opacity-0' : 'opacity-100'}`}
-                  autoPlay
-                  playsInline
-                  muted
-                />
-                {!showCamera && (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400"
-                    style={{ background: 'rgba(17,24,39,0.85)' }}>
-                    <CameraOff size={22} className="mb-2 opacity-50" />
-                    <span className="widget-label">Camera đã ẩn</span>
-                  </div>
-                )}
-                {/* Live indicator */}
-                {showCamera && (
-                  <div className="absolute top-2 left-2 flex items-center gap-1.5 px-2 py-1 rounded-lg"
-                    style={{ background: 'rgba(0,0,0,0.6)' }}>
-                    <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                    <span className="text-white text-xs font-bold uppercase tracking-widest">Live</span>
-                  </div>
-                )}
+            <div className="premium-card">
+              <div className="card-title"><Info size={18} className="text-blue-500" /> Get Help</div>
+              <div className="flex items-center gap-4 bg-gray-50 p-4 rounded-xl mb-5">
+                <div className="flex -space-x-3">
+                   {['bg-red-200','bg-green-200','bg-blue-200'].map((c,i)=><div key={i} className={`w-10 h-10 rounded-full border-2 border-white shadow-sm ${c}`} />)}
+                </div>
+                <div className="text-sm font-bold text-gray-800">
+                  3 AI Tips for you
+                  <div className="text-xs text-gray-400 font-medium">on completing your next step</div>
+                </div>
               </div>
-
-              <p className="text-xs font-medium text-gray-400 mb-4 leading-relaxed">
-                AI theo dõi tư thế và khoảng cách mắt liên tục, thông báo cho bạn và phụ huynh.
-              </p>
-
-              <button
-                onClick={() => setShowCamera(!showCamera)}
-                className="w-full py-3.5 font-bold text-white rounded-2xl transition-all hover:opacity-90 mt-auto flex items-center justify-center gap-2"
-                style={{ background: 'linear-gradient(135deg, #4ADE80, #22c55e)', boxShadow: '0 4px 12px rgba(74,222,128,0.3)' }}
-              >
-                {showCamera ? <><CameraOff size={15} /> Ẩn Camera</> : <><Camera size={15} /> Hiện Camera</>}
+              <button className="btn-secondary w-full" style={{ background: '#00d285' }}>
+                See Tips &rarr;
               </button>
-            </div>
-
-            {/* Live Metrics Table */}
-            <div className="widget-card p-6">
-              <h3 className="widget-label mb-4">📊 Chỉ Số Tư Thế Thực Tế</h3>
-              <table className="w-full text-xs">
-                <thead>
-                  <tr style={{ borderBottom: '1px solid #F3F4F6' }}>
-                    <th className="text-left pb-2.5 font-semibold text-gray-400 uppercase tracking-wider text-[10px]">Chỉ số</th>
-                    <th className="text-right pb-2.5 font-semibold text-gray-400 uppercase tracking-wider text-[10px]">Mục tiêu</th>
-                    <th className="text-right pb-2.5 font-semibold text-gray-400 uppercase tracking-wider text-[10px]">Hiện tại</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr style={{ borderBottom: '1px solid #F9FAFB' }}>
-                    <td className="py-3.5 font-bold text-gray-800">Gù lưng</td>
-                    <td className="py-3.5 text-right font-bold text-gray-400">&lt; 15°</td>
-                    <td className={`py-3.5 text-right font-black`}
-                      style={{ color: metrics && metrics.slouchAngle > 15 ? '#FF5E5E' : '#4ADE80' }}>
-                      {metrics ? Math.round(metrics.slouchAngle) : 0}°
-                    </td>
-                  </tr>
-                  <tr style={{ borderBottom: '1px solid #F9FAFB' }}>
-                    <td className="py-3.5 font-bold text-gray-800">Cúi cổ</td>
-                    <td className="py-3.5 text-right font-bold text-gray-400">&lt; 20°</td>
-                    <td className={`py-3.5 text-right font-black`}
-                      style={{ color: metrics && metrics.neckAngle > 20 && !metrics.isWritingMode ? '#FF5E5E' : '#4ADE80' }}>
-                      {metrics ? Math.round(metrics.neckAngle) : 0}°
-                    </td>
-                  </tr>
-                  <tr>
-                    <td className="py-3.5 font-bold text-gray-800">Cách màn hình</td>
-                    <td className="py-3.5 text-right font-bold text-gray-400">&gt; 50 cm</td>
-                    <td className={`py-3.5 text-right font-black`}
-                      style={{ color: metrics && metrics.eyeDistanceCm < 50 ? '#FF5E5E' : '#4ADE80' }}>
-                      {metrics ? metrics.eyeDistanceCm : 60} cm
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
             </div>
 
           </div>
+
         </div>
       </div>
     </div>
