@@ -14,6 +14,8 @@ export interface CalibrationData {
   baseEAR: number;            // baseline Eye Aspect Ratio (open eyes)
 }
 
+export type PostureState = 'GOOD_POSTURE' | 'WRITING' | 'BAD_POSTURE';
+
 export interface PostureMetrics {
   eyeDistanceCm: number;
   neckAngle: number;
@@ -23,6 +25,7 @@ export interface PostureMetrics {
   isBlinking: boolean;
   isWritingMode: boolean; // Context awareness: looking down + neck bent
   fidgetFactor: number;   // Variance of movements
+  state: PostureState;    // AI classified state
   timestamp: number;
 }
 
@@ -85,6 +88,7 @@ export function analyzePosture(
     isBlinking: false,
     isWritingMode: false,
     fidgetFactor: 0,
+    state: 'GOOD_POSTURE',
     timestamp: Date.now(),
   };
 
@@ -204,6 +208,20 @@ export function analyzePosture(
     const avgIrisYRatio = (leftIrisRatio + rightIrisRatio) / 2;
     if (avgIrisYRatio > 0.75 && metrics.neckAngle > 20) {
       metrics.isWritingMode = true;
+    }
+
+    // Determine Posture State (Heuristic proxy for future ML Model)
+    if (metrics.isWritingMode) {
+      metrics.state = 'WRITING';
+    } else if (
+      metrics.neckAngle > 20 || 
+      metrics.shoulderTilt > 7 || 
+      metrics.slouchAngle > 15 || 
+      metrics.eyeDistanceCm < 45
+    ) {
+      metrics.state = 'BAD_POSTURE';
+    } else {
+      metrics.state = 'GOOD_POSTURE';
     }
   }
 

@@ -8,6 +8,7 @@ import type { CalibrationData, PostureMetrics } from '../services/postureAI';
 import { loadCalibration, loadSettings, loadUserStats, saveSessionRecord, addXP, getBadgesStatus } from '../services/db';
 import type { Badge } from '../services/db';
 import { broadcastStudentStatus, broadcastFatigueAlert } from '../services/parentSync';
+import { useAlertEngine } from '../services/useAlertEngine';
 import OliverPet from './OliverPet';
 import type { PetState } from './OliverPet';
 import Calibration from './Calibration';
@@ -32,10 +33,9 @@ export const StudentView: React.FC = () => {
 
   const [sessionStartTime, setSessionStartTime] = useState<number>(Date.now());
   const [totalSessionMinutes, setTotalSessionMinutes] = useState<number>(0);
-  const [badPostureSeconds, setBadPostureSeconds] = useState<number>(0);
-  const [alertLevel, setAlertLevel] = useState<'none' | 'light' | 'strong'>('none');
-  const [stretchBreakTriggered, setStretchBreakTriggered] = useState<boolean>(false);
   const [eyeExerciseTriggered, setEyeExerciseTriggered] = useState<boolean>(false);
+
+  const { alertLevel, startSession, resetBreak, hasStarted } = useAlertEngine(metrics?.state || 'GOOD_POSTURE');
 
   const [warningsCount, setWarningsCount] = useState<number>(0);
   const [blinkCount, setBlinkCount] = useState<number>(0);
@@ -63,16 +63,12 @@ export const StudentView: React.FC = () => {
   }, [isModelReady, startCamera, stopCamera]);
 
   useEffect(() => {
+    if (!hasStarted) return;
     const interval = setInterval(() => {
       const mins = Math.floor((Date.now() - sessionStartTime) / 60000);
       setTotalSessionMinutes(mins);
 
       const settings = loadSettings();
-      if (mins > 0 && mins % settings.sessionBreakInterval === 0 && !stretchBreakTriggered) {
-        setStretchBreakTriggered(true);
-        playStretchSound();
-      }
-
       const secs = Math.floor((Date.now() - sessionStartTime) / 1000);
       if (secs > 0 && secs % (settings.eyeExerciseInterval * 60) === 0 && !eyeExerciseTriggered) {
         setEyeExerciseTriggered(true);
@@ -80,7 +76,15 @@ export const StudentView: React.FC = () => {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [sessionStartTime, stretchBreakTriggered, eyeExerciseTriggered]);
+  }, [sessionStartTime, eyeExerciseTriggered, hasStarted]);
+
+  useEffect(() => {
+    if (alertLevel === 'STRONG_WARNING') {
+      setWarningsCount(w => w + 1);
+      if (isAudioEnabled) playBeepSound();
+      if ('vibrate' in navigator) navigator.vibrate([200, 100, 200]);
+    }
+  }, [alertLevel, isAudioEnabled]);
 
   useEffect(() => {
     if (!isModelReady || !calibration) return;
@@ -126,33 +130,6 @@ export const StudentView: React.FC = () => {
       broadcastFatigueAlert("Bé bắt đầu nhấp nhổm nhiều, có dấu hiệu mất tập trung hoặc mỏi cơ.");
     }
 
-    const settings = loadSettings();
-    const isUnderDistance = calculatedMetrics.eyeDistanceCm < settings.screenDistanceThreshold;
-    const isBentNeck = calculatedMetrics.neckAngle > settings.neckTiltThreshold;
-    const isCrookedShoulder = calculatedMetrics.shoulderTilt > settings.shoulderTiltThreshold;
-    const isSlouchedBack = calculatedMetrics.slouchAngle > settings.slouchThreshold;
-
-    const hasIssue = (isUnderDistance || isCrookedShoulder || isSlouchedBack || (isBentNeck && !calculatedMetrics.isWritingMode));
-
-    if (hasIssue) {
-      setBadPostureSeconds(s => s + 1);
-    } else {
-      setBadPostureSeconds(0);
-      setAlertLevel('none');
-    }
-
-    if (badPostureSeconds >= 30 && badPostureSeconds < 120) {
-      setAlertLevel('light');
-    } else if (badPostureSeconds >= 120) {
-      if (alertLevel !== 'strong') {
-        setAlertLevel('strong');
-        setWarningsCount(w => w + 1);
-        if (isAudioEnabled && settings.soundAlertEnabled) {
-          playBeepSound();
-        }
-      }
-    }
-
     const overallStatus = calculatedScore >= 85 ? 'good' : calculatedScore >= 70 ? 'warning' : 'danger';
     broadcastStudentStatus(overallStatus, {
       eyeDistanceCm: calculatedMetrics.eyeDistanceCm,
@@ -163,7 +140,7 @@ export const StudentView: React.FC = () => {
       isWritingMode: calculatedMetrics.isWritingMode,
     });
 
-  }, [poseLandmarks, faceLandmarks, isModelReady, calibration, badPostureSeconds, alertLevel, isAudioEnabled, totalTicks]);
+  }, [poseLandmarks, faceLandmarks, isModelReady, calibration, isAudioEnabled, totalTicks]);
 
   const playBeepSound = () => {
     try {
@@ -290,11 +267,23 @@ export const StudentView: React.FC = () => {
   const mm = (totalSessionMinutes % 60).toString().padStart(2, '0');
 
   return (
-    <div className={`min-h-full ${alertLevel === 'light' ? 'screen-alert-glow' : ''} ${alertLevel === 'strong' ? 'shake-warn' : ''}`}>
+    <div className={`min-h-full ${alertLevel === 'MILD_WARNING' ? 'screen-alert-glow' : ''} ${alertLevel === 'STRONG_WARNING' ? 'shake-warn' : ''}`}>
       
       {/* Overlays */}
+      {!hasStarted && (
+        <div className="fixed inset-0 z-[60] bg-gray-900/95 backdrop-blur-3xl flex flex-col items-center justify-center text-white text-center p-8">
+          <h2 className="text-5xl font-black mb-4 tracking-tight">Sẵn Sàng Học Tập!</h2>
+          <p className="text-gray-300 text-xl mb-10 max-w-lg leading-relaxed">
+            Hệ thống AI sẽ theo dõi tư thế của bạn để bảo vệ cột sống và mắt. Vui lòng bấm Bắt Đầu để cấp quyền âm thanh cảnh báo.
+          </p>
+          <button onClick={() => { startSession(); setSessionStartTime(Date.now()); }} className="btn-primary text-lg px-10 py-4 shadow-[0_8px_32px_rgba(74,222,128,0.4)]">
+            Bắt Đầu Học
+          </button>
+        </div>
+      )}
+
       {eyeExerciseTriggered && <EyeExercise isBlinking={metrics?.isBlinking || false} onComplete={handleEyeExerciseComplete} />}
-      {stretchBreakTriggered && (
+      {alertLevel === 'BREAK_TIME' && (
         <div className="fixed inset-0 z-50 bg-gray-900/95 backdrop-blur-3xl flex flex-col items-center justify-center text-white text-center p-8">
           <div className="w-24 h-24 bg-green-500/20 rounded-full flex items-center justify-center text-green-400 mb-6 animate-pulse">
             <BookOpen size={48} />
@@ -303,13 +292,13 @@ export const StudentView: React.FC = () => {
           <p className="text-gray-300 text-xl mb-10 max-w-lg leading-relaxed">
             Cơ thể của bạn cần nghỉ ngơi. Hãy đứng dậy vươn vai, đi uống nước hoặc vận động nhẹ trong 1–2 phút nhé!
           </p>
-          <button onClick={() => setStretchBreakTriggered(false)} className="btn-secondary text-lg px-10 py-4 shadow-[0_8px_32px_rgba(74,222,128,0.4)]">
+          <button onClick={() => resetBreak()} className="btn-secondary text-lg px-10 py-4 shadow-[0_8px_32px_rgba(74,222,128,0.4)]">
             Tôi đã vận động xong
           </button>
         </div>
       )}
 
-      {alertLevel === 'strong' && (
+      {alertLevel === 'STRONG_WARNING' && (
         <div className="fixed inset-0 z-40 bg-red-900/40 backdrop-blur-xl flex flex-col items-center justify-center text-white text-center p-4">
           <div className="premium-card bg-red-950/80 border border-red-500 p-10 max-w-lg shadow-[0_32px_64px_rgba(255,94,94,0.4)] animate-bounce">
             <AlertTriangle size={72} className="text-red-500 mx-auto mb-6 drop-shadow-[0_0_15px_rgba(255,94,94,0.5)]" />
@@ -317,7 +306,7 @@ export const StudentView: React.FC = () => {
             <p className="text-red-100 text-lg mb-8 leading-relaxed font-medium">
               Bạn đã ngồi sai tư thế liên tục hơn 2 phút! Hãy điều chỉnh lại khoảng cách và thẳng lưng ngay để bảo vệ cột sống và thị lực.
             </p>
-            <button onClick={() => { setAlertLevel('none'); setBadPostureSeconds(0); }} className="btn-primary w-full bg-red-500 text-white border-none py-4 text-lg">
+            <button onClick={() => resetBreak()} className="btn-primary w-full bg-red-500 text-white border-none py-4 text-lg">
               Tôi Đã Sửa Tư Thế
             </button>
           </div>
@@ -420,8 +409,8 @@ export const StudentView: React.FC = () => {
               <div className="timer-labels">
                 <span>Giờ</span><span>Phút</span>
               </div>
-              <button className="btn-secondary w-full" onClick={() => setStretchBreakTriggered(true)}>
-                Tạm dừng 5 phút
+              <button className="btn-secondary w-full" onClick={() => resetBreak()}>
+                Bắt đầu phiên học mới
               </button>
             </div>
 
