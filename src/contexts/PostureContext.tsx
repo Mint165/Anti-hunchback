@@ -1,8 +1,9 @@
-import React, { createContext, useContext, useRef, useState, useEffect } from 'react';
+import React, { createContext, useContext, useRef, useState, useEffect, useCallback } from 'react';
 import { useMediaPipe } from '../hooks/useMediaPipe';
 import { useAlertEngine } from '../services/useAlertEngine';
 import { analyzePosture, calculateHealthScore, type PostureMetrics, type CalibrationData } from '../services/postureAI';
-import { loadCalibration, addPetXP } from '../services/db';
+import { loadCalibration, loadSettings, addPetXP } from '../services/db';
+import { broadcastFatigueAlert } from '../services/parentSync';
 
 interface PostureContextType {
   metrics: PostureMetrics | null;
@@ -19,6 +20,18 @@ interface PostureContextType {
   goodPostureStreak: number;
   poseLandmarks: any[] | null;
   faceLandmarks: any[] | null;
+  // Eye Exercise
+  eyeExerciseTriggered: boolean;
+  onEyeExerciseComplete: (xpGained: number) => void;
+  // Fatigue analytics
+  sessionFatigueFlags: number;
+  // Accumulated angle data for session record
+  sessionAngleAccumulator: {
+    shoulderTiltSum: number;
+    neckAngleSum: number;
+    slouchAngleSum: number;
+    tickCount: number;
+  };
 }
 
 const PostureContext = createContext<PostureContextType | undefined>(undefined);
@@ -36,6 +49,23 @@ export const PostureProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const { alertLevel, startSession, resetBreak, hasStarted } = useAlertEngine(metrics?.state || 'GOOD_POSTURE');
   
   const movementHistoryRef = useRef<{ x: number; y: number }[]>([]);
+
+  // --- Eye Exercise (20-20-20 Rule) ---
+  const [eyeExerciseTriggered, setEyeExerciseTriggered] = useState<boolean>(false);
+  const sessionStartTimeRef = useRef<number>(Date.now());
+  const lastEyeExerciseTimeRef = useRef<number>(0);
+
+  // --- Fatigue Screening (5-min buffer) ---
+  const [sessionFatigueFlags, setSessionFatigueFlags] = useState<number>(0);
+  const fatigueBufferRef = useRef<{ blinkTicks: number; fidgetSum: number; sampleCount: number }>({
+    blinkTicks: 0, fidgetSum: 0, sampleCount: 0,
+  });
+  const lastFatigueCheckRef = useRef<number>(0);
+
+  // --- Accumulated angle data for session analytics ---
+  const [sessionAngleAccumulator, setSessionAngleAccumulator] = useState({
+    shoulderTiltSum: 0, neckAngleSum: 0, slouchAngleSum: 0, tickCount: 0,
+  });
 
   // Load calibration on mount
   useEffect(() => {
@@ -84,18 +114,69 @@ export const PostureProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   }, [poseLandmarks, faceLandmarks, isModelReady, calibration]);
 
-  // Pet XP Logic
+  // --- Global 1-second tick for Eye Exercise timer, Fatigue buffer, Pet XP, Angle accumulation ---
   useEffect(() => {
     if (!hasStarted) return;
+    const settings = loadSettings();
+    const eyeExerciseIntervalMs = settings.eyeExerciseInterval * 60 * 1000; // 20 min default
+    const fatigueCheckIntervalMs = 5 * 60 * 1000; // 5 minutes
+
     const interval = setInterval(() => {
-      // Access latest state using a setter function to avoid stale closures if metrics was a dependency
+      const now = Date.now();
+
+      // --- Eye Exercise 20-20-20 trigger ---
+      if (!eyeExerciseTriggered) {
+        const timeSinceLastExercise = now - (lastEyeExerciseTimeRef.current || sessionStartTimeRef.current);
+        if (timeSinceLastExercise >= eyeExerciseIntervalMs) {
+          setEyeExerciseTriggered(true);
+        }
+      }
+
+      // --- Fatigue screening buffer ---
       setMetrics(prevMetrics => {
         if (!prevMetrics) return prevMetrics;
+
+        // Accumulate blink and fidget data
+        fatigueBufferRef.current.sampleCount += 1;
+        if (prevMetrics.isBlinking) {
+          fatigueBufferRef.current.blinkTicks += 1;
+        }
+        fatigueBufferRef.current.fidgetSum += prevMetrics.fidgetFactor;
+
+        // Accumulate angle data for session analytics
+        setSessionAngleAccumulator(prev => ({
+          shoulderTiltSum: prev.shoulderTiltSum + prevMetrics.shoulderTilt,
+          neckAngleSum: prev.neckAngleSum + prevMetrics.neckAngle,
+          slouchAngleSum: prev.slouchAngleSum + prevMetrics.slouchAngle,
+          tickCount: prev.tickCount + 1,
+        }));
+
+        // Check every 5 minutes
+        const timeSinceLastFatigueCheck = now - (lastFatigueCheckRef.current || sessionStartTimeRef.current);
+        if (timeSinceLastFatigueCheck >= fatigueCheckIntervalMs && fatigueBufferRef.current.sampleCount > 0) {
+          const avgBlinksPerMinute = (fatigueBufferRef.current.blinkTicks / fatigueBufferRef.current.sampleCount) * 60;
+          const avgFidget = fatigueBufferRef.current.fidgetSum / fatigueBufferRef.current.sampleCount;
+
+          if (avgBlinksPerMinute < 4 || avgFidget > 35) {
+            setSessionFatigueFlags(f => f + 1);
+            if (avgBlinksPerMinute < 4) {
+              broadcastFatigueAlert("Tần suất chớp mắt của bé quá thấp trong 5 phút qua, có dấu hiệu mỏi mắt.");
+            }
+            if (avgFidget > 35) {
+              broadcastFatigueAlert("Bé nhấp nhổm nhiều trong 5 phút qua, có dấu hiệu mất tập trung hoặc mệt mỏi.");
+            }
+          }
+
+          // Reset buffer
+          fatigueBufferRef.current = { blinkTicks: 0, fidgetSum: 0, sampleCount: 0 };
+          lastFatigueCheckRef.current = now;
+        }
+
+        // Pet XP logic
         if (prevMetrics.state === 'GOOD_POSTURE' || prevMetrics.state === 'WRITING') {
           setGoodPostureStreak(s => {
             const newStreak = s + 1;
             if (newStreak % 60 === 0) {
-              // Add 10 XP every 60 seconds
               addPetXP(10);
             }
             return newStreak;
@@ -103,18 +184,27 @@ export const PostureProvider: React.FC<{ children: React.ReactNode }> = ({ child
         } else if (prevMetrics.state === 'BAD_POSTURE') {
           setGoodPostureStreak(0);
         }
+
         return prevMetrics;
       });
     }, 1000);
     
     return () => clearInterval(interval);
-  }, [hasStarted]);
+  }, [hasStarted, eyeExerciseTriggered]);
+
+  // Eye exercise completion callback
+  const onEyeExerciseComplete = useCallback((_xpGained: number) => {
+    setEyeExerciseTriggered(false);
+    lastEyeExerciseTimeRef.current = Date.now();
+  }, []);
 
   return (
     <PostureContext.Provider value={{
       metrics, healthScore, alertLevel, hasStarted, startSession, resetBreak,
       isModelReady, isLoading, error, calibration, setCalibration, goodPostureStreak,
-      poseLandmarks, faceLandmarks
+      poseLandmarks, faceLandmarks,
+      eyeExerciseTriggered, onEyeExerciseComplete,
+      sessionFatigueFlags, sessionAngleAccumulator,
     }}>
       <video
         id="global-webcam"

@@ -28,6 +28,11 @@ export interface SessionRecord {
   fidgetFlagsCount: number;
   completedEyeExercises: number;
   streakAdded: boolean;
+  // Data Analytics fields
+  averageShoulderTilt?: number;
+  averageNeckAngle?: number;
+  averageSlouchAngle?: number;
+  fatigueFlags?: number;
 }
 
 export interface UserStats {

@@ -3,20 +3,20 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { AlertTriangle, RefreshCw, Trophy, BookOpen, Volume2, VolumeX, CameraOff, Play, Info } from 'lucide-react';
 import type { CalibrationData } from '../services/postureAI';
-import { loadSettings, loadUserStats, saveSessionRecord, addXP, getBadgesStatus } from '../services/db';
+import { loadUserStats, saveSessionRecord, addXP, getBadgesStatus } from '../services/db';
 import type { Badge } from '../services/db';
 import { broadcastStudentStatus, broadcastFatigueAlert } from '../services/parentSync';
 import { usePostureContext } from '../contexts/PostureContext';
 import OliverPet from './OliverPet';
 import type { PetState } from './OliverPet';
 import Calibration from './Calibration';
-import EyeExercise from './EyeExercise';
 
 export const StudentView: React.FC = () => {
   const {
     metrics, healthScore, alertLevel, hasStarted, startSession, resetBreak,
     isModelReady, isLoading, calibration, setCalibration, 
-    poseLandmarks, faceLandmarks
+    poseLandmarks, faceLandmarks,
+    sessionFatigueFlags, sessionAngleAccumulator,
   } = usePostureContext();
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -25,7 +25,6 @@ export const StudentView: React.FC = () => {
 
   const [sessionStartTime, setSessionStartTime] = useState<number>(Date.now());
   const [totalSessionMinutes, setTotalSessionMinutes] = useState<number>(0);
-  const [eyeExerciseTriggered, setEyeExerciseTriggered] = useState<boolean>(false);
 
   const [warningsCount, setWarningsCount] = useState<number>(0);
   const [blinkCount, setBlinkCount] = useState<number>(0);
@@ -49,16 +48,10 @@ export const StudentView: React.FC = () => {
     const interval = setInterval(() => {
       const mins = Math.floor((Date.now() - sessionStartTime) / 60000);
       setTotalSessionMinutes(mins);
-
-      const settings = loadSettings();
-      const secs = Math.floor((Date.now() - sessionStartTime) / 1000);
-      if (secs > 0 && secs % (settings.eyeExerciseInterval * 60) === 0 && !eyeExerciseTriggered) {
-        setEyeExerciseTriggered(true);
-      }
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [sessionStartTime, eyeExerciseTriggered, hasStarted]);
+  }, [sessionStartTime, hasStarted]);
 
   useEffect(() => {
     if (alertLevel === 'STRONG_WARNING') {
@@ -114,7 +107,6 @@ export const StudentView: React.FC = () => {
   };
 
   const getPetState = (): PetState => {
-    if (eyeExerciseTriggered) return 'tired';
     if (metrics?.isWritingMode) return 'writing';
     if (metrics && metrics.eyeDistanceCm < 50) return 'close';
     if (metrics && (metrics.slouchAngle > 15 || metrics.shoulderTilt > 7)) return 'slouch';
@@ -125,14 +117,6 @@ export const StudentView: React.FC = () => {
   const handleCalibrationComplete = (data: CalibrationData) => {
     setCalibration(data);
     setSessionStartTime(Date.now());
-  };
-
-  const handleEyeExerciseComplete = (xpGained: number) => {
-    setEyeExerciseTriggered(false);
-    if (xpGained > 0) {
-      setUserStats(loadUserStats());
-      setBadges(getBadgesStatus());
-    }
   };
 
   const handleEndSession = () => {
@@ -152,6 +136,17 @@ export const StudentView: React.FC = () => {
       fidgetFlagsCount: fidgetCount,
       completedEyeExercises: Math.floor(totalSessionMinutes / 20),
       streakAdded: true,
+      // Data Analytics fields
+      averageShoulderTilt: sessionAngleAccumulator.tickCount > 0
+        ? Math.round((sessionAngleAccumulator.shoulderTiltSum / sessionAngleAccumulator.tickCount) * 10) / 10
+        : 0,
+      averageNeckAngle: sessionAngleAccumulator.tickCount > 0
+        ? Math.round((sessionAngleAccumulator.neckAngleSum / sessionAngleAccumulator.tickCount) * 10) / 10
+        : 0,
+      averageSlouchAngle: sessionAngleAccumulator.tickCount > 0
+        ? Math.round((sessionAngleAccumulator.slouchAngleSum / sessionAngleAccumulator.tickCount) * 10) / 10
+        : 0,
+      fatigueFlags: sessionFatigueFlags,
     };
     saveSessionRecord(sessionRecord);
 
@@ -217,7 +212,6 @@ export const StudentView: React.FC = () => {
         </div>
       )}
 
-      {eyeExerciseTriggered && <EyeExercise isBlinking={metrics?.isBlinking || false} onComplete={handleEyeExerciseComplete} />}
       {alertLevel === 'BREAK_TIME' && (
         <div className="fixed inset-0 z-50 bg-gray-900/95 backdrop-blur-3xl flex flex-col items-center justify-center text-white text-center p-8">
           <div className="w-24 h-24 bg-green-500/20 rounded-full flex items-center justify-center text-green-400 mb-6 animate-pulse">
