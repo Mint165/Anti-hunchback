@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Eye, Bell, Shield, ShieldAlert, Heart, AlertCircle } from 'lucide-react';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar } from 'recharts';
 import { getSessionRecords, saveSessionRecord } from '../services/db';
 import type { SessionRecord } from '../services/db';
 import { subscribeToStudentSync } from '../services/parentSync';
@@ -203,6 +203,20 @@ export const ParentView: React.FC = () => {
 
   const trendData = getTrendData();
 
+  // 3. Concentration density chart data
+  const getConcentrationData = () => {
+    return sessions.map(s => {
+      // Simulate concentration based on fatigue flags (each flag reduces concentration by ~15%)
+      const penalty = (s.fatigueFlags || s.fidgetFlagsCount || 0) * 15;
+      const conc = Math.max(30, 100 - penalty); // Min 30%
+      return {
+        name: s.date || 'Học',
+        concentration: conc,
+      };
+    });
+  };
+  const concData = getConcentrationData();
+
   // Smart Health prediction based on real session data
   const getHealthPrediction = () => {
     if (sessions.length === 0) {
@@ -300,49 +314,58 @@ export const ParentView: React.FC = () => {
         <div className="flex flex-col gap-6">
           
           {/* Real-time Status Card */}
-          <div className="premium-card p-6 flex flex-col items-center text-center">
-            <h3 className="widget-label mb-6">Trạng thái ngồi học trực tiếp</h3>
+          <div className="premium-card p-6 flex flex-col items-center text-center relative overflow-hidden">
+            {/* Background glowing effect */}
+            <div className="absolute -top-20 -right-20 w-40 h-40 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-blob"></div>
+            <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-green-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-blob animation-delay-2000"></div>
+            
+            <h3 className="widget-label mb-8 relative z-10">Trạng thái ngồi học trực tiếp</h3>
             
             {/* Pulsing indicator */}
-            <div className="relative mb-6">
+            <div className="relative mb-8 flex justify-center w-full">
+              <div className="absolute inset-0 flex items-center justify-center">
+                 <div className="w-32 h-32 rounded-full animate-ping opacity-20" style={{
+                    backgroundColor: studentStatus === 'good' ? '#4EAD63' : studentStatus === 'warning' ? '#FFAA2C' : studentStatus === 'danger' ? '#FF5E5E' : '#9CA3AF',
+                 }}></div>
+              </div>
               <div 
-                className={`w-28 h-28 rounded-full flex items-center justify-center border-4 border-white shadow-lg transition-all duration-500`}
+                className={`relative z-10 w-32 h-32 rounded-full flex items-center justify-center border-4 border-white shadow-xl transition-all duration-700`}
                 style={{
-                  backgroundColor: 
-                    studentStatus === 'good' ? '#4EAD63' :
-                    studentStatus === 'warning' ? '#FFAA2C' :
-                    studentStatus === 'danger' ? '#FF5E5E' : '#9CA3AF'
+                  background: studentStatus === 'good' ? 'linear-gradient(135deg, #4ade80, #00d285)' :
+                              studentStatus === 'warning' ? 'linear-gradient(135deg, #fbbd23, #f59e0b)' :
+                              studentStatus === 'danger' ? 'linear-gradient(135deg, #f87171, #ef4444)' : 
+                              'linear-gradient(135deg, #9ca3af, #6b7280)'
                 }}
               >
-                {studentStatus === 'good' && <Shield size={40} className="text-white animate-pulse" />}
-                {studentStatus === 'warning' && <AlertCircle size={40} className="text-white" />}
-                {studentStatus === 'danger' && <ShieldAlert size={40} className="text-white animate-bounce" />}
-                {studentStatus === 'offline' && <Eye size={40} className="text-white" />}
+                {studentStatus === 'good' && <Shield size={48} className="text-white drop-shadow-md animate-pulse" />}
+                {studentStatus === 'warning' && <AlertCircle size={48} className="text-white drop-shadow-md" />}
+                {studentStatus === 'danger' && <ShieldAlert size={48} className="text-white drop-shadow-md animate-bounce" />}
+                {studentStatus === 'offline' && <Eye size={48} className="text-white drop-shadow-md" />}
               </div>
               
               {/* Online pulse dot */}
               {studentActive && (
-                <span className="absolute top-1 right-1 flex h-4 w-4">
+                <span className="absolute top-2 right-[25%] flex h-5 w-5">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-4 w-4 bg-green-500 border-2 border-white"></span>
+                  <span className="relative inline-flex rounded-full h-5 w-5 bg-green-500 border-2 border-white shadow-sm"></span>
                 </span>
               )}
             </div>
 
-            <h4 className="text-lg font-bold text-gray-800">
+            <h4 className="text-xl font-bold text-gray-800 relative z-10">
               {studentStatus === 'good' && 'Con đang ngồi học đúng chuẩn'}
               {studentStatus === 'warning' && 'Con ngồi hơi sai tư thế'}
               {studentStatus === 'danger' && 'Tư thế sai nghiêm trọng!'}
               {studentStatus === 'offline' && 'Thiết bị học sinh ngoại tuyến'}
             </h4>
             
-            <p className="text-xs text-gray-400 mt-1 mb-4">
-              {studentActive ? 'Đang truyền dữ liệu (Bảo mật: Không truyền camera)' : 'Chờ thiết bị học sinh kết nối...'}
+            <p className="text-xs text-gray-400 mt-1 mb-4 font-medium">
+              {studentActive ? 'Trạng thái được đồng bộ thời gian thực' : 'Chờ thiết bị học sinh kết nối...'}
             </p>
 
             {/* Live Metrics details */}
             {studentActive && (
-              <div className="w-full grid grid-cols-2 gap-2 mt-4 text-left border-t border-gray-100 pt-4">
+              <div className="w-full grid grid-cols-2 gap-2 mt-4 text-left border-t border-gray-100 pt-4 relative z-10">
                 <div className="p-3 bg-gray-50 rounded-xl">
                   <span className="text-[10px] text-gray-400 block uppercase font-bold">Điểm PHI</span>
                   <span className="text-lg font-black text-gray-700">{studentDetails.healthScore}</span>
@@ -361,6 +384,12 @@ export const ParentView: React.FC = () => {
                 </div>
               </div>
             )}
+            
+            {/* Privacy Guarantee Badge */}
+            <div className="mt-5 flex items-start gap-2.5 bg-green-50 text-green-800 p-3.5 rounded-xl border border-green-100 text-xs text-left leading-relaxed relative z-10 w-full shadow-sm">
+              <Shield size={20} className="flex-shrink-0 text-green-500 mt-0.5" />
+              <span><strong>Cam kết bảo mật:</strong> Hệ thống sử dụng AI xử lý tại biên trên máy học sinh. Tuyệt đối không truyền tải hình ảnh/video thực tế để bảo vệ quyền riêng tư.</span>
+            </div>
           </div>
 
           {/* Health Analysis Prediction */}
@@ -394,10 +423,10 @@ export const ParentView: React.FC = () => {
         <div className="lg:col-span-2 flex flex-col gap-6">
           
           {/* Grid of charts */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             
             {/* Posture Pie Distribution (Recharts) */}
-            <div className="premium-card p-5 md:col-span-1 flex flex-col justify-between">
+            <div className="premium-card p-5 flex flex-col justify-between">
               <h3 className="widget-label mb-4">Tỷ lệ tư thế ngồi</h3>
               <div className="h-44 flex items-center justify-center relative">
                 <ResponsiveContainer width="100%" height="100%">
@@ -406,8 +435,8 @@ export const ParentView: React.FC = () => {
                       data={pieData}
                       cx="50%"
                       cy="50%"
-                      innerRadius={45}
-                      outerRadius={65}
+                      innerRadius={50}
+                      outerRadius={75}
                       paddingAngle={5}
                       dataKey="value"
                     >
@@ -415,45 +444,68 @@ export const ParentView: React.FC = () => {
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(value) => `${value}%`} />
+                    <Tooltip formatter={(value) => `${value}%`} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 8px 16px rgba(0,0,0,0.1)' }} />
                   </PieChart>
                 </ResponsiveContainer>
                 {/* Center text overlay */}
-                <div className="absolute text-center">
+                <div className="absolute text-center mt-1">
                   <span className="text-[10px] text-gray-400 font-bold block">TỐT NHẤT</span>
-                  <span className="text-lg font-black text-green-600">
+                  <span className="text-2xl font-black text-green-600">
                     {pieData[0] ? `${pieData[0].value}%` : '80%'}
                   </span>
                 </div>
               </div>
-              <div className="flex justify-center gap-6 mt-2 text-xs">
-                <span className="flex items-center gap-1.5 text-gray-500">
-                  <span className="w-2.5 h-2.5 rounded-full bg-green-500" /> Ngồi đúng
+              <div className="flex justify-center gap-6 mt-4 text-xs font-semibold">
+                <span className="flex items-center gap-2 text-gray-600">
+                  <span className="w-3 h-3 rounded-full bg-green-500 shadow-sm" /> Ngồi đúng
                 </span>
-                <span className="flex items-center gap-1.5 text-gray-500">
-                  <span className="w-2.5 h-2.5 rounded-full bg-yellow-400" /> Ngồi lệch
+                <span className="flex items-center gap-2 text-gray-600">
+                  <span className="w-3 h-3 rounded-full bg-yellow-400 shadow-sm" /> Ngồi lệch
                 </span>
               </div>
             </div>
 
-            {/* PHI Score & Time Trend over the week (Recharts Area) */}
-            <div className="premium-card p-5 md:col-span-2">
+            {/* PHI Score & Time Trend (Recharts Area) */}
+            <div className="premium-card p-5">
               <h3 className="widget-label mb-4">Xu hướng điểm sức khỏe PHI</h3>
-              <div className="h-48">
+              <div className="h-56 mt-2">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={trendData}>
                     <defs>
                       <linearGradient id="colorPHI" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#7E5BEF" stopOpacity={0.2}/>
+                        <stop offset="5%" stopColor="#7E5BEF" stopOpacity={0.25}/>
                         <stop offset="95%" stopColor="#7E5BEF" stopOpacity={0.0}/>
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                    <XAxis dataKey="name" stroke="#9CA3AF" fontSize={11} tickLine={false} />
-                    <YAxis domain={[50, 100]} stroke="#9CA3AF" fontSize={11} tickLine={false} />
-                    <Tooltip />
-                    <Area type="monotone" dataKey="PHI" stroke="#7E5BEF" strokeWidth={2.5} fillOpacity={1} fill="url(#colorPHI)" />
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F3F4F6" />
+                    <XAxis dataKey="name" stroke="#9CA3AF" fontSize={11} tickLine={false} axisLine={false} dy={10} />
+                    <YAxis domain={[50, 100]} stroke="#9CA3AF" fontSize={11} tickLine={false} axisLine={false} dx={-10} />
+                    <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 8px 16px rgba(0,0,0,0.1)' }} />
+                    <Area type="monotone" dataKey="PHI" stroke="#7E5BEF" strokeWidth={3} fillOpacity={1} fill="url(#colorPHI)" />
                   </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Concentration Density (Bar Chart) */}
+            <div className="premium-card p-5 lg:col-span-2">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="widget-label">Mật độ tập trung trong ngày</h3>
+                <span className="text-[10px] text-blue-600 bg-blue-50 px-3 py-1 rounded-full font-bold uppercase">Phân tích bằng AI</span>
+              </div>
+              <div className="h-52">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={concData} barSize={32}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F3F4F6" />
+                    <XAxis dataKey="name" stroke="#9CA3AF" fontSize={11} tickLine={false} axisLine={false} dy={10} />
+                    <YAxis domain={[0, 100]} stroke="#9CA3AF" fontSize={11} tickLine={false} axisLine={false} dx={-10} />
+                    <Tooltip 
+                      cursor={{ fill: '#F3F4F6', opacity: 0.5 }}
+                      contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 8px 16px rgba(0,0,0,0.1)' }}
+                      formatter={(value) => [`${value}%`, 'Mức độ tập trung']}
+                    />
+                    <Bar dataKey="concentration" fill="#3b82f6" radius={[6, 6, 0, 0]} />
+                  </BarChart>
                 </ResponsiveContainer>
               </div>
             </div>
@@ -494,25 +546,65 @@ export const ParentView: React.FC = () => {
               )}
             </div>
 
-            {/* Smart Notification Prompt */}
-            {fatigueAlerts.length > 0 && (
-              <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200/50 rounded-2xl flex items-start gap-3">
-                <AlertCircle size={20} className="text-yellow-600 flex-shrink-0 mt-0.5" />
-                <div>
-                  <h4 className="text-xs font-bold text-yellow-800">Khuyên nhủ thông minh dành cho cha mẹ:</h4>
-                  <p className="text-xs text-yellow-700 mt-1 leading-relaxed">
-                    Bé có dấu hiệu mệt mỏi và giảm tập trung sau thời gian dài học. Phụ huynh nên kiểm tra lại ánh sáng phòng học, nhắc nhở bé nghỉ ngơi và uống một ly nước nhé!
-                  </p>
-                </div>
-              </div>
-            )}
-
+            {/* Hidden fallback / previous prompt - removed in favor of mock push notification */}
           </div>
 
         </div>
 
       </div>
 
+      {/* Push Notification Simulation */}
+      {fatigueAlerts.length > 0 && (
+        <div className="fixed bottom-8 right-8 z-[100]" style={{ animation: 'slideUp 0.5s ease-out forwards' }}>
+          <div className="bg-white rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.2)] border border-gray-100 p-4 max-w-sm flex gap-4 overflow-hidden relative cursor-pointer hover:scale-105 transition-transform" onClick={() => setFatigueAlerts(prev => prev.slice(1))}>
+            <div className="absolute top-0 left-0 w-1.5 h-full bg-gradient-to-b from-yellow-400 to-orange-500"></div>
+            <div className="w-12 h-12 rounded-full bg-yellow-50 flex items-center justify-center flex-shrink-0 border border-yellow-100">
+               <Bell className="text-yellow-600" size={24} style={{ animation: 'swing 2s infinite ease-in-out' }} />
+            </div>
+            <div>
+               <div className="flex justify-between items-center mb-1.5">
+                 <h4 className="text-sm font-bold text-gray-800">Cảnh báo thông minh</h4>
+                 <span className="text-[10px] text-gray-400 font-semibold bg-gray-50 px-2 py-0.5 rounded-full">Vừa xong</span>
+               </div>
+               <p className="text-xs text-gray-600 leading-relaxed font-medium">
+                 {fatigueAlerts[0]} <span className="text-orange-600 font-semibold">Phụ huynh nên nhắc bé nghỉ ngơi hoặc điều chỉnh ánh sáng nhé!</span>
+               </p>
+            </div>
+            {/* Close button hint */}
+            <button className="absolute top-2 right-2 text-gray-300 hover:text-gray-500" onClick={(e) => { e.stopPropagation(); setFatigueAlerts(prev => prev.slice(1)); }}>
+               <span className="sr-only">Close</span>
+               &times;
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Injecting simple animations for Parent Dashboard */}
+      <style>{`
+        @keyframes slideUp {
+          from { transform: translateY(100px); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
+        }
+        @keyframes swing {
+          20% { transform: rotate(15deg); }
+          40% { transform: rotate(-10deg); }
+          60% { transform: rotate(5deg); }
+          80% { transform: rotate(-5deg); }
+          100% { transform: rotate(0deg); }
+        }
+        @keyframes blob {
+          0% { transform: translate(0px, 0px) scale(1); }
+          33% { transform: translate(30px, -50px) scale(1.1); }
+          66% { transform: translate(-20px, 20px) scale(0.9); }
+          100% { transform: translate(0px, 0px) scale(1); }
+        }
+        .animate-blob {
+          animation: blob 7s infinite;
+        }
+        .animation-delay-2000 {
+          animation-delay: 2s;
+        }
+      `}</style>
     </div>
   );
 };
