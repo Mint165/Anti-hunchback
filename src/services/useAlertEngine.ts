@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { PostureState } from './postureAI';
+import type { PostureState } from './postureAI';
 
 export type AlertLevel = 'NONE' | 'MILD_WARNING' | 'STRONG_WARNING' | 'BREAK_TIME';
 

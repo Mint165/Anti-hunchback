@@ -1,17 +1,18 @@
 // Layout Component - Premium Sidebar Design
 
 import React from 'react';
-import { LayoutDashboard, Shield, Settings as SettingsIcon } from 'lucide-react';
+import { LayoutDashboard, Shield, Settings as SettingsIcon, PawPrint } from 'lucide-react';
 
 interface LayoutProps {
   children: React.ReactNode;
-  activeTab: 'student' | 'parent' | 'settings';
-  setActiveTab: (tab: 'student' | 'parent' | 'settings') => void;
+  activeTab: 'student' | 'parent' | 'pet' | 'settings';
+  setActiveTab: (tab: 'student' | 'parent' | 'pet' | 'settings') => void;
 }
 
 export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) => {
   const menuItems = [
     { id: 'student', name: 'Dashboard', icon: LayoutDashboard },
+    { id: 'pet', name: 'Oliver Pet', icon: PawPrint },
     { id: 'parent', name: 'Parent Sync', icon: Shield },
     { id: 'settings', name: 'Settings', icon: SettingsIcon },
   ] as const;

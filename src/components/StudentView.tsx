@@ -2,13 +2,11 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { AlertTriangle, RefreshCw, Trophy, BookOpen, Volume2, VolumeX, CameraOff, Play, Info } from 'lucide-react';
-import { useMediaPipe } from '../hooks/useMediaPipe';
-import { analyzePosture, calculateHealthScore } from '../services/postureAI';
-import type { CalibrationData, PostureMetrics } from '../services/postureAI';
-import { loadCalibration, loadSettings, loadUserStats, saveSessionRecord, addXP, getBadgesStatus } from '../services/db';
+import type { CalibrationData } from '../services/postureAI';
+import { loadSettings, loadUserStats, saveSessionRecord, addXP, getBadgesStatus } from '../services/db';
 import type { Badge } from '../services/db';
 import { broadcastStudentStatus, broadcastFatigueAlert } from '../services/parentSync';
-import { useAlertEngine } from '../services/useAlertEngine';
+import { usePostureContext } from '../contexts/PostureContext';
 import OliverPet from './OliverPet';
 import type { PetState } from './OliverPet';
 import Calibration from './Calibration';
@@ -16,26 +14,18 @@ import EyeExercise from './EyeExercise';
 
 export const StudentView: React.FC = () => {
   const {
-    poseLandmarks,
-    faceLandmarks,
-    isLoading,
-    startCamera,
-    stopCamera,
-    isModelReady,
-  } = useMediaPipe();
+    metrics, healthScore, alertLevel, hasStarted, startSession, resetBreak,
+    isModelReady, isLoading, calibration, setCalibration, 
+    poseLandmarks, faceLandmarks
+  } = usePostureContext();
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const [calibration, setCalibration] = useState<CalibrationData | null>(null);
-  const [metrics, setMetrics] = useState<PostureMetrics | null>(null);
-  const [healthScore, setHealthScore] = useState<number>(100);
   const [showCamera, setShowCamera] = useState<boolean>(true);
   const [isAudioEnabled, setIsAudioEnabled] = useState<boolean>(true);
 
   const [sessionStartTime, setSessionStartTime] = useState<number>(Date.now());
   const [totalSessionMinutes, setTotalSessionMinutes] = useState<number>(0);
   const [eyeExerciseTriggered, setEyeExerciseTriggered] = useState<boolean>(false);
-
-  const { alertLevel, startSession, resetBreak, hasStarted } = useAlertEngine(metrics?.state || 'GOOD_POSTURE');
 
   const [warningsCount, setWarningsCount] = useState<number>(0);
   const [blinkCount, setBlinkCount] = useState<number>(0);
@@ -46,21 +36,13 @@ export const StudentView: React.FC = () => {
   const [userStats, setUserStats] = useState(loadUserStats());
   const [badges, setBadges] = useState<Badge[]>(getBadgesStatus());
 
-  const movementHistoryRef = useRef<{ x: number; y: number }[]>([]);
-
+  // Attach global video stream to local video element for preview
   useEffect(() => {
-    const savedCalibration = loadCalibration();
-    if (savedCalibration.baseEyeDistance !== 80 || localStorage.getItem('oliver_calibration_data')) {
-      setCalibration(savedCalibration);
+    const globalVideo = document.getElementById('global-webcam') as HTMLVideoElement;
+    if (globalVideo && videoRef.current) {
+       videoRef.current.srcObject = globalVideo.srcObject;
     }
-  }, []);
-
-  useEffect(() => {
-    if (isModelReady && videoRef.current) {
-      startCamera(videoRef.current);
-    }
-    return () => stopCamera();
-  }, [isModelReady, startCamera, stopCamera]);
+  }); // Run after every render to ensure videoRef gets the stream when it appears
 
   useEffect(() => {
     if (!hasStarted) return;
@@ -87,60 +69,33 @@ export const StudentView: React.FC = () => {
   }, [alertLevel, isAudioEnabled]);
 
   useEffect(() => {
-    if (!isModelReady || !calibration) return;
-
-    if (poseLandmarks && poseLandmarks.length > 12) {
-      const leftShoulder = poseLandmarks[11];
-      const rightShoulder = poseLandmarks[12];
-      const shoulderMid = {
-        x: (leftShoulder.x + rightShoulder.x) / 2,
-        y: (leftShoulder.y + rightShoulder.y) / 2,
-      };
-      movementHistoryRef.current.push(shoulderMid);
-      if (movementHistoryRef.current.length > 100) {
-        movementHistoryRef.current.shift();
-      }
-    }
-
-    const calculatedMetrics = analyzePosture(
-      poseLandmarks,
-      faceLandmarks,
-      calibration,
-      640,
-      480,
-      movementHistoryRef.current
-    );
-
-    setMetrics(calculatedMetrics);
-
-    const calculatedScore = calculateHealthScore(calculatedMetrics);
-    setHealthScore(calculatedScore);
+    if (!isModelReady || !calibration || !metrics) return;
 
     setTotalTicks(t => t + 1);
-    if (calculatedScore >= 80) {
+    if (healthScore >= 80) {
       setGoodPostureCount(g => g + 1);
     }
 
-    if (calculatedMetrics.isBlinking) {
+    if (metrics.isBlinking) {
       setBlinkCount(b => b + 1);
     }
 
-    if (calculatedMetrics.fidgetFactor > 40 && totalTicks > 0 && totalTicks % 300 === 0) {
+    if (metrics.fidgetFactor > 40 && totalTicks > 0 && totalTicks % 300 === 0) {
       setFidgetCount(f => f + 1);
       broadcastFatigueAlert("Bé bắt đầu nhấp nhổm nhiều, có dấu hiệu mất tập trung hoặc mỏi cơ.");
     }
 
-    const overallStatus = calculatedScore >= 85 ? 'good' : calculatedScore >= 70 ? 'warning' : 'danger';
+    const overallStatus = healthScore >= 85 ? 'good' : healthScore >= 70 ? 'warning' : 'danger';
     broadcastStudentStatus(overallStatus, {
-      eyeDistanceCm: calculatedMetrics.eyeDistanceCm,
-      neckAngle: calculatedMetrics.neckAngle,
-      shoulderTilt: calculatedMetrics.shoulderTilt,
-      slouchAngle: calculatedMetrics.slouchAngle,
-      healthScore: calculatedScore,
-      isWritingMode: calculatedMetrics.isWritingMode,
+      eyeDistanceCm: metrics.eyeDistanceCm,
+      neckAngle: metrics.neckAngle,
+      shoulderTilt: metrics.shoulderTilt,
+      slouchAngle: metrics.slouchAngle,
+      healthScore: healthScore,
+      isWritingMode: metrics.isWritingMode,
     });
 
-  }, [poseLandmarks, faceLandmarks, isModelReady, calibration, isAudioEnabled, totalTicks]);
+  }, [metrics, healthScore, isModelReady, calibration, totalTicks]);
 
   const playBeepSound = () => {
     try {
@@ -155,26 +110,6 @@ export const StudentView: React.FC = () => {
       gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.5);
       osc.start();
       osc.stop(ctx.currentTime + 0.5);
-    } catch {}
-  };
-
-  const playStretchSound = () => {
-    try {
-      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const playFreq = (freq: number, start: number) => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.frequency.setValueAtTime(freq, ctx.currentTime + start);
-        gain.gain.setValueAtTime(0.15, ctx.currentTime + start);
-        gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + start + 0.3);
-        osc.start(ctx.currentTime + start);
-        osc.stop(ctx.currentTime + start + 0.3);
-      };
-      playFreq(440, 0);
-      playFreq(554, 0.15);
-      playFreq(659, 0.3);
     } catch {}
   };
 

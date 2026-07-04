@@ -2,15 +2,16 @@
 
 import React from 'react';
 
-export type PetState = 'good' | 'slouch' | 'close' | 'writing' | 'tired' | 'success';
+export type PetState = 'good' | 'slouch' | 'close' | 'writing' | 'tired' | 'success' | 'sleep';
 
 interface OliverPetProps {
   state: PetState;
   customText?: string;
   size?: number;
+  petLevel?: number;
 }
 
-export const OliverPet: React.FC<OliverPetProps> = ({ state, customText, size = 200 }) => {
+export const OliverPet: React.FC<OliverPetProps> = ({ state, customText, size = 200, petLevel = 1 }) => {
   // Determine dialogue text based on state
   const getDialogueText = () => {
     if (customText) return customText;
@@ -24,9 +25,11 @@ export const OliverPet: React.FC<OliverPetProps> = ({ state, customText, size = 
       case 'writing':
         return 'Chủ nhân đang rất tập trung viết bài, giữ im lặng nào...';
       case 'tired':
-        return 'Mắt mỏi quá rồi, chớp mắt nhiều hơn hoặc nhắm mắt thư giãn đi!';
+        return 'Tớ mệt quá rồi... Cùng sửa tư thế nhé!';
       case 'success':
         return 'Tuyệt cú mèo! Lưng thẳng tắp, mắt sáng ngời!';
+      case 'sleep':
+        return 'Zzz... Nhấn Bắt đầu để gọi tớ dậy nhé!';
       default:
         return 'Tớ đồng hành cùng bạn học tập!';
     }
@@ -38,9 +41,10 @@ export const OliverPet: React.FC<OliverPetProps> = ({ state, customText, size = 
       case 'good': return '#4EAD63';
       case 'success': return '#7E5BEF';
       case 'writing': return '#3B82F6';
-      case 'tired':
+      case 'tired': return '#FF5E5E';
       case 'slouch': return '#FFAA2C';
       case 'close': return '#FF5E5E';
+      case 'sleep': return '#9CA3AF';
       default: return '#4EAD63';
     }
   };
@@ -103,6 +107,15 @@ export const OliverPet: React.FC<OliverPetProps> = ({ state, customText, size = 
           viewBox="0 0 100 100" 
           className={`transition-all duration-500 ${state === 'slouch' ? 'translate-y-2' : ''} ${state === 'close' ? 'scale-110' : ''}`}
         >
+          {/* Sparkles for Level 5 */}
+          {petLevel >= 5 && state !== 'sleep' && (
+            <g className="animate-pulse opacity-80">
+              <polygon points="15,20 17,25 22,27 17,29 15,34 13,29 8,27 13,25" fill="#FBBF24" />
+              <polygon points="85,30 86,33 89,34 86,35 85,38 84,35 81,34 84,33" fill="#FBBF24" />
+              <polygon points="20,70 21,72 23,73 21,74 20,76 19,74 17,73 19,72" fill="#FBBF24" />
+            </g>
+          )}
+
           {/* Shadow */}
           <ellipse cx="50" cy="88" rx="25" ry="5" fill="#E5E7EB" />
 
@@ -115,10 +128,20 @@ export const OliverPet: React.FC<OliverPetProps> = ({ state, customText, size = 
           <circle cx="72" cy="24" r="8" fill="#1F2937" />
           <circle cx="72" cy="24" r="4" fill="#374151" />
 
+          {/* Royal Cape (Level 5) */}
+          {petLevel >= 5 && (
+            <path d="M 25 50 Q 10 90 20 85 Q 50 95 80 85 Q 90 90 75 50 Z" fill="#EF4444" opacity="0.9" />
+          )}
+
           {/* Body/Torso */}
           <ellipse cx="50" cy="68" rx="22" ry="18" fill="#FFFFFF" stroke="#1F2937" strokeWidth="2" />
           {/* Belly patch */}
           <ellipse cx="50" cy="71" rx="15" ry="11" fill="#F3F4F6" />
+
+          {/* Guardian Armor (Level 4+) */}
+          {petLevel >= 4 && (
+            <path d="M 36 60 Q 50 75 64 60 Q 50 50 36 60" fill="#9CA3AF" stroke="#6B7280" strokeWidth="1" />
+          )}
 
           {/* Left Arm / Shoulder */}
           <path 
@@ -156,6 +179,11 @@ export const OliverPet: React.FC<OliverPetProps> = ({ state, customText, size = 
           <ellipse cx="36" cy="85" rx="6" ry="5" fill="#1F2937" />
           <ellipse cx="64" cy="85" rx="6" ry="5" fill="#1F2937" />
 
+          {/* Student Bag (Level 2+) */}
+          {petLevel >= 2 && petLevel < 5 && (
+            <rect x="70" y="55" width="12" height="16" rx="3" fill="#3B82F6" stroke="#2563EB" strokeWidth="1" transform="rotate(-15 70 55)" />
+          )}
+
           {/* Head base */}
           <ellipse 
             cx="50" 
@@ -187,9 +215,18 @@ export const OliverPet: React.FC<OliverPetProps> = ({ state, customText, size = 
             {/* Right Eye Patch */}
             <ellipse cx="60" cy="36" rx="6" ry="8" fill="#1F2937" style={{ transform: 'rotate(10deg)', transformOrigin: '60px 36px' }} />
 
+            {/* Student Glasses (Level 2+) */}
+            {petLevel >= 2 && (
+              <g stroke="#FBBF24" strokeWidth="1.5" fill="none">
+                <circle cx="40" cy="36" r="8" />
+                <circle cx="60" cy="36" r="8" />
+                <path d="M 48 36 L 52 36" />
+              </g>
+            )}
+
             {/* Eyes */}
-            {state === 'close' ? (
-              // Crying / squinting eyes
+            {state === 'close' || state === 'sleep' ? (
+              // Crying / squinting / closed eyes
               <>
                 <path d="M 37 36 L 43 36 M 38 34 L 42 38" stroke="#FFFFFF" strokeWidth="1.5" strokeLinecap="round" />
                 <path d="M 57 36 L 63 36 M 58 38 L 62 34" stroke="#FFFFFF" strokeWidth="1.5" strokeLinecap="round" />
@@ -199,6 +236,12 @@ export const OliverPet: React.FC<OliverPetProps> = ({ state, customText, size = 
               <>
                 <path d="M 37 38 Q 40 34 43 37" fill="none" stroke="#FFFFFF" strokeWidth="2.0" strokeLinecap="round" />
                 <path d="M 57 37 Q 60 34 63 38" fill="none" stroke="#FFFFFF" strokeWidth="2.0" strokeLinecap="round" />
+                {state === 'tired' && (
+                   <>
+                     <circle cx="35" cy="40" r="1.5" fill="#60A5FA" />
+                     <circle cx="65" cy="40" r="1.5" fill="#60A5FA" />
+                   </>
+                )}
               </>
             ) : (
               // Normal happy / sparkling eyes
@@ -228,11 +271,42 @@ export const OliverPet: React.FC<OliverPetProps> = ({ state, customText, size = 
             {state === 'good' || state === 'success' || state === 'writing' ? (
               // Happy mouth
               <path d="M 47 47 Q 50 50 53 47" fill="none" stroke="#1F2937" strokeWidth="1.5" strokeLinecap="round" />
+            ) : state === 'sleep' ? (
+              // Sleep mouth
+              <circle cx="50" cy="48" r="1.5" fill="#1F2937" />
             ) : (
               // Sad / flat mouth
               <path d="M 47 49 Q 50 46 53 49" fill="none" stroke="#1F2937" strokeWidth="1.5" strokeLinecap="round" />
             )}
           </g>
+
+          {/* Scholar Hat (Level 3) */}
+          {petLevel === 3 && (
+            <g transform="translate(35, 10)">
+              <polygon points="0,15 15,5 30,15 15,25" fill="#1F2937" />
+              <rect x="10" y="15" width="10" height="8" fill="#1F2937" />
+              <path d="M 28 15 L 32 22" stroke="#FBBF24" strokeWidth="1.5" />
+            </g>
+          )}
+
+          {/* Silver Crown (Level 4) */}
+          {petLevel === 4 && (
+            <g transform="translate(38, 8) scale(0.6)">
+              <polygon points="10,30 20,10 30,25 40,10 50,30" fill="#E5E7EB" stroke="#9CA3AF" strokeWidth="3" strokeLinejoin="round" />
+            </g>
+          )}
+
+          {/* Gold Emperor Crown (Level 5) */}
+          {petLevel >= 5 && (
+            <g transform="translate(30, 2) scale(0.8)">
+              <polygon points="10,30 20,5 30,20 40,5 50,30" fill="#FBBF24" stroke="#D97706" strokeWidth="3" strokeLinejoin="round" />
+              <circle cx="10" cy="30" r="3" fill="#EF4444" />
+              <circle cx="20" cy="5" r="4" fill="#3B82F6" />
+              <circle cx="30" cy="20" r="3" fill="#10B981" />
+              <circle cx="40" cy="5" r="4" fill="#3B82F6" />
+              <circle cx="50" cy="30" r="3" fill="#EF4444" />
+            </g>
+          )}
 
           {/* Success Crown */}
           {state === 'success' && (
@@ -260,8 +334,9 @@ export const OliverPet: React.FC<OliverPetProps> = ({ state, customText, size = 
         {state === 'slouch' && 'Cảnh báo Tư thế'}
         {state === 'close' && 'Nhìn quá sát'}
         {state === 'writing' && 'Viết bài'}
-        {state === 'tired' && 'Cần nhấp nháy mắt'}
+        {state === 'tired' && 'Mệt mỏi'}
         {state === 'success' && 'Hoàn thành'}
+        {state === 'sleep' && 'Nghỉ ngơi'}
       </div>
     </div>
   );

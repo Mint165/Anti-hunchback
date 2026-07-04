@@ -37,6 +37,9 @@ export interface UserStats {
   lastSessionDate: string | null;
   totalStudyTime: number; // minutes
   badges: string[]; // unlocked badge ids
+  petXp: number;
+  petLevel: number;
+  petGoodPostureStreak: number; // in seconds
 }
 
 export interface Badge {
@@ -179,6 +182,8 @@ export async function syncFromSupabase(): Promise<boolean> {
     // 3. Fetch Stats
     const { data: statsData } = await supabase.from('user_stats').select('*').eq('id', 'default').single();
     if (statsData) {
+      const localStatsRaw = localStorage.getItem(STORAGE_KEYS.STATS);
+      const localStats = localStatsRaw ? JSON.parse(localStatsRaw) : null;
       const stats: UserStats = {
         xp: statsData.xp,
         level: statsData.level,
@@ -186,6 +191,9 @@ export async function syncFromSupabase(): Promise<boolean> {
         lastSessionDate: statsData.last_session_date,
         totalStudyTime: statsData.total_study_time,
         badges: statsData.badges || [],
+        petXp: localStats?.petXp || 0,
+        petLevel: localStats?.petLevel || 1,
+        petGoodPostureStreak: localStats?.petGoodPostureStreak || 0,
       };
       localStorage.setItem(STORAGE_KEYS.STATS, JSON.stringify(stats));
     }
@@ -241,7 +249,7 @@ export function loadSettings(): AppSettings {
 
 // --- Stats & Gamification ---
 export function loadUserStats(): UserStats {
-  const stats = localStorage.getItem(STORAGE_KEYS.STATS);
+  const statsStr = localStorage.getItem(STORAGE_KEYS.STATS);
   const defaultStats: UserStats = {
     xp: 0,
     level: 1,
@@ -249,8 +257,13 @@ export function loadUserStats(): UserStats {
     lastSessionDate: null,
     totalStudyTime: 0,
     badges: [],
+    petXp: 0,
+    petLevel: 1,
+    petGoodPostureStreak: 0,
   };
-  return stats ? JSON.parse(stats) : defaultStats;
+  if (!statsStr) return defaultStats;
+  const stats = JSON.parse(statsStr);
+  return { ...defaultStats, ...stats };
 }
 
 export function saveUserStats(stats: UserStats): void {
@@ -273,6 +286,26 @@ export function addXP(amount: number): { stats: UserStats; leveledUp: boolean } 
   
   saveUserStats(stats);
   return { stats, leveledUp: stats.level > oldLevel };
+}
+
+// Pet Level calculations
+export function calculatePetLevel(xp: number): number {
+  if (xp >= 5000) return 5;
+  if (xp >= 3000) return 4;
+  if (xp >= 1500) return 3;
+  if (xp >= 500) return 2;
+  return 1;
+}
+
+export function addPetXP(amount: number): { stats: UserStats; leveledUp: boolean } {
+  const stats = loadUserStats();
+  const oldLevel = stats.petLevel;
+  
+  stats.petXp += amount;
+  stats.petLevel = calculatePetLevel(stats.petXp);
+  
+  saveUserStats(stats);
+  return { stats, leveledUp: stats.petLevel > oldLevel };
 }
 
 // Unlock a badge
