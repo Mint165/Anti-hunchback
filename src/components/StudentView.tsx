@@ -26,11 +26,11 @@ export const StudentView: React.FC = () => {
   const [sessionStartTime, setSessionStartTime] = useState<number>(Date.now());
   const [totalSessionMinutes, setTotalSessionMinutes] = useState<number>(0);
 
-  const [warningsCount, setWarningsCount] = useState<number>(0);
-  const [blinkCount, setBlinkCount] = useState<number>(0);
-  const [fidgetCount, setFidgetCount] = useState<number>(0);
-  const [goodPostureCount, setGoodPostureCount] = useState<number>(0);
-  const [totalTicks, setTotalTicks] = useState<number>(0);
+  const warningsCountRef = useRef<number>(0);
+  const blinkCountRef = useRef<number>(0);
+  const fidgetCountRef = useRef<number>(0);
+  const goodPostureCountRef = useRef<number>(0);
+  const totalTicksRef = useRef<number>(0);
 
   const [userStats, setUserStats] = useState(loadUserStats());
   const [badges, setBadges] = useState<Badge[]>(getBadgesStatus());
@@ -38,10 +38,10 @@ export const StudentView: React.FC = () => {
   // Attach global video stream to local video element for preview
   useEffect(() => {
     const globalVideo = document.getElementById('global-webcam') as HTMLVideoElement;
-    if (globalVideo && videoRef.current) {
+    if (globalVideo && videoRef.current && videoRef.current.srcObject !== globalVideo.srcObject) {
        videoRef.current.srcObject = globalVideo.srcObject;
     }
-  }); // Run after every render to ensure videoRef gets the stream when it appears
+  }); // Run after every render to ensure videoRef gets the stream when it appears, guarded by equality check
 
   useEffect(() => {
     if (!hasStarted) return;
@@ -55,7 +55,7 @@ export const StudentView: React.FC = () => {
 
   useEffect(() => {
     if (alertLevel === 'STRONG_WARNING') {
-      setWarningsCount(w => w + 1);
+      warningsCountRef.current += 1;
       if (isAudioEnabled) playBeepSound();
       if ('vibrate' in navigator) navigator.vibrate([200, 100, 200]);
     }
@@ -64,17 +64,17 @@ export const StudentView: React.FC = () => {
   useEffect(() => {
     if (!isModelReady || !calibration || !metrics) return;
 
-    setTotalTicks(t => t + 1);
+    totalTicksRef.current += 1;
     if (healthScore >= 80) {
-      setGoodPostureCount(g => g + 1);
+      goodPostureCountRef.current += 1;
     }
 
     if (metrics.isBlinking) {
-      setBlinkCount(b => b + 1);
+      blinkCountRef.current += 1;
     }
 
-    if (metrics.fidgetFactor > 40 && totalTicks > 0 && totalTicks % 300 === 0) {
-      setFidgetCount(f => f + 1);
+    if (metrics.fidgetFactor > 40 && totalTicksRef.current > 0 && totalTicksRef.current % 300 === 0) {
+      fidgetCountRef.current += 1;
       broadcastFatigueAlert("Bé bắt đầu nhấp nhổm nhiều, có dấu hiệu mất tập trung hoặc mỏi cơ.");
     }
 
@@ -88,7 +88,7 @@ export const StudentView: React.FC = () => {
       isWritingMode: metrics.isWritingMode,
     });
 
-  }, [metrics, healthScore, isModelReady, calibration, totalTicks]);
+  }, [metrics, healthScore, isModelReady, calibration]);
 
   const playBeepSound = () => {
     try {
@@ -120,9 +120,9 @@ export const StudentView: React.FC = () => {
   };
 
   const handleEndSession = () => {
-    if (totalTicks === 0) return;
+    if (totalTicksRef.current === 0) return;
 
-    const goodPosturePercentage = Math.round((goodPostureCount / totalTicks) * 100);
+    const goodPosturePercentage = Math.round((goodPostureCountRef.current / totalTicksRef.current) * 100);
     const sessionRecord = {
       id: Math.random().toString(36).substring(2, 9),
       date: new Date().toISOString().split('T')[0],
@@ -131,9 +131,9 @@ export const StudentView: React.FC = () => {
       durationMinutes: Math.max(1, totalSessionMinutes),
       averageHealthScore: Math.round(healthScore),
       goodPosturePercentage,
-      warningsCount,
-      blinksCount: blinkCount,
-      fidgetFlagsCount: fidgetCount,
+      warningsCount: warningsCountRef.current,
+      blinksCount: blinkCountRef.current,
+      fidgetFlagsCount: fidgetCountRef.current,
       completedEyeExercises: Math.floor(totalSessionMinutes / 20),
       streakAdded: true,
       // Data Analytics fields
@@ -161,11 +161,11 @@ export const StudentView: React.FC = () => {
 
     setSessionStartTime(Date.now());
     setTotalSessionMinutes(0);
-    setWarningsCount(0);
-    setBlinkCount(0);
-    setFidgetCount(0);
-    setGoodPostureCount(0);
-    setTotalTicks(0);
+    warningsCountRef.current = 0;
+    blinkCountRef.current = 0;
+    fidgetCountRef.current = 0;
+    goodPostureCountRef.current = 0;
+    totalTicksRef.current = 0;
     setUserStats(loadUserStats());
     setBadges(getBadgesStatus());
     alert('Buổi học đã hoàn thành! Dữ liệu đã được lưu trữ.');
