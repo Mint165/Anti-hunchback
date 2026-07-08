@@ -36,6 +36,9 @@ CREATE TABLE IF NOT EXISTS user_stats (
     last_session_date TEXT,
     total_study_time INT NOT NULL DEFAULT 0,
     badges TEXT[] NOT NULL DEFAULT '{}',
+    coins INT NOT NULL DEFAULT 0,
+    unlocked_items TEXT[] NOT NULL DEFAULT '{}',
+    equipped_items JSONB NOT NULL DEFAULT '{}'::jsonb,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 

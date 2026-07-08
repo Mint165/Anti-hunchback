@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { loadUserStats, getBadgesStatus } from '../services/db';
 import OliverPet from './OliverPet';
+import PetShop from './PetShop';
 import { Award, Heart, Eye, Activity } from 'lucide-react';
 
 export const PetProfile: React.FC = () => {
@@ -47,7 +48,7 @@ export const PetProfile: React.FC = () => {
         <div className="premium-card bg-white p-8 flex flex-col items-center justify-center">
           <div className="w-48 h-48 bg-gray-50 rounded-full flex items-center justify-center mb-6 shadow-inner relative border-4 border-green-100">
              <div className="scale-75 absolute -bottom-4">
-               <OliverPet state="good" size={240} petLevel={stats.petLevel} customText="Tớ luôn sẵn sàng đồng hành cùng bạn!" />
+               <OliverPet state="good" size={240} petLevel={stats.petLevel} equippedItems={stats.equippedItems} customText="Tớ luôn sẵn sàng đồng hành cùng bạn!" />
              </div>
           </div>
           
@@ -126,6 +127,10 @@ export const PetProfile: React.FC = () => {
           </div>
 
         </div>
+      </div>
+
+      <div className="mt-8">
+        <PetShop />
       </div>
     </div>
   );

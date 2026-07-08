@@ -1,11 +1,11 @@
 // Parent Dashboard Component
 
 import React, { useState, useEffect } from 'react';
-import { Eye, Bell, Shield, ShieldAlert, Heart, AlertCircle } from 'lucide-react';
+import { Eye, Bell, Shield, ShieldAlert, Heart, AlertCircle, Send, MessageSquare } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar } from 'recharts';
 import { getSessionRecords, saveSessionRecord } from '../services/db';
 import type { SessionRecord } from '../services/db';
-import { subscribeToStudentSync } from '../services/parentSync';
+import { subscribeToStudentSync, broadcastParentMessage } from '../services/parentSync';
 
 interface ChartDataPoint {
   name: string;
@@ -37,6 +37,20 @@ export const ParentView: React.FC = () => {
 
   // Push notifications queue
   const [fatigueAlerts, setFatigueAlerts] = useState<string[]>([]);
+  
+  // Parent messaging state
+  const [messageText, setMessageText] = useState('');
+  const [isMessageSent, setIsMessageSent] = useState(false);
+
+  const handleSendMessage = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!messageText.trim()) return;
+    
+    broadcastParentMessage(messageText.trim());
+    setMessageText('');
+    setIsMessageSent(true);
+    setTimeout(() => setIsMessageSent(false), 3000);
+  };
 
   // Initialize mock data if no sessions exist, to make the dashboard look rich and premium
   useEffect(() => {
@@ -512,41 +526,91 @@ export const ParentView: React.FC = () => {
 
           </div>
 
-          {/* Interactive Notifications panel */}
-          <div className="premium-card p-6 flex-1">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
-                <Bell size={16} className="text-purple-500 animate-swing" /> Nhật ký cảnh báo & mỏi mắt
-              </h3>
-              <span className="px-2 py-0.5 text-2xs font-bold bg-purple-100 text-purple-700 rounded-full">
-                Thời gian thực
-              </span>
-            </div>
+          {/* Interactive Notifications panel & Message Sender */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="premium-card p-6 flex-1">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
+                  <Bell size={16} className="text-purple-500 animate-swing" /> Nhật ký cảnh báo
+                </h3>
+                <span className="px-2 py-0.5 text-2xs font-bold bg-purple-100 text-purple-700 rounded-full">
+                  Thời gian thực
+                </span>
+              </div>
 
-            {/* Warnings list logs */}
-            <div className="flex flex-col gap-3 max-h-56 overflow-y-auto pr-2">
-              {alerts.length === 0 ? (
-                <div className="text-center py-6 text-xs text-gray-400">
-                  Chưa có thông tin cảnh báo nào. Con đang học tập tốt!
-                </div>
-              ) : (
-                alerts.map((alert) => (
-                  <div key={alert.id} className="flex items-start justify-between gap-3 p-3 bg-white rounded-xl border border-gray-100 shadow-2xs hover:shadow-xs transition-all">
-                    <div className="flex gap-2.5">
-                      <span className="mt-0.5 text-xs text-purple-500">🔔</span>
-                      <div className="text-xs text-gray-600 leading-relaxed font-medium">
-                        {alert.message}
-                      </div>
-                    </div>
-                    <span className="text-[10px] text-gray-400 font-semibold flex-shrink-0">
-                      {alert.time}
-                    </span>
+              {/* Warnings list logs */}
+              <div className="flex flex-col gap-3 max-h-56 overflow-y-auto pr-2">
+                {alerts.length === 0 ? (
+                  <div className="text-center py-6 text-xs text-gray-400">
+                    Chưa có thông tin cảnh báo nào. Con đang học tập tốt!
                   </div>
-                ))
-              )}
+                ) : (
+                  alerts.map((alert) => (
+                    <div key={alert.id} className="flex items-start justify-between gap-3 p-3 bg-white rounded-xl border border-gray-100 shadow-2xs hover:shadow-xs transition-all">
+                      <div className="flex gap-2.5">
+                        <span className="mt-0.5 text-xs text-purple-500">🔔</span>
+                        <div className="text-xs text-gray-600 leading-relaxed font-medium">
+                          {alert.message}
+                        </div>
+                      </div>
+                      <span className="text-[10px] text-gray-400 font-semibold flex-shrink-0">
+                        {alert.time}
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
 
-            {/* Hidden fallback / previous prompt - removed in favor of mock push notification */}
+            {/* Parent Message Sender */}
+            <div className="premium-card p-6 flex-1 flex flex-col">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
+                  <MessageSquare size={16} className="text-blue-500" /> Nhắn Gửi Yêu Thương
+                </h3>
+              </div>
+              <p className="text-xs text-gray-500 mb-4 leading-relaxed">
+                Nhập lời nhắn ngắn, chú gấu trúc Oliver trên màn hình của con sẽ đọc to câu nói này bằng giọng nói dễ thương để khích lệ con!
+              </p>
+              
+              <form onSubmit={handleSendMessage} className="mt-auto flex flex-col gap-3">
+                <div className="relative">
+                  <textarea
+                    value={messageText}
+                    onChange={(e) => setMessageText(e.target.value)}
+                    placeholder="VD: Cố lên con yêu, ngồi thẳng lưng nhé!"
+                    className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 resize-none h-24"
+                    maxLength={100}
+                  ></textarea>
+                  <span className="absolute bottom-3 right-3 text-2xs text-gray-400 font-medium">
+                    {messageText.length}/100
+                  </span>
+                </div>
+                
+                <button
+                  type="submit"
+                  disabled={!messageText.trim() || !studentActive}
+                  className={`w-full py-3 rounded-xl flex items-center justify-center gap-2 text-sm font-bold transition-all ${
+                    !messageText.trim() || !studentActive
+                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                      : isMessageSent 
+                        ? 'bg-green-500 text-white' 
+                        : 'bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg'
+                  }`}
+                >
+                  {isMessageSent ? (
+                    'Đã gửi thành công!'
+                  ) : (
+                    <>
+                      Gửi cho bé <Send size={16} />
+                    </>
+                  )}
+                </button>
+                {!studentActive && (
+                  <p className="text-2xs text-red-400 text-center mt-1">Con đang không mở màn hình học tập</p>
+                )}
+              </form>
+            </div>
           </div>
 
         </div>

@@ -9,9 +9,10 @@ interface OliverPetProps {
   customText?: string;
   size?: number;
   petLevel?: number;
+  equippedItems?: Record<string, string>;
 }
 
-export const OliverPet: React.FC<OliverPetProps> = ({ state, customText, size = 200, petLevel = 1 }) => {
+export const OliverPet: React.FC<OliverPetProps> = ({ state, customText, size = 200, petLevel = 1, equippedItems = {} }) => {
   // Determine dialogue text based on state
   const getDialogueText = () => {
     if (customText) return customText;
@@ -77,6 +78,19 @@ export const OliverPet: React.FC<OliverPetProps> = ({ state, customText, size = 
       {/* Interactive SVG Panda */}
       <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
         
+        {/* Equipped Background Aura */}
+        {equippedItems['background'] === 'bg_aura' && (
+          <svg className="absolute w-full h-full" viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="48" fill="url(#auraGrad)" opacity="0.6" className="animate-spin-slow" />
+            <defs>
+              <radialGradient id="auraGrad" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stopColor="#FDE047" stopOpacity="0.8" />
+                <stop offset="100%" stopColor="#FDE047" stopOpacity="0" />
+              </radialGradient>
+            </defs>
+          </svg>
+        )}
+
         {/* Good Posture Green Protective Shield */}
         {state === 'good' && (
           <svg className="absolute w-full h-full shield-active-glow" viewBox="0 0 100 100">
@@ -137,6 +151,11 @@ export const OliverPet: React.FC<OliverPetProps> = ({ state, customText, size = 
           <ellipse cx="50" cy="68" rx="22" ry="18" fill="#FFFFFF" stroke="#1F2937" strokeWidth="2" />
           {/* Belly patch */}
           <ellipse cx="50" cy="71" rx="15" ry="11" fill="#F3F4F6" />
+
+          {/* Equipped Body Cape */}
+          {equippedItems['body'] === 'body_cape' && (
+            <path d="M 28 50 Q 15 90 25 85 Q 50 95 75 85 Q 85 90 72 50 Z" fill="#EF4444" opacity="0.9" />
+          )}
 
           {/* Guardian Armor (Level 4+) */}
           {petLevel >= 4 && (
@@ -215,12 +234,20 @@ export const OliverPet: React.FC<OliverPetProps> = ({ state, customText, size = 
             {/* Right Eye Patch */}
             <ellipse cx="60" cy="36" rx="6" ry="8" fill="#1F2937" style={{ transform: 'rotate(10deg)', transformOrigin: '60px 36px' }} />
 
-            {/* Student Glasses (Level 2+) */}
-            {petLevel >= 2 && (
+            {/* Equipped Glasses */}
+            {(equippedItems['eyes'] === 'eyes_glasses' || petLevel >= 2) && equippedItems['eyes'] !== 'eyes_sunglasses' && (
               <g stroke="#FBBF24" strokeWidth="1.5" fill="none">
                 <circle cx="40" cy="36" r="8" />
                 <circle cx="60" cy="36" r="8" />
                 <path d="M 48 36 L 52 36" />
+              </g>
+            )}
+
+            {equippedItems['eyes'] === 'eyes_sunglasses' && (
+              <g>
+                <path d="M 30 36 Q 40 30 48 36 Q 40 42 30 36" fill="#111827" stroke="#000" strokeWidth="1" />
+                <path d="M 52 36 Q 60 30 70 36 Q 60 42 52 36" fill="#111827" stroke="#000" strokeWidth="1" />
+                <path d="M 48 34 L 52 34" stroke="#111827" strokeWidth="2" />
               </g>
             )}
 
@@ -281,7 +308,7 @@ export const OliverPet: React.FC<OliverPetProps> = ({ state, customText, size = 
           </g>
 
           {/* Scholar Hat (Level 3) */}
-          {petLevel === 3 && (
+          {(equippedItems['head'] === 'hat_scholar' || petLevel === 3) && equippedItems['head'] !== 'hat_crown_silver' && equippedItems['head'] !== 'hat_crown_gold' && (
             <g transform="translate(35, 10)">
               <polygon points="0,15 15,5 30,15 15,25" fill="#1F2937" />
               <rect x="10" y="15" width="10" height="8" fill="#1F2937" />
@@ -290,14 +317,14 @@ export const OliverPet: React.FC<OliverPetProps> = ({ state, customText, size = 
           )}
 
           {/* Silver Crown (Level 4) */}
-          {petLevel === 4 && (
+          {(equippedItems['head'] === 'hat_crown_silver' || petLevel === 4) && equippedItems['head'] !== 'hat_crown_gold' && equippedItems['head'] !== 'hat_scholar' && (
             <g transform="translate(38, 8) scale(0.6)">
               <polygon points="10,30 20,10 30,25 40,10 50,30" fill="#E5E7EB" stroke="#9CA3AF" strokeWidth="3" strokeLinejoin="round" />
             </g>
           )}
 
           {/* Gold Emperor Crown (Level 5) */}
-          {petLevel >= 5 && (
+          {(equippedItems['head'] === 'hat_crown_gold' || petLevel >= 5) && equippedItems['head'] !== 'hat_scholar' && equippedItems['head'] !== 'hat_crown_silver' && (
             <g transform="translate(30, 2) scale(0.8)">
               <polygon points="10,30 20,5 30,20 40,5 50,30" fill="#FBBF24" stroke="#D97706" strokeWidth="3" strokeLinejoin="round" />
               <circle cx="10" cy="30" r="3" fill="#EF4444" />

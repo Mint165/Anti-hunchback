@@ -20,7 +20,13 @@ export interface FatigueAlertUpdate {
   timestamp: number;
 }
 
-type SyncMessage = PostureStateUpdate | FatigueAlertUpdate;
+export interface ParentMessageUpdate {
+  type: 'parent_message';
+  text: string;
+  timestamp: number;
+}
+
+type SyncMessage = PostureStateUpdate | FatigueAlertUpdate | ParentMessageUpdate;
 
 const CHANNEL_NAME = 'oliver_parent_student_sync';
 let channel: BroadcastChannel | null = null;
@@ -96,6 +102,30 @@ export function broadcastFatigueAlert(message: string): void {
   }
 }
 
+// Broadcast message from parent to student
+export function broadcastParentMessage(text: string): void {
+  try {
+    const msg: ParentMessageUpdate = {
+      type: 'parent_message',
+      text,
+      timestamp: Date.now(),
+    };
+    
+    getChannel().postMessage(msg);
+    
+    const sbChannel = getSupabaseChannel();
+    if (sbChannel) {
+      sbChannel.send({
+        type: 'broadcast',
+        event: 'parent_message',
+        payload: msg
+      });
+    }
+  } catch (e) {
+    console.error('Failed to send parent message', e);
+  }
+}
+
 // Subscribe to status updates (for Parent Dashboard)
 export function subscribeToStudentSync(
   onStatusChange: (status: 'good' | 'warning' | 'danger' | 'offline', details: PostureStateUpdate['details']) => void,
@@ -129,6 +159,37 @@ export function subscribeToStudentSync(
   }
 
   // Return unsubscribe cleanup function
+  return () => {
+    syncChannel.removeEventListener('message', localListener);
+    if (sbChannel && supabase) {
+      supabase.removeChannel(sbChannel);
+    }
+  };
+}
+
+// Subscribe to parent messages (for Student Dashboard)
+export function subscribeToParentMessage(
+  onMessageReceived: (text: string) => void
+): () => void {
+  const syncChannel = getChannel();
+  const localListener = (event: MessageEvent<SyncMessage>) => {
+    const msg = event.data;
+    if (msg.type === 'parent_message') {
+      onMessageReceived(msg.text);
+    }
+  };
+  syncChannel.addEventListener('message', localListener);
+
+  let sbChannel: any = null;
+  if (isSupabaseConfigured && supabase) {
+    sbChannel = supabase.channel(CHANNEL_NAME)
+      .on('broadcast', { event: 'parent_message' }, ({ payload }) => {
+        const msg = payload as ParentMessageUpdate;
+        onMessageReceived(msg.text);
+      })
+      .subscribe();
+  }
+
   return () => {
     syncChannel.removeEventListener('message', localListener);
     if (sbChannel && supabase) {

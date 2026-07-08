@@ -16,7 +16,7 @@ type ActiveTab = 'student' | 'parent' | 'pet' | 'settings';
 function AppContent() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('student');
   const [isSynced, setIsSynced] = useState<boolean>(false);
-  const { eyeExerciseTriggered, onEyeExerciseComplete, metrics } = usePostureContext();
+  const { eyeExerciseTriggered, onEyeExerciseComplete, metrics, poseLandmarks } = usePostureContext();
 
   useEffect(() => {
     syncFromSupabase().then((success) => {
@@ -32,6 +32,7 @@ function AppContent() {
       {eyeExerciseTriggered && (
         <EyeExercise
           isBlinking={metrics?.isBlinking || false}
+          poseLandmarks={poseLandmarks}
           onComplete={onEyeExerciseComplete}
         />
       )}

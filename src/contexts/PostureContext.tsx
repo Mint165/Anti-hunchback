@@ -3,7 +3,8 @@ import { useMediaPipe } from '../hooks/useMediaPipe';
 import { useAlertEngine } from '../services/useAlertEngine';
 import { analyzePosture, calculateHealthScore, type PostureMetrics, type CalibrationData } from '../services/postureAI';
 import { loadCalibration, loadSettings, addPetXP } from '../services/db';
-import { broadcastFatigueAlert } from '../services/parentSync';
+import { broadcastFatigueAlert, subscribeToParentMessage } from '../services/parentSync';
+import { voiceService } from '../services/voiceService';
 
 interface PostureContextType {
   metrics: PostureMetrics | null;
@@ -32,6 +33,8 @@ interface PostureContextType {
     slouchAngleSum: number;
     tickCount: number;
   };
+  // Parent messaging
+  latestParentMessage: string | null;
 }
 
 const PostureContext = createContext<PostureContextType | undefined>(undefined);
@@ -66,6 +69,20 @@ export const PostureProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [sessionAngleAccumulator, setSessionAngleAccumulator] = useState({
     shoulderTiltSum: 0, neckAngleSum: 0, slouchAngleSum: 0, tickCount: 0,
   });
+
+  const [latestParentMessage, setLatestParentMessage] = useState<string | null>(null);
+
+  // Subscribe to parent messages
+  useEffect(() => {
+    const unsubscribe = subscribeToParentMessage((text) => {
+      setLatestParentMessage(text);
+      voiceService.speak(text, () => {
+        // Clear message after speaking (optional, or keep it on screen for a bit)
+        setTimeout(() => setLatestParentMessage(null), 5000);
+      });
+    });
+    return () => unsubscribe();
+  }, []);
 
   // Load calibration on mount
   useEffect(() => {
@@ -205,6 +222,7 @@ export const PostureProvider: React.FC<{ children: React.ReactNode }> = ({ child
       poseLandmarks, faceLandmarks,
       eyeExerciseTriggered, onEyeExerciseComplete,
       sessionFatigueFlags, sessionAngleAccumulator,
+      latestParentMessage,
     }}>
       <video
         id="global-webcam"

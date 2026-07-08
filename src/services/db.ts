@@ -45,6 +45,10 @@ export interface UserStats {
   petXp: number;
   petLevel: number;
   petGoodPostureStreak: number; // in seconds
+  // New Gamification Fields
+  coins: number;
+  unlockedItems: string[];
+  equippedItems: Record<string, string>; // e.g. { head: 'crown_gold', eyes: 'sunglasses' }
 }
 
 export interface Badge {
@@ -121,7 +125,10 @@ async function pushUserStatsToSupabase(stats: UserStats) {
       streak: stats.streak,
       last_session_date: stats.lastSessionDate,
       total_study_time: stats.totalStudyTime,
-      badges: stats.badges
+      badges: stats.badges,
+      coins: stats.coins,
+      unlocked_items: stats.unlockedItems,
+      equipped_items: stats.equippedItems
     });
   } catch (err) {
     console.error('Failed to sync user stats to Supabase:', err);
@@ -199,6 +206,9 @@ export async function syncFromSupabase(): Promise<boolean> {
         petXp: localStats?.petXp || 0,
         petLevel: localStats?.petLevel || 1,
         petGoodPostureStreak: localStats?.petGoodPostureStreak || 0,
+        coins: statsData.coins || localStats?.coins || 0,
+        unlockedItems: statsData.unlocked_items || localStats?.unlockedItems || [],
+        equippedItems: statsData.equipped_items || localStats?.equippedItems || {},
       };
       localStorage.setItem(STORAGE_KEYS.STATS, JSON.stringify(stats));
     }
@@ -265,6 +275,9 @@ export function loadUserStats(): UserStats {
     petXp: 0,
     petLevel: 1,
     petGoodPostureStreak: 0,
+    coins: 0,
+    unlockedItems: [],
+    equippedItems: {},
   };
   if (!statsStr) return defaultStats;
   const stats = JSON.parse(statsStr);
@@ -282,6 +295,10 @@ export function addXP(amount: number): { stats: UserStats; leveledUp: boolean } 
   const oldLevel = stats.level;
   
   stats.xp += amount;
+  
+  // Convert XP to Coins (10 XP = 1 Coin)
+  const coinsGained = Math.floor(amount / 10);
+  stats.coins += coinsGained;
   
   const xpNeeded = stats.level * 1000;
   if (stats.xp >= xpNeeded) {
@@ -311,6 +328,36 @@ export function addPetXP(amount: number): { stats: UserStats; leveledUp: boolean
   
   saveUserStats(stats);
   return { stats, leveledUp: stats.petLevel > oldLevel };
+}
+
+// Gamification Shop Functions
+export function addCoins(amount: number): UserStats {
+  const stats = loadUserStats();
+  stats.coins += amount;
+  saveUserStats(stats);
+  return stats;
+}
+
+export function buyItem(itemId: string, cost: number): boolean {
+  const stats = loadUserStats();
+  if (stats.coins >= cost && !stats.unlockedItems.includes(itemId)) {
+    stats.coins -= cost;
+    stats.unlockedItems.push(itemId);
+    saveUserStats(stats);
+    return true;
+  }
+  return false;
+}
+
+export function equipItem(slot: string, itemId: string | null): UserStats {
+  const stats = loadUserStats();
+  if (itemId === null) {
+    delete stats.equippedItems[slot];
+  } else if (stats.unlockedItems.includes(itemId)) {
+    stats.equippedItems[slot] = itemId;
+  }
+  saveUserStats(stats);
+  return stats;
 }
 
 // Unlock a badge

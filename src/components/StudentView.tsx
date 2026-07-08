@@ -17,6 +17,7 @@ export const StudentView: React.FC = () => {
     isModelReady, isLoading, calibration, setCalibration, 
     poseLandmarks, faceLandmarks,
     sessionFatigueFlags, sessionAngleAccumulator,
+    latestParentMessage,
   } = usePostureContext();
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -318,7 +319,7 @@ export const StudentView: React.FC = () => {
             <div className="premium-card pet-card">
                <div className="pet-circle">
                  <div className="pet-model">
-                    <OliverPet state={getPetState()} size={64} />
+                    <OliverPet state={getPetState()} size={64} equippedItems={userStats.equippedItems} customText={latestParentMessage || undefined} />
                  </div>
                </div>
                <h3>Thú Cưng Oliver</h3>
