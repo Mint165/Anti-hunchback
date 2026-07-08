@@ -18,7 +18,7 @@ export const EyeExercise: React.FC<EyeExerciseProps> = ({ isBlinking, poseLandma
   const [exerciseStatus, setExerciseStatus] = useState<'active' | 'success'>('active');
   
   const wasBlinkingRef = useRef<boolean>(false);
-  const requestRef = useRef<number>();
+  const requestRef = useRef<number | undefined>(undefined);
 
   const targetPosRef = useRef(targetPos);
   const bambooCountRef = useRef(bambooCount);
