@@ -41,7 +41,7 @@ export const StudentView: React.FC = () => {
     if (globalVideo && videoRef.current && videoRef.current.srcObject !== globalVideo.srcObject) {
        videoRef.current.srcObject = globalVideo.srcObject;
     }
-  }); // Run after every render to ensure videoRef gets the stream when it appears, guarded by equality check
+  }, [showCamera, hasStarted]); // Run when camera is toggled or session starts
 
   useEffect(() => {
     if (!hasStarted) return;

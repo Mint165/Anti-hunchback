@@ -153,9 +153,9 @@ export function useMediaPipe(): UseMediaPipeResult {
           if (!videoElementRef.current) return;
           
           const now = performance.now();
-          // Throttling: Run AI inference only once every 100ms (10 FPS)
-          // This keeps CPU usage very low without affecting posture responsiveness
-          if (now - lastProcessedTime < 100) {
+          // Throttling: Run AI inference only once every 300ms (~3 FPS)
+          // This significantly reduces CPU usage and React re-renders
+          if (now - lastProcessedTime < 300) {
             return;
           }
           lastProcessedTime = now;
