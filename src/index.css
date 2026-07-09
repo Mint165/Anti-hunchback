@@ -508,13 +508,27 @@ body {
 
 @media (max-width: 768px) {
   .hero-banner {
-    padding: 24px;
+    display: none;
   }
-  .hero-text h1 {
-    font-size: 24px;
+  .pet-card {
+    display: none;
+  }
+  .tips-card {
+    display: none;
   }
   .sv-grid {
+    display: flex;
+    flex-direction: column;
     gap: 16px;
+  }
+  .sv-col-camera {
+    order: 1;
+  }
+  .sv-col-progress {
+    order: 2;
+  }
+  .sv-col-stats {
+    order: 3;
   }
   .score-ring-wrapper {
     width: 200px;
@@ -522,5 +536,26 @@ body {
   }
   .score-ring-val {
     font-size: 56px;
+  }
+  .mobile-stats-summary.hidden {
+    display: block !important;
+    cursor: pointer;
+    font-weight: bold;
+    padding: 12px;
+    background: #f9fafb;
+    border-radius: 8px;
+    text-align: center;
+    margin-bottom: 8px;
+    color: #4b5563;
+  }
+  /* Bảng nhỏ gọn hơn trên điện thoại */
+  .td-metric, .td-goal, .td-status {
+    padding: 10px 8px;
+    font-size: 13px;
+  }
+  .metric-icon {
+    width: 24px;
+    height: 24px;
+    font-size: 14px;
   }
 }

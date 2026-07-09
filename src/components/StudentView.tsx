@@ -298,7 +298,7 @@ export const StudentView: React.FC = () => {
         <div className="sv-grid">
           
           {/* Column 1: Progress & Pet */}
-          <div className="sv-col">
+          <div className="sv-col sv-col-progress">
             
             <div className="premium-card xp-card">
               <div className="card-title"><Trophy size={18} className="text-purple-500" /> Cấp Độ & Kinh Nghiệm</div>
@@ -347,7 +347,7 @@ export const StudentView: React.FC = () => {
           </div>
 
           {/* Column 2: Central Ring & Camera */}
-          <div className="sv-col">
+          <div className="sv-col sv-col-camera">
             
             <div className="premium-card ring-card">
               <div className="card-title">Daily Goal Left</div>
@@ -404,13 +404,16 @@ export const StudentView: React.FC = () => {
           </div>
 
           {/* Column 3: Leaderboard / Live Stats Table */}
-          <div className="sv-col">
+          <div className="sv-col sv-col-stats">
             
             <div className="premium-card leaderboard-card">
                <div className="leaderboard-header">
                   <div className="card-title m-0">Live Leaderboard</div>
                   <div className="pill-tag pill-realtime">REAL TIME</div>
                </div>
+               
+               <details className="mobile-stats-details" open>
+                 <summary className="mobile-stats-summary hidden">Tap to View Live Stats</summary>
 
                <div className="table-wrapper">
                  <table className="sv-table">
@@ -461,7 +464,8 @@ export const StudentView: React.FC = () => {
                    </tbody>
                  </table>
                </div>
-            </div>
+               </details>
+             </div>
 
             <div className="premium-card tips-card">
               <div className="card-title"><Info size={18} className="text-blue-500" /> Get Help</div>
