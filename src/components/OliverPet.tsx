@@ -10,9 +10,11 @@ interface OliverPetProps {
   size?: number;
   petLevel?: number;
   equippedItems?: Record<string, string>;
+  hideBubble?: boolean;
+  hideBadge?: boolean;
 }
 
-export const OliverPet: React.FC<OliverPetProps> = ({ state, customText, size = 200, petLevel = 1, equippedItems = {} }) => {
+export const OliverPet: React.FC<OliverPetProps> = ({ state, customText, size = 200, petLevel = 1, equippedItems = {}, hideBubble = false, hideBadge = false }) => {
   // Determine dialogue text based on state
   const getDialogueText = () => {
     if (customText) return customText;
@@ -51,29 +53,35 @@ export const OliverPet: React.FC<OliverPetProps> = ({ state, customText, size = 
   };
 
   const themeColor = getThemeColor();
+  const isMinimal = hideBubble && hideBadge;
 
   return (
-    <div className="flex flex-col items-center justify-center p-4 bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300 w-full" style={{ maxWidth: '350px' }}>
+    <div 
+      className={isMinimal ? "flex flex-col items-center justify-center" : "flex flex-col items-center justify-center p-4 bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300 w-full"} 
+      style={isMinimal ? {} : { maxWidth: '350px' }}
+    >
       
       {/* Dialogue Bubble */}
-      <div 
-        className="relative px-4 py-3 mb-6 text-sm font-medium rounded-2xl text-center shadow-sm w-full transition-all duration-300"
-        style={{
-          backgroundColor: `${themeColor}12`,
-          color: themeColor,
-          border: `1.5px solid ${themeColor}40`,
-        }}
-      >
-        {getDialogueText()}
-        {/* Arrow for bubble */}
+      {!hideBubble && (
         <div 
-          className="absolute bottom-[-8px] left-1/2 transform -translate-x-1/2 w-3 h-3 rotate-45 border-r border-b"
+          className="relative px-4 py-3 mb-6 text-sm font-medium rounded-2xl text-center shadow-sm w-full transition-all duration-300"
           style={{
-            backgroundColor: '#ffffff',
-            borderColor: `${themeColor}40`,
+            backgroundColor: `${themeColor}12`,
+            color: themeColor,
+            border: `1.5px solid ${themeColor}40`,
           }}
-        />
-      </div>
+        >
+          {getDialogueText()}
+          {/* Arrow for bubble */}
+          <div 
+            className="absolute bottom-[-8px] left-1/2 transform -translate-x-1/2 w-3 h-3 rotate-45 border-r border-b"
+            style={{
+              backgroundColor: '#ffffff',
+              borderColor: `${themeColor}40`,
+            }}
+          />
+        </div>
+      )}
 
       {/* Interactive SVG Panda */}
       <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
@@ -350,21 +358,23 @@ export const OliverPet: React.FC<OliverPetProps> = ({ state, customText, size = 
       </div>
 
       {/* State Badge */}
-      <div 
-        className="mt-4 px-3 py-1 text-xs font-semibold rounded-full uppercase tracking-wider shadow-sm transition-all duration-300"
-        style={{
-          backgroundColor: themeColor,
-          color: '#ffffff',
-        }}
-      >
-        {state === 'good' && 'Tư thế Tốt'}
-        {state === 'slouch' && 'Cảnh báo Tư thế'}
-        {state === 'close' && 'Nhìn quá sát'}
-        {state === 'writing' && 'Viết bài'}
-        {state === 'tired' && 'Mệt mỏi'}
-        {state === 'success' && 'Hoàn thành'}
-        {state === 'sleep' && 'Nghỉ ngơi'}
-      </div>
+      {!hideBadge && (
+        <div 
+          className="mt-4 px-3 py-1 text-xs font-semibold rounded-full uppercase tracking-wider shadow-sm transition-all duration-300"
+          style={{
+            backgroundColor: themeColor,
+            color: '#ffffff',
+          }}
+        >
+          {state === 'good' && 'Tư thế Tốt'}
+          {state === 'slouch' && 'Cảnh báo Tư thế'}
+          {state === 'close' && 'Nhìn quá sát'}
+          {state === 'writing' && 'Viết bài'}
+          {state === 'tired' && 'Mệt mỏi'}
+          {state === 'success' && 'Hoàn thành'}
+          {state === 'sleep' && 'Nghỉ ngơi'}
+        </div>
+      )}
     </div>
   );
 };

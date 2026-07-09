@@ -319,7 +319,7 @@ export const StudentView: React.FC = () => {
             <div className="premium-card pet-card">
                <div className="pet-circle">
                  <div className="pet-model">
-                    <OliverPet state={getPetState()} size={64} equippedItems={userStats.equippedItems} customText={latestParentMessage || undefined} />
+                    <OliverPet state={getPetState()} size={64} equippedItems={userStats.equippedItems} customText={latestParentMessage || undefined} hideBubble={true} hideBadge={true} />
                  </div>
                </div>
                <h3>Thú Cưng Oliver</h3>
