@@ -7,8 +7,6 @@ import { loadUserStats, saveSessionRecord, addXP, getBadgesStatus } from '../ser
 import type { Badge } from '../services/db';
 import { broadcastStudentStatus, broadcastFatigueAlert } from '../services/parentSync';
 import { usePostureContext } from '../contexts/PostureContext';
-import OliverPet from './OliverPet';
-import type { PetState } from './OliverPet';
 import Calibration from './Calibration';
 
 export const StudentView: React.FC = () => {
@@ -17,7 +15,6 @@ export const StudentView: React.FC = () => {
     isModelReady, isLoading, calibration, setCalibration, 
     poseLandmarks, faceLandmarks,
     sessionFatigueFlags, sessionAngleAccumulator,
-    latestParentMessage,
   } = usePostureContext();
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -107,13 +104,6 @@ export const StudentView: React.FC = () => {
     } catch {}
   };
 
-  const getPetState = (): PetState => {
-    if (metrics?.isWritingMode) return 'writing';
-    if (metrics && metrics.eyeDistanceCm < 50) return 'close';
-    if (metrics && (metrics.slouchAngle > 15 || metrics.shoulderTilt > 7)) return 'slouch';
-    if (healthScore >= 80) return 'good';
-    return 'good';
-  };
 
   const handleCalibrationComplete = (data: CalibrationData) => {
     setCalibration(data);
@@ -316,16 +306,6 @@ export const StudentView: React.FC = () => {
               </div>
             </div>
 
-            <div className="premium-card pet-card">
-               <div className="pet-circle">
-                 <div className="pet-model">
-                    <OliverPet state={getPetState()} size={64} equippedItems={userStats.equippedItems} customText={latestParentMessage || undefined} />
-                 </div>
-               </div>
-               <h3>Thú Cưng Oliver</h3>
-               <p>Theo dõi bạn học tập thời gian thực</p>
-               <div className="pill-tag pill-secondary">Trạng thái: {getPetState() === 'good' ? 'Vui vẻ' : getPetState() === 'slouch' ? 'Buồn bã' : 'Đang nhắc nhở'}</div>
-            </div>
 
             <div className="premium-card timer-card">
               <div className="card-title">Bộ đếm thời gian</div>
