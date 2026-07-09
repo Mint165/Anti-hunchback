@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Eye, Bell, Shield, ShieldAlert, Heart, AlertCircle, Send, MessageSquare } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar } from 'recharts';
-import { getSessionRecords, saveSessionRecord } from '../services/db';
+import { getSessionRecords } from '../services/db';
 import type { SessionRecord } from '../services/db';
 import { subscribeToStudentSync, broadcastParentMessage } from '../services/parentSync';
 
@@ -52,85 +52,8 @@ export const ParentView: React.FC = () => {
     setTimeout(() => setIsMessageSent(false), 3000);
   };
 
-  // Initialize mock data if no sessions exist, to make the dashboard look rich and premium
   useEffect(() => {
     let savedSessions = getSessionRecords();
-    if (savedSessions.length === 0) {
-      const mockSessions: SessionRecord[] = [
-        {
-          id: 's1',
-          date: 'Thứ 5',
-          startTime: Date.now() - 4 * 24 * 3600 * 1000,
-          endTime: Date.now() - 4 * 24 * 3600 * 1000 + 45 * 60 * 1000,
-          durationMinutes: 45,
-          averageHealthScore: 88,
-          goodPosturePercentage: 85,
-          warningsCount: 1,
-          blinksCount: 750,
-          fidgetFlagsCount: 0,
-          completedEyeExercises: 2,
-          streakAdded: true,
-        },
-        {
-          id: 's2',
-          date: 'Thứ 6',
-          startTime: Date.now() - 3 * 24 * 3600 * 1000,
-          endTime: Date.now() - 3 * 24 * 3600 * 1000 + 60 * 60 * 1000,
-          durationMinutes: 60,
-          averageHealthScore: 82,
-          goodPosturePercentage: 79,
-          warningsCount: 3,
-          blinksCount: 920,
-          fidgetFlagsCount: 1,
-          completedEyeExercises: 3,
-          streakAdded: true,
-        },
-        {
-          id: 's3',
-          date: 'Thứ 7',
-          startTime: Date.now() - 2 * 24 * 3600 * 1000,
-          endTime: Date.now() - 2 * 24 * 3600 * 1000 + 50 * 60 * 1000,
-          durationMinutes: 50,
-          averageHealthScore: 92,
-          goodPosturePercentage: 91,
-          warningsCount: 0,
-          blinksCount: 880,
-          fidgetFlagsCount: 0,
-          completedEyeExercises: 2,
-          streakAdded: true,
-        },
-        {
-          id: 's4',
-          date: 'Chủ Nhật',
-          startTime: Date.now() - 1 * 24 * 3600 * 1000,
-          endTime: Date.now() - 1 * 24 * 3600 * 1000 + 90 * 60 * 1000,
-          durationMinutes: 90,
-          averageHealthScore: 75,
-          goodPosturePercentage: 72,
-          warningsCount: 5,
-          blinksCount: 1100,
-          fidgetFlagsCount: 3,
-          completedEyeExercises: 4,
-          streakAdded: true,
-        },
-        {
-          id: 's5',
-          date: 'Hôm nay',
-          startTime: Date.now(),
-          endTime: Date.now() + 45 * 60 * 1000,
-          durationMinutes: 45,
-          averageHealthScore: 84,
-          goodPosturePercentage: 83,
-          warningsCount: 2,
-          blinksCount: 780,
-          fidgetFlagsCount: 0,
-          completedEyeExercises: 2,
-          streakAdded: true,
-        },
-      ];
-      mockSessions.forEach(s => saveSessionRecord(s));
-      savedSessions = mockSessions;
-    }
     setSessions(savedSessions);
 
     // Initial alert log
@@ -435,7 +358,16 @@ export const ParentView: React.FC = () => {
 
         {/* Center / Right: Charts Reports & Logs alerts */}
         <div className="lg:col-span-2 flex flex-col gap-6">
-          
+          {sessions.length === 0 ? (
+            <div className="premium-card p-10 flex flex-col items-center justify-center text-center h-full min-h-[400px]">
+               <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center text-gray-400 mb-4 border border-gray-100">
+                 <Shield size={40} />
+               </div>
+               <h3 className="text-xl font-bold text-gray-700 mb-2">Chưa có dữ liệu học tập</h3>
+               <p className="text-gray-500 max-w-sm">Học sinh chưa hoàn thành phiên học nào. Hệ thống sẽ tự động cập nhật biểu đồ phân tích và cảnh báo ngay khi có dữ liệu mới.</p>
+            </div>
+          ) : (
+            <>
           {/* Grid of charts */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             
@@ -612,9 +544,9 @@ export const ParentView: React.FC = () => {
               </form>
             </div>
           </div>
-
+          </>
+          )}
         </div>
-
       </div>
 
       {/* Push Notification Simulation */}

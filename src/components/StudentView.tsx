@@ -10,6 +10,7 @@ import { usePostureContext } from '../contexts/PostureContext';
 import OliverPet from './OliverPet';
 import type { PetState } from './OliverPet';
 import Calibration from './Calibration';
+import toast from 'react-hot-toast';
 
 export const StudentView: React.FC = () => {
   const {
@@ -169,10 +170,37 @@ export const StudentView: React.FC = () => {
     totalTicksRef.current = 0;
     setUserStats(loadUserStats());
     setBadges(getBadgesStatus());
-    alert('Buổi học đã hoàn thành! Dữ liệu đã được lưu trữ.');
+    toast.success('Buổi học đã hoàn thành! Dữ liệu đã được lưu trữ.', {
+      duration: 4000,
+      position: 'top-center',
+    });
+  };
+
+  const [showOnboarding, setShowOnboarding] = useState<boolean>(!localStorage.getItem('oliver_onboarded'));
+
+  const handleFinishOnboarding = () => {
+    localStorage.setItem('oliver_onboarded', 'true');
+    setShowOnboarding(false);
   };
 
   if (!calibration) {
+    if (showOnboarding) {
+      return (
+        <div className="fixed inset-0 z-[100] bg-gray-900/95 backdrop-blur-3xl flex flex-col items-center justify-center text-white text-center p-8">
+          <div className="w-24 h-24 bg-purple-500/20 rounded-full flex items-center justify-center text-purple-400 mb-6">
+            <Trophy size={48} />
+          </div>
+          <h2 className="text-5xl font-black mb-4 tracking-tight">Chào mừng đến với Oliver AI</h2>
+          <p className="text-gray-300 text-xl mb-10 max-w-lg leading-relaxed">
+            Hệ thống sẽ theo dõi tư thế của bạn thông qua camera để bảo vệ cột sống và mắt. Dữ liệu hình ảnh chỉ xử lý trực tiếp trên máy của bạn, tuyệt đối bảo mật.
+          </p>
+          <button onClick={handleFinishOnboarding} className="btn-primary text-lg px-10 py-4 shadow-[0_8px_32px_rgba(168,85,247,0.4)]">
+            Tôi Đã Hiểu & Bắt Đầu
+          </button>
+        </div>
+      );
+    }
+
     return (
       <div className="calibration-container">
         <div className="premium-card calibration-card">
@@ -270,7 +298,7 @@ export const StudentView: React.FC = () => {
         <div className="hero-banner">
           <div className="hero-content">
             <div className="hero-text">
-              <h1>You're closer than you think!</h1>
+              <h1>Chỉ còn một chút nữa thôi!</h1>
               <p>Chỉ còn vài XP nữa là bạn đạt cấp độ tiếp theo. Hãy duy trì tư thế thẳng lưng và tập trung học tập để bứt phá bảng xếp hạng.</p>
               <button className="btn-primary" onClick={handleEndSession}>Lưu Phiên Học</button>
             </div>
@@ -279,15 +307,15 @@ export const StudentView: React.FC = () => {
               <div className="hero-stat-card">
                 <div className="hero-stat-icon" style={{ background: '#facc15', color: '#713f12' }}>🔥</div>
                 <div>
-                  <div className="hero-stat-val">{userStats.streak} Days Streak</div>
-                  <div className="hero-stat-lbl">Fast Learner</div>
+                  <div className="hero-stat-val">{userStats.streak} Ngày Chuỗi</div>
+                  <div className="hero-stat-lbl">Học Tập Chăm Chỉ</div>
                 </div>
               </div>
               <div className="hero-stat-card">
                 <div className="hero-stat-icon" style={{ background: '#60a5fa', color: '#1e3a8a' }}>⭐</div>
                 <div>
-                  <div className="hero-stat-val">Level {userStats.level}</div>
-                  <div className="hero-stat-lbl">Current Rank</div>
+                  <div className="hero-stat-val">Cấp {userStats.level}</div>
+                  <div className="hero-stat-lbl">Hạng Hiện Tại</div>
                 </div>
               </div>
             </div>
@@ -350,7 +378,7 @@ export const StudentView: React.FC = () => {
           <div className="sv-col sv-col-camera">
             
             <div className="premium-card ring-card">
-              <div className="card-title">Daily Goal Left</div>
+              <div className="card-title">Mục Tiêu Sức Khoẻ</div>
               
               <div className={`score-ring-wrapper ${healthScore >= 80 ? 'score-ring-good' : ''}`}>
                 <svg className="score-ring-svg" viewBox="0 0 100 100">
@@ -408,20 +436,20 @@ export const StudentView: React.FC = () => {
             
             <div className="premium-card leaderboard-card">
                <div className="leaderboard-header">
-                  <div className="card-title m-0">Live Leaderboard</div>
-                  <div className="pill-tag pill-realtime">REAL TIME</div>
+                  <div className="card-title m-0">Bảng Trạng Thái</div>
+                  <div className="pill-tag pill-realtime">TRỰC TIẾP</div>
                </div>
                
                <details className="mobile-stats-details" open>
-                 <summary className="mobile-stats-summary hidden">Tap to View Live Stats</summary>
+                 <summary className="mobile-stats-summary hidden">Chạm để xem chỉ số trực tiếp</summary>
 
                <div className="table-wrapper">
                  <table className="sv-table">
                    <thead>
                      <tr>
-                       <th className="th-left">Metric</th>
-                       <th className="th-center">Goal</th>
-                       <th className="th-right">Status</th>
+                       <th className="th-left">Chỉ số</th>
+                       <th className="th-center">Mục tiêu</th>
+                       <th className="th-right">Trạng thái</th>
                      </tr>
                    </thead>
                    <tbody>
@@ -468,18 +496,18 @@ export const StudentView: React.FC = () => {
              </div>
 
             <div className="premium-card tips-card">
-              <div className="card-title"><Info size={18} className="text-blue-500" /> Get Help</div>
+              <div className="card-title"><Info size={18} className="text-blue-500" /> Trợ giúp AI</div>
               <div className="tips-banner">
                 <div className="tips-avatars">
                    {['bg-red-200','bg-green-200','bg-blue-200'].map((c,i)=><div key={i} className={`tip-avatar ${c}`} />)}
                 </div>
                 <div className="tips-text">
-                  3 AI Tips for you
-                  <div className="tips-subtext">on completing your next step</div>
+                  3 Mẹo từ AI
+                  <div className="tips-subtext">để cải thiện tư thế của bạn</div>
                 </div>
               </div>
               <button className="btn-secondary w-full" style={{ background: '#00d285' }}>
-                See Tips &rarr;
+                Xem Mẹo &rarr;
               </button>
             </div>
 

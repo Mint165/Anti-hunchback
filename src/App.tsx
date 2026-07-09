@@ -3,6 +3,7 @@ import React, { useState, useEffect, Suspense } from 'react';
 import Layout from './components/Layout';
 import { syncFromSupabase } from './services/db';
 import { PostureProvider, usePostureContext } from './contexts/PostureContext';
+import { Toaster } from 'react-hot-toast';
 
 // Lazy loaded components for code splitting
 const StudentView = React.lazy(() => import('./components/StudentView'));
@@ -59,6 +60,7 @@ function AppContent() {
       <Suspense fallback={null}>
         <FloatingPet />
       </Suspense>
+      <Toaster position="top-center" />
     </>
   );
 }
