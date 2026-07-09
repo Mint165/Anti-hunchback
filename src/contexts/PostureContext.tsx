@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useRef, useState, useEffect, useCallback } from 'react';
 import { useMediaPipe } from '../hooks/useMediaPipe';
 import { useAlertEngine } from '../services/useAlertEngine';
-import { analyzePosture, calculateHealthScore, type PostureMetrics, type CalibrationData } from '../services/postureAI';
+import { analyzePosture, calculateHealthScore, type PostureMetrics, type CalibrationData, type CameraMode } from '../services/postureAI';
 import { loadCalibration, loadSettings, addPetXP } from '../services/db';
 import { broadcastFatigueAlert, subscribeToParentMessage } from '../services/parentSync';
 import { voiceService } from '../services/voiceService';
@@ -35,6 +35,9 @@ interface PostureContextType {
   };
   // Parent messaging
   latestParentMessage: string | null;
+  // Camera Mode (Front / Side)
+  cameraMode: CameraMode;
+  setCameraMode: (mode: CameraMode) => void;
 }
 
 const PostureContext = createContext<PostureContextType | undefined>(undefined);
@@ -48,6 +51,7 @@ export const PostureProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [metrics, setMetrics] = useState<PostureMetrics | null>(null);
   const [healthScore, setHealthScore] = useState<number>(100);
   const [goodPostureStreak, setGoodPostureStreak] = useState<number>(0);
+  const [cameraMode, setCameraMode] = useState<CameraMode>('front');
 
   const { alertLevel, startSession, resetBreak, hasStarted } = useAlertEngine(metrics?.state || 'GOOD_POSTURE');
   
@@ -123,13 +127,14 @@ export const PostureProvider: React.FC<{ children: React.ReactNode }> = ({ child
       calibration,
       640,
       480,
-      movementHistoryRef.current
+      movementHistoryRef.current,
+      cameraMode
     );
 
     setMetrics(calculatedMetrics);
     setHealthScore(calculateHealthScore(calculatedMetrics));
 
-  }, [poseLandmarks, faceLandmarks, isModelReady, calibration]);
+  }, [poseLandmarks, faceLandmarks, isModelReady, calibration, cameraMode]);
 
   // --- Global 1-second tick for Eye Exercise timer, Fatigue buffer, Pet XP, Angle accumulation ---
   useEffect(() => {
@@ -223,6 +228,8 @@ export const PostureProvider: React.FC<{ children: React.ReactNode }> = ({ child
       eyeExerciseTriggered, onEyeExerciseComplete,
       sessionFatigueFlags, sessionAngleAccumulator,
       latestParentMessage,
+      cameraMode,
+      setCameraMode,
     }}>
       <video
         id="global-webcam"

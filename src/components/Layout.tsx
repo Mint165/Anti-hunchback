@@ -3,14 +3,16 @@
 import React from 'react';
 import { LayoutDashboard, Shield, Settings as SettingsIcon, PawPrint } from 'lucide-react';
 import { useMediaQuery } from 'react-responsive';
+import type { AppMode } from '../App';
 
 interface LayoutProps {
   children: React.ReactNode;
   activeTab: 'student' | 'parent' | 'pet' | 'settings';
   setActiveTab: (tab: 'student' | 'parent' | 'pet' | 'settings') => void;
+  appMode?: AppMode;
 }
 
-export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) => {
+export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, appMode }) => {
   const isMobile = useMediaQuery({ maxWidth: 768 });
 
   const menuItems = [
@@ -76,7 +78,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTa
       </main>
 
       {/* ─── Bottom Navigation (Mobile) ───────────────────────────── */}
-      {isMobile && (
+      {isMobile && appMode !== 'parent' && (
         <div className="bottom-nav">
           {menuItems.map((item) => {
             const Icon = item.icon;

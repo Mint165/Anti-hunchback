@@ -15,6 +15,7 @@ export interface CalibrationData {
 }
 
 export type PostureState = 'GOOD_POSTURE' | 'WRITING' | 'BAD_POSTURE';
+export type CameraMode = 'front' | 'side';
 
 export interface PostureMetrics {
   eyeDistanceCm: number;
@@ -77,7 +78,8 @@ export function analyzePosture(
   calibration: CalibrationData,
   canvasWidth: number,
   canvasHeight: number,
-  movementHistory: { x: number; y: number }[]
+  movementHistory: { x: number; y: number }[],
+  cameraMode: CameraMode = 'front'
 ): PostureMetrics {
   const metrics: PostureMetrics = {
     eyeDistanceCm: 60,
@@ -156,7 +158,7 @@ export function analyzePosture(
   }
 
   // 2. Pose Analysis
-  if (poseLandmarks && poseLandmarks.length > 12) {
+  if (poseLandmarks && poseLandmarks.length > 24) { // ensure hips are available
     const nose = poseLandmarks[0];
     const leftShoulder = poseLandmarks[11];
     const rightShoulder = poseLandmarks[12];
@@ -178,15 +180,57 @@ export function analyzePosture(
     // Neck offset Y (vertical distance)
     const currentNeckOffset = (shoulderMid.y - nose.y) * canvasHeight;
     
-    // Neck angle proxy: comparing current vertical neck length with base neck length
-    // Bending forward shrinks the vertical projection of the neck.
-    const neckRatio = currentNeckOffset / calibration.baseNeckYOffset;
-    metrics.neckAngle = Math.max(0, Math.min(90, (1 - neckRatio) * 90));
+    if (cameraMode === 'side') {
+      // Side Profile Logic
+      const leftEar = poseLandmarks[7];
+      const rightEar = poseLandmarks[8];
+      const leftHip = poseLandmarks[23];
+      const rightHip = poseLandmarks[24];
+      
+      // Determine which side is facing the camera (closer to center or more visible)
+      // Since MediaPipe normalizes x to [0,1], we can use visibility or simply assume the points that form a larger area are visible, or average them.
+      // Usually, the side facing the camera has points closer together in z space, but x-distance between ear/shoulder/hip is what we want.
+      // To simplify, we calculate the angle for both sides and pick the one that represents a larger, more realistic angle (closer to 180).
+      
+      const calcAngle = (A: Landmark, B: Landmark, C: Landmark) => {
+         const AB = Math.sqrt(Math.pow(B.x - A.x, 2) + Math.pow(B.y - A.y, 2));
+         const BC = Math.sqrt(Math.pow(C.x - B.x, 2) + Math.pow(C.y - B.y, 2));
+         const AC = Math.sqrt(Math.pow(C.x - A.x, 2) + Math.pow(C.y - A.y, 2));
+         if (AB * BC === 0) return 180;
+         const cosB = (Math.pow(AB, 2) + Math.pow(BC, 2) - Math.pow(AC, 2)) / (2 * AB * BC);
+         return Math.acos(Math.max(-1, Math.min(1, cosB))) * (180 / Math.PI);
+      };
 
-    // Torso height / slouched back proxy
-    const currentTorsoHeight = (shoulderMid.y - headTop.y) * canvasHeight;
-    const slouchRatio = currentTorsoHeight / calibration.baseTorsoHeight;
-    metrics.slouchAngle = Math.max(0, Math.min(90, (1 - slouchRatio) * 85));
+      const leftAngle = calcAngle(leftEar, leftShoulder, leftHip);
+      const rightAngle = calcAngle(rightEar, rightShoulder, rightHip);
+      
+      // Use the angle that is more pronounced. If the person is facing right, the right side will be clearly visible.
+      // We take the average or the sharper angle if one side is obscured.
+      const sideAngle = (leftAngle + rightAngle) / 2;
+      
+      // A perfect straight back implies Ear, Shoulder, and Hip are aligned (angle ~170-180)
+      // Slouching makes this angle smaller (e.g. 140-150)
+      // We map this to slouchAngle (0 = straight, 90 = heavily slouched)
+      const maxStraight = 175;
+      metrics.slouchAngle = Math.max(0, Math.min(90, maxStraight - sideAngle));
+      
+      // Neck angle for side mode: Angle between Nose-Ear-Shoulder
+      const leftNeck = calcAngle(nose, leftEar, leftShoulder);
+      const rightNeck = calcAngle(nose, rightEar, rightShoulder);
+      const sideNeckAngle = (leftNeck + rightNeck) / 2;
+      metrics.neckAngle = Math.max(0, Math.min(90, 160 - sideNeckAngle));
+      
+    } else {
+      // Front Profile Logic
+      // Neck angle proxy: comparing current vertical neck length with base neck length
+      const neckRatio = currentNeckOffset / calibration.baseNeckYOffset;
+      metrics.neckAngle = Math.max(0, Math.min(90, (1 - neckRatio) * 90));
+
+      // Torso height / slouched back proxy
+      const currentTorsoHeight = (shoulderMid.y - headTop.y) * canvasHeight;
+      const slouchRatio = currentTorsoHeight / calibration.baseTorsoHeight;
+      metrics.slouchAngle = Math.max(0, Math.min(90, (1 - slouchRatio) * 85));
+    }
 
     // Fidgeting factor: calculate the standard deviation of shoulder midpoint over history
     if (movementHistory.length > 1) {
