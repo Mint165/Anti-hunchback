@@ -11,6 +11,7 @@ import OliverPet from './OliverPet';
 import type { PetState } from './OliverPet';
 import Calibration from './Calibration';
 import toast from 'react-hot-toast';
+import confetti from 'canvas-confetti';
 
 export const StudentView: React.FC = () => {
   const {
@@ -153,11 +154,22 @@ export const StudentView: React.FC = () => {
     saveSessionRecord(sessionRecord);
 
     if (goodPosturePercentage > 80 && totalSessionMinutes >= 5) {
-      addXP(500);
+      const { leveledUp } = addXP(500);
+      
+      if (leveledUp) {
+        confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, zIndex: 10000 });
+        toast.success('Chúc mừng! Bạn đã thăng cấp!', { icon: '🎉', duration: 5000 });
+      } else {
+        confetti({ particleCount: 60, spread: 50, origin: { y: 0.6 }, zIndex: 10000 });
+      }
+
       const isNew = badges.find(b => b.id === 'warrior')?.unlocked === false;
       if (isNew) {
         localStorage.setItem('oliver_unlocked_badge_warrior', 'true');
         addXP(1000);
+        setTimeout(() => {
+          toast.success('Đã mở khoá huy hiệu: Chiến binh Bền bỉ!', { icon: '🛡️', duration: 5000 });
+        }, 1000);
       }
     }
 

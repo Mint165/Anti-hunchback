@@ -8,9 +8,15 @@ import type { AppSettings } from '../services/db';
 export const Settings: React.FC = () => {
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [isSaved, setIsSaved] = useState<boolean>(false);
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
 
   useEffect(() => {
     setSettings(loadSettings());
+    const darkTheme = localStorage.getItem('oliver_dark_mode') === 'true';
+    setIsDarkMode(darkTheme);
+    if (darkTheme) {
+      document.documentElement.classList.add('dark');
+    }
   }, []);
 
   const handleChange = (key: keyof AppSettings, value: any) => {
@@ -59,8 +65,34 @@ export const Settings: React.FC = () => {
 
       <div className="premium-card max-w-2xl">
         
+        {/* Theme Section */}
+        <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-6 border-b border-gray-100 dark:border-gray-700 pb-3 flex items-center gap-2">
+          Giao Diện
+        </h3>
+        
+        <div className="flex flex-col gap-6 mb-8">
+          <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-xl">
+            <div>
+              <div className="font-bold text-gray-800 dark:text-gray-100">Chế độ tối (Dark Mode)</div>
+              <div className="text-xs text-gray-500">Giảm mỏi mắt khi học vào ban đêm</div>
+            </div>
+            <button 
+              onClick={() => {
+                const newMode = !isDarkMode;
+                setIsDarkMode(newMode);
+                localStorage.setItem('oliver_dark_mode', String(newMode));
+                if (newMode) document.documentElement.classList.add('dark');
+                else document.documentElement.classList.remove('dark');
+              }}
+              className={`w-14 h-7 rounded-full p-1 flex transition-colors ${isDarkMode ? 'bg-blue-600' : 'bg-gray-300'}`}
+            >
+              <div className={`w-5 h-5 rounded-full bg-white transition-transform ${isDarkMode ? 'translate-x-7' : 'translate-x-0'}`} />
+            </button>
+          </div>
+        </div>
+
         {/* Posture Thresholds Section */}
-        <h3 className="text-lg font-bold text-gray-800 mb-6 border-b border-gray-100 pb-3 flex items-center gap-2">
+        <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-6 border-b border-gray-100 dark:border-gray-700 pb-3 flex items-center gap-2">
           <Shield size={20} className="text-green-600" /> Ngưỡng Đo Lường AI
         </h3>
         

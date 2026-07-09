@@ -1,11 +1,13 @@
 // Parent Dashboard Component
 
 import React, { useState, useEffect } from 'react';
-import { Eye, Bell, Shield, ShieldAlert, Heart, AlertCircle, Send, MessageSquare } from 'lucide-react';
+import { Eye, Bell, Shield, ShieldAlert, Heart, AlertCircle, Send, MessageSquare, Download, Calendar } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar } from 'recharts';
 import { getSessionRecords } from '../services/db';
 import type { SessionRecord } from '../services/db';
 import { subscribeToStudentSync, broadcastParentMessage } from '../services/parentSync';
+// @ts-ignore
+import html2pdf from 'html2pdf.js';
 
 interface ChartDataPoint {
   name: string;
@@ -231,21 +233,84 @@ export const ParentView: React.FC = () => {
 
   const healthPrediction = getHealthPrediction();
 
+  // Export PDF Logic
+  const handleExportPDF = () => {
+    const element = document.getElementById('report-content');
+    if (!element) return;
+    element.classList.add('exporting-pdf');
+    const opt = {
+      margin: 0.5,
+      filename: `Bao_Cao_Tien_Trinh_${new Date().toLocaleDateString('vi-VN')}.pdf`,
+      image: { type: 'jpeg' as const, quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true },
+      jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' as const }
+    };
+    html2pdf().set(opt).from(element).save().then(() => {
+       element.classList.remove('exporting-pdf');
+    });
+  };
+
+  // Render Heatmap (Last 28 days)
+  const renderHeatmap = () => {
+    const days = [];
+    for (let i = 27; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      days.push(`${year}-${month}-${day}`);
+    }
+
+    const studyMap: Record<string, number> = {};
+    sessions.forEach(s => {
+       studyMap[s.date] = (studyMap[s.date] || 0) + s.durationMinutes;
+    });
+
+    return (
+      <div className="mt-6 pt-6 border-t border-gray-100">
+        <h4 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
+          <Calendar size={16} className="text-blue-500" /> Biểu Đồ Luyện Tập (28 Ngày)
+        </h4>
+        <div className="flex gap-1.5 flex-wrap">
+          {days.map(d => {
+            const mins = studyMap[d] || 0;
+            let bgClass = 'bg-gray-100';
+            if (mins > 60) bgClass = 'bg-green-600';
+            else if (mins > 30) bgClass = 'bg-green-400';
+            else if (mins > 0) bgClass = 'bg-green-200';
+            return (
+              <div 
+                key={d} 
+                className={`w-5 h-5 rounded-sm ${bgClass} shadow-sm border border-black/5 hover:scale-110 transition-transform`} 
+                title={`${d}: Học ${mins} phút`}
+              ></div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-full p-6 lg:p-8" style={{ background: 'var(--bg-page)' }}>
       
       {/* Page Header */}
-      <div className="mb-8">
-        <div className="flex items-center gap-2 mb-2">
-          <span className="text-xs font-bold uppercase tracking-widest px-3 py-1 rounded-full"
-            style={{ background: '#ede9fe', color: '#7c3aed' }}>Phụ Huynh Dashboard</span>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-xs font-bold uppercase tracking-widest px-3 py-1 rounded-full bg-purple-100 text-purple-700">Phụ Huynh Dashboard</span>
+          </div>
+          <h1 className="text-2xl font-black text-gray-800">Giám sát Từ xa 🏠</h1>
+          <p className="text-gray-400 text-sm font-medium mt-0.5">Theo dõi tư thế, khoảng cách an toàn và tình trạng mệt mỏi của con.</p>
         </div>
-        <h1 className="text-2xl font-black text-gray-800">Giám sát Từ xa 🏠</h1>
-        <p className="text-gray-400 text-sm font-medium mt-0.5">Theo dõi tư thế, khoảng cách an toàn và tình trạng mệt mỏi của con.</p>
+        <button onClick={handleExportPDF} className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-700 shadow-sm hover:bg-gray-50 hide-on-pdf">
+          <Download size={16} /> Báo Cáo PDF
+        </button>
       </div>
 
       {/* Grid: Live monitoring vs Metrics Analytics */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+      <div id="report-content" className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         
         {/* Left Column: Real-time Connection status */}
         <div className="flex flex-col gap-6">
@@ -352,6 +417,8 @@ export const ParentView: React.FC = () => {
                 ))}
               </div>
             )}
+
+            {renderHeatmap()}
           </div>
 
         </div>
@@ -599,6 +666,9 @@ export const ParentView: React.FC = () => {
         }
         .animation-delay-2000 {
           animation-delay: 2s;
+        }
+        .exporting-pdf .hide-on-pdf {
+          display: none !important;
         }
       `}</style>
     </div>

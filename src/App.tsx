@@ -34,6 +34,10 @@ function AppContent() {
         setIsSynced(true);
       }
     });
+    // Check dark mode
+    if (localStorage.getItem('oliver_dark_mode') === 'true') {
+      document.documentElement.classList.add('dark');
+    }
   }, []);
 
   // Simple loading fallback
