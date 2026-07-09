@@ -3,11 +3,13 @@ import { usePostureContext } from '../contexts/PostureContext';
 import OliverPet, { type PetState } from './OliverPet';
 import { loadUserStats } from '../services/db';
 import { Maximize2, Minimize2 } from 'lucide-react';
+import { useMediaQuery } from 'react-responsive';
 
 export const FloatingPet: React.FC = () => {
   const { metrics, hasStarted, alertLevel } = usePostureContext();
   const [isMinimized, setIsMinimized] = useState(false);
   const [stats, setStats] = useState(() => loadUserStats());
+  const isMobile = useMediaQuery({ maxWidth: 768 });
 
   useEffect(() => {
     // Poll for stats changes to keep level up to date
@@ -33,26 +35,30 @@ export const FloatingPet: React.FC = () => {
   };
 
   const state = getPetState();
+  const bottomClass = isMobile ? 'bottom-24' : 'bottom-6';
+  const rightClass = isMobile ? 'right-4' : 'right-6';
 
-  if (isMinimized) {
+  if (isMinimized || isMobile) {
     return (
       <div 
-        className="fixed bottom-6 right-6 z-50 bg-white p-3 rounded-full shadow-lg border border-gray-200 cursor-pointer hover:shadow-xl transition-all hover:scale-110 flex items-center justify-center"
-        onClick={() => setIsMinimized(false)}
+        className={`fixed ${bottomClass} ${rightClass} z-50 bg-white p-3 rounded-full shadow-lg border border-gray-200 cursor-pointer hover:shadow-xl transition-all hover:scale-110 flex items-center justify-center`}
+        onClick={() => !isMobile && setIsMinimized(false)}
         style={{ width: '60px', height: '60px' }}
       >
         <div className="scale-50 origin-center -ml-16 -mt-16 pointer-events-none">
-          <OliverPet state={state} size={150} petLevel={stats.petLevel} />
+          <OliverPet state={state} size={150} petLevel={stats.petLevel} hideBubble={isMobile} />
         </div>
-        <div className="absolute top-0 right-0 bg-blue-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
-          <Maximize2 size={10} />
-        </div>
+        {!isMobile && (
+          <div className="absolute top-0 right-0 bg-blue-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
+            <Maximize2 size={10} />
+          </div>
+        )}
       </div>
     );
   }
 
   return (
-    <div className={`fixed bottom-6 right-6 z-50 transition-transform duration-300 ${state === 'slouch' || state === 'close' ? 'animate-bounce' : ''}`}>
+    <div className={`fixed ${bottomClass} ${rightClass} z-50 transition-transform duration-300 ${state === 'slouch' || state === 'close' ? 'animate-bounce' : ''}`}>
       <div className="relative group">
         <button 
           onClick={() => setIsMinimized(true)}
