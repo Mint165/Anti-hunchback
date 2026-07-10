@@ -11,12 +11,20 @@ export const FloatingPet: React.FC = () => {
   const [stats, setStats] = useState(() => loadUserStats());
   const isMobile = useMediaQuery({ maxWidth: 768 });
 
+  // Refresh stats only when tab becomes visible (instead of polling every 2s)
   useEffect(() => {
-    // Poll for stats changes to keep level up to date
-    const interval = setInterval(() => {
-      setStats(loadUserStats());
-    }, 2000);
-    return () => clearInterval(interval);
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        setStats(loadUserStats());
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    // Also refresh every 30 seconds (instead of 2s) as a fallback
+    const interval = setInterval(() => setStats(loadUserStats()), 30000);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility);
+      clearInterval(interval);
+    };
   }, []);
 
   if (!hasStarted) {

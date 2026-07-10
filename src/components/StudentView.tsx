@@ -64,6 +64,9 @@ export const StudentView: React.FC = () => {
     }
   }, [alertLevel, isAudioEnabled]);
 
+  // Throttle broadcast to once every 2 seconds
+  const lastBroadcastRef = useRef<number>(0);
+
   useEffect(() => {
     if (!isModelReady || !calibration || !metrics) return;
 
@@ -81,15 +84,20 @@ export const StudentView: React.FC = () => {
       broadcastFatigueAlert("Bé bắt đầu nhấp nhổm nhiều, có dấu hiệu mất tập trung hoặc mỏi cơ.");
     }
 
-    const overallStatus = healthScore >= 85 ? 'good' : healthScore >= 70 ? 'warning' : 'danger';
-    broadcastStudentStatus(overallStatus, {
-      eyeDistanceCm: metrics.eyeDistanceCm,
-      neckAngle: metrics.neckAngle,
-      shoulderTilt: metrics.shoulderTilt,
-      slouchAngle: metrics.slouchAngle,
-      healthScore: healthScore,
-      isWritingMode: metrics.isWritingMode,
-    });
+    // Throttle: only broadcast once every 2 seconds
+    const now = Date.now();
+    if (now - lastBroadcastRef.current >= 2000) {
+      const overallStatus = healthScore >= 85 ? 'good' : healthScore >= 70 ? 'warning' : 'danger';
+      broadcastStudentStatus(overallStatus, {
+        eyeDistanceCm: metrics.eyeDistanceCm,
+        neckAngle: metrics.neckAngle,
+        shoulderTilt: metrics.shoulderTilt,
+        slouchAngle: metrics.slouchAngle,
+        healthScore: healthScore,
+        isWritingMode: metrics.isWritingMode,
+      });
+      lastBroadcastRef.current = now;
+    }
 
   }, [metrics, healthScore, isModelReady, calibration]);
 
