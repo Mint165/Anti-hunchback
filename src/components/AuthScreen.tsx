@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
-import { User, Shield, Lock, Mail, ArrowLeft, CheckCircle2, ShieldAlert } from 'lucide-react';
+import { User, Shield, Lock, Mail, ArrowLeft, CheckCircle2, ShieldAlert, Eye } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 export interface AuthUser {
@@ -160,7 +160,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/20 rounded-full blur-[120px] pointer-events-none animate-pulse"></div>
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-600/20 rounded-full blur-[120px] pointer-events-none animate-pulse" style={{ animationDelay: '2s' }}></div>
 
-        <div className="relative z-10 w-full max-w-md p-8 rounded-3xl bg-white/10 dark:bg-slate-900/60 backdrop-blur-xl border border-white/20 dark:border-slate-800/80 shadow-[0_20px_50px_rgba(0,0,0,0.3)] text-white">
+        <div className="relative z-10 w-full max-w-md p-6 sm:p-8 rounded-3xl bg-white/10 dark:bg-slate-900/60 backdrop-blur-xl border border-white/20 dark:border-slate-800/80 shadow-[0_20px_50px_rgba(0,0,0,0.3)] text-white">
           <button 
             onClick={() => setIsVerifying(false)}
             className="absolute top-6 left-6 p-2 rounded-full hover:bg-white/10 transition-colors text-white"
@@ -172,7 +172,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
             <div className="w-16 h-16 bg-gradient-to-br from-green-400 to-emerald-600 rounded-2xl flex items-center justify-center text-white mx-auto mb-4 shadow-lg shadow-emerald-500/30">
               <CheckCircle2 size={32} />
             </div>
-            <h2 className="text-2xl font-black tracking-tight text-white">Xác Minh Tài Khoản</h2>
+            <h2 className="text-2xl font-black tracking-tight text-white animate-fade-in">Xác Minh Tài Khoản</h2>
             <p className="text-gray-300 mt-2 text-sm">
               Chúng tôi đã gửi một mã xác nhận gồm 6 ký tự (3 chữ, 3 số) đến <span className="font-bold text-primary">{pendingEmail}</span>.
             </p>
@@ -192,14 +192,17 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
                 type="text"
                 value={otpCode}
                 onChange={(e) => setOtpCode(e.target.value)}
-                className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-center font-black tracking-[0.3em] text-2xl text-white placeholder-gray-600"
+                className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-center font-black tracking-[0.3em] text-2xl text-white placeholder-gray-600 transition-all"
                 placeholder="A1B2C3"
                 maxLength={6}
                 required
               />
             </div>
 
-            <button type="submit" className="w-full py-4 rounded-2xl bg-gradient-to-r from-primary to-purple-600 hover:from-primary-hover hover:to-purple-700 font-bold shadow-lg shadow-primary/30 transition-all transform hover:-translate-y-0.5 active:translate-y-0 text-white">
+            <button 
+              type="submit" 
+              className="w-full py-4 rounded-xl bg-gradient-to-r from-primary to-purple-600 hover:from-primary-hover hover:to-purple-700 font-extrabold text-white shadow-[0_4px_20px_rgba(92,60,241,0.4)] hover:shadow-[0_4px_25px_rgba(92,60,241,0.6)] hover:scale-[1.03] active:scale-[0.98] transition-all duration-300"
+            >
               Kích hoạt tài khoản
             </button>
           </form>
@@ -224,10 +227,10 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
       <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/20 rounded-full blur-[120px] pointer-events-none animate-pulse"></div>
       <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-600/20 rounded-full blur-[120px] pointer-events-none animate-pulse" style={{ animationDelay: '2s' }}></div>
 
-      <div className="relative z-10 w-full max-w-md p-8 rounded-3xl bg-white/10 dark:bg-slate-900/60 backdrop-blur-xl border border-white/20 dark:border-slate-800/80 shadow-[0_20px_50px_rgba(0,0,0,0.3)] text-white">
+      <div className="relative z-10 w-full max-w-md p-6 sm:p-8 rounded-3xl bg-white/10 dark:bg-slate-900/60 backdrop-blur-xl border border-white/20 dark:border-slate-800/80 shadow-[0_20px_50px_rgba(0,0,0,0.3)] text-white">
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-gradient-to-br from-primary to-purple-600 rounded-2xl flex items-center justify-center text-white text-3xl font-black mx-auto mb-4 shadow-lg shadow-primary/30">
-            O
+          <div className="w-16 h-16 bg-gradient-to-br from-primary to-purple-600 rounded-2xl flex items-center justify-center text-white mx-auto mb-4 shadow-lg shadow-primary/40 transform hover:scale-105 transition-all">
+            <Eye size={32} className="text-white" />
           </div>
           <h2 className="text-3xl font-black tracking-tight text-white">
             {isLogin ? t('auth.loginTitle') : t('auth.registerTitle')}
@@ -325,20 +328,26 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
             </div>
           </div>
 
-          <button type="submit" className="w-full py-4 rounded-xl bg-gradient-to-r from-primary to-purple-600 hover:from-primary-hover hover:to-purple-700 font-bold shadow-lg shadow-primary/20 transition-all transform hover:-translate-y-0.5 active:translate-y-0 text-white mt-6">
+          <button 
+            type="submit" 
+            className="w-full py-4 rounded-xl bg-gradient-to-r from-primary to-purple-600 hover:from-primary-hover hover:to-purple-700 font-extrabold text-white shadow-[0_4px_20px_rgba(92,60,241,0.4)] hover:shadow-[0_4px_25px_rgba(92,60,241,0.6)] hover:scale-[1.03] active:scale-[0.98] transition-all duration-300 mt-6"
+          >
             {isLogin ? t('auth.loginBtn') : t('auth.registerBtn')}
           </button>
         </form>
 
-        <div className="mt-8 text-center border-t border-white/10 pt-6">
+        <div className="mt-8 text-center border-t border-white/10 pt-6 flex flex-col items-center gap-3">
+          <span className="text-sm text-gray-400">
+            {isLogin ? "Bạn mới tham gia?" : "Đã có tài khoản?"}
+          </span>
           <button
             onClick={() => {
               setIsLogin(!isLogin);
               setError('');
             }}
-            className="text-primary font-bold hover:underline transition-all"
+            className="w-full py-3.5 px-6 rounded-xl border border-white/20 bg-white/5 hover:bg-white/10 text-white font-bold transition-all transform hover:scale-[1.02] active:scale-[0.98] duration-200"
           >
-            {isLogin ? t('auth.switchToRegister') : t('auth.switchToLogin')}
+            {isLogin ? "Đăng ký tài khoản mới" : "Đăng nhập ngay"}
           </button>
         </div>
       </div>

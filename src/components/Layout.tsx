@@ -1,7 +1,7 @@
 // Layout Component - Premium Sidebar Design
 
 import React from 'react';
-import { LayoutDashboard, Shield, Settings as SettingsIcon, PawPrint } from 'lucide-react';
+import { LayoutDashboard, Shield, Settings as SettingsIcon, PawPrint, Eye } from 'lucide-react';
 import { useMediaQuery } from 'react-responsive';
 import type { AuthUser } from './AuthScreen';
 
@@ -19,7 +19,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTa
 
   const menuItems = [
     { id: 'student', name: 'Dashboard', icon: LayoutDashboard },
-    { id: 'pet', name: 'Oliver Pet', icon: PawPrint },
+    { id: 'pet', name: 'Thú cưng MediEdu', icon: PawPrint },
     { id: 'parent', name: 'Parent Sync', icon: Shield },
     { id: 'settings', name: 'Settings', icon: SettingsIcon },
   ] as const;
@@ -35,9 +35,11 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTa
           
           {/* Brand */}
           <div className="sidebar-brand">
-            <div className="sidebar-logo">O</div>
+            <div className="sidebar-logo">
+              <Eye size={20} className="text-white" />
+            </div>
             <div>
-              <h2>Oliver AI</h2>
+              <h2>MediEdu</h2>
             </div>
           </div>
 

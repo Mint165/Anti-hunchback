@@ -212,7 +212,7 @@ export const StudentView: React.FC = () => {
           <div className="w-24 h-24 bg-purple-500/20 rounded-full flex items-center justify-center text-purple-400 mb-6">
             <Trophy size={48} />
           </div>
-          <h2 className="text-5xl font-black mb-4 tracking-tight">Chào mừng đến với Oliver AI</h2>
+          <h2 className="text-5xl font-black mb-4 tracking-tight">Chào mừng đến với MediEdu</h2>
           <p className="text-gray-300 text-xl mb-10 max-w-lg leading-relaxed">
             Hệ thống sẽ theo dõi tư thế của bạn thông qua camera để bảo vệ cột sống và mắt. Dữ liệu hình ảnh chỉ xử lý trực tiếp trên máy của bạn, tuyệt đối bảo mật.
           </p>
