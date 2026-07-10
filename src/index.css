@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -37,7 +37,7 @@
   --shadow-hover: 0 12px 32px rgba(149, 157, 165, 0.15);
   --shadow-btn: 0 4px 14px rgba(92, 60, 241, 0.3);
 
-  --font-sans: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-sans: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 /* Dark Mode Overrides */
@@ -45,8 +45,8 @@
   --bg-page: #0f172a; /* slate-900 */
   --bg-sidebar: #1e293b; /* slate-800 */
   
-  --text-main: #f1f5f9; /* slate-100 */
-  --text-muted: #94a3b8; /* slate-400 */
+  --text-main: #f8fafc; /* slate-50 - higher contrast */
+  --text-muted: #cbd5e1; /* slate-300 - higher contrast */
   
   --primary-light: rgba(92, 60, 241, 0.2);
   --secondary-light: rgba(0, 210, 133, 0.2);
@@ -604,4 +604,17 @@ body {
     height: 24px;
     font-size: 14px;
   }
+}
+/* Custom Animations */
+@keyframes subtle-pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+}
+
+.subtle-pulse {
+  animation: subtle-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }

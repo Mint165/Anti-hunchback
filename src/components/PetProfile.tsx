@@ -2,18 +2,25 @@ import React, { useState, useEffect } from 'react';
 import { loadUserStats, getBadgesStatus } from '../services/db';
 import OliverPet from './OliverPet';
 import PetShop from './PetShop';
-import { Award, Heart, Eye, Activity } from 'lucide-react';
+import { Award, Heart, Eye, Activity, Info, X } from 'lucide-react';
+import { useLanguage } from '../contexts/LanguageContext';
 
 export const PetProfile: React.FC = () => {
+  const { t: _t } = useLanguage();
   const [stats, setStats] = useState(() => loadUserStats());
   const [badges, setBadges] = useState(() => getBadgesStatus());
+  const [showInfo, setShowInfo] = useState(false);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setStats(loadUserStats());
-      setBadges(getBadgesStatus());
-    }, 2000);
-    return () => clearInterval(interval);
+    // Only load once when mounted, and listen to visibility change (same fix as FloatingPet)
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        setStats(loadUserStats());
+        setBadges(getBadgesStatus());
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, []);
 
   const getXpThreshold = (level: number) => {
@@ -45,7 +52,14 @@ export const PetProfile: React.FC = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* Left Column: Avatar & Progress */}
-        <div className="premium-card bg-white p-8 flex flex-col items-center justify-center">
+        <div className="premium-card bg-white p-8 flex flex-col items-center justify-center relative">
+          <button 
+            onClick={() => setShowInfo(true)}
+            className="absolute top-4 right-4 p-2 bg-blue-50 text-blue-500 hover:bg-blue-100 rounded-full transition-colors shadow-sm"
+          >
+            <Info size={20} />
+          </button>
+          
           <div className="w-48 h-48 bg-gray-50 rounded-full flex items-center justify-center mb-6 shadow-inner relative border-4 border-green-100">
              <div className="scale-75 absolute -bottom-4">
                <OliverPet state="good" size={240} petLevel={stats.petLevel} equippedItems={stats.equippedItems} customText="Tớ luôn sẵn sàng đồng hành cùng bạn!" />
@@ -132,6 +146,23 @@ export const PetProfile: React.FC = () => {
       <div className="mt-8">
         <PetShop />
       </div>
+
+      {showInfo && (
+        <div className="fixed inset-0 z-[100] bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-md p-8 shadow-2xl relative animate-slide-in-right">
+            <button onClick={() => setShowInfo(false)} className="absolute top-4 right-4 p-2 bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 rounded-full transition-colors">
+              <X size={20} className="text-gray-600 dark:text-gray-300" />
+            </button>
+            <h3 className="text-2xl font-black text-gray-800 dark:text-white mb-4">Hướng dẫn Thú cưng</h3>
+            <div className="space-y-4 text-gray-600 dark:text-gray-300 text-sm leading-relaxed">
+              <p><strong>Làm sao để tăng XP?</strong><br/>Hãy giữ tư thế ngồi thẳng, mắt cách màn hình {'>'}50cm. Mỗi phút ngồi chuẩn bạn sẽ được cộng XP!</p>
+              <p><strong>Oliver sẽ phản ứng ra sao?</strong><br/>Oliver sẽ vui vẻ (nhảy múa) khi bạn ngồi đúng. Nếu bạn cúi quá gần, Oliver sẽ nhíu mày nhắc nhở.</p>
+              <p><strong>Cách đổi vật phẩm:</strong><br/>Sử dụng XP đạt được để mở khóa kính, mũ, áo ở Pet Shop bên dưới. Level càng cao, vật phẩm càng hiếm!</p>
+            </div>
+            <button onClick={() => setShowInfo(false)} className="w-full btn-primary py-3 mt-6">Đã hiểu</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

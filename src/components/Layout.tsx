@@ -3,16 +3,18 @@
 import React from 'react';
 import { LayoutDashboard, Shield, Settings as SettingsIcon, PawPrint } from 'lucide-react';
 import { useMediaQuery } from 'react-responsive';
-import type { AppMode } from '../App';
+import type { AuthUser } from './AuthScreen';
 
 interface LayoutProps {
   children: React.ReactNode;
   activeTab: 'student' | 'parent' | 'pet' | 'settings';
   setActiveTab: (tab: 'student' | 'parent' | 'pet' | 'settings') => void;
-  appMode?: AppMode;
+  appMode?: string;
+  onAvatarClick?: () => void;
+  user?: AuthUser;
 }
 
-export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, appMode }) => {
+export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, appMode, onAvatarClick, user }) => {
   const isMobile = useMediaQuery({ maxWidth: 768 });
 
   const menuItems = [
@@ -21,6 +23,8 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTa
     { id: 'parent', name: 'Parent Sync', icon: Shield },
     { id: 'settings', name: 'Settings', icon: SettingsIcon },
   ] as const;
+
+  const displayUser = user || { name: 'Học Sinh', role: 'student' };
 
   return (
     <div className={`app-container ${isMobile ? 'mobile-layout' : ''}`}>
@@ -46,6 +50,11 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTa
             {menuItems.map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.id;
+              
+              // Hide student tabs if parent, hide parent tabs if student
+              if (displayUser.role === 'parent' && (item.id === 'student' || item.id === 'pet')) return null;
+              if (displayUser.role === 'student' && item.id === 'parent') return null;
+
               return (
                 <button
                   key={item.id}
@@ -60,13 +69,13 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTa
           </nav>
 
           {/* Bottom User Area or Footer */}
-          <div className="sidebar-footer">
-            <div className="user-avatar">
-              H
+          <div className="sidebar-footer cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-700/50 rounded-xl p-2 transition-colors" onClick={onAvatarClick}>
+            <div className="user-avatar bg-gradient-to-br from-primary to-purple-600 text-white font-black text-lg">
+              {displayUser.name.charAt(0).toUpperCase()}
             </div>
             <div className="user-info">
-              <div className="user-name">Học Sinh</div>
-              <div className="user-plan">Pro Plan</div>
+              <div className="user-name truncate max-w-[130px]">{displayUser.name}</div>
+              <div className="user-plan text-xs">{displayUser.role === 'student' ? 'Học Sinh' : 'Phụ Huynh'}</div>
             </div>
           </div>
         </aside>
@@ -83,6 +92,10 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTa
           {menuItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
+            
+            if (displayUser.role === 'parent' && (item.id === 'student' || item.id === 'pet')) return null;
+            if (displayUser.role === 'student' && item.id === 'parent') return null;
+
             return (
               <button
                 key={item.id}

@@ -278,7 +278,7 @@ export const OliverPet: React.FC<OliverPetProps> = ({
               </svg>
             )}
 
-            {/* SVG Panda Body with breathing */}
+            {/* SVG Panda Body with breathing and 3D effects */}
             <svg
               width="90%" height="90%"
               viewBox="0 0 100 100"
@@ -286,6 +286,43 @@ export const OliverPet: React.FC<OliverPetProps> = ({
                 state === 'slouch' ? 'translate-y-2' : ''
               } ${state === 'close' ? 'scale-110' : ''}`}
             >
+              <defs>
+                {/* 3D Gradients */}
+                <radialGradient id="bodyGrad" cx="40%" cy="30%" r="70%">
+                  <stop offset="0%" stopColor="#FFFFFF" />
+                  <stop offset="70%" stopColor="#F3F4F6" />
+                  <stop offset="100%" stopColor="#D1D5DB" />
+                </radialGradient>
+                
+                <radialGradient id="blackGrad" cx="40%" cy="30%" r="60%">
+                  <stop offset="0%" stopColor="#374151" />
+                  <stop offset="70%" stopColor="#1F2937" />
+                  <stop offset="100%" stopColor="#111827" />
+                </radialGradient>
+
+                <radialGradient id="headGrad" cx="35%" cy="30%" r="65%">
+                  <stop offset="0%" stopColor="#FFFFFF" />
+                  <stop offset="75%" stopColor="#F9FAFB" />
+                  <stop offset="100%" stopColor="#E5E7EB" />
+                </radialGradient>
+                
+                <radialGradient id="blushGrad" cx="50%" cy="50%" r="50%">
+                  <stop offset="0%" stopColor="#FF8A8A" stopOpacity="0.8" />
+                  <stop offset="100%" stopColor="#FF8A8A" stopOpacity="0" />
+                </radialGradient>
+
+                <filter id="furTexture" x="-20%" y="-20%" width="140%" height="140%">
+                   <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="3" result="noise" />
+                   <feColorMatrix type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0.05 0" in="noise" result="coloredNoise" />
+                   <feComposite operator="in" in="coloredNoise" in2="SourceGraphic" result="texture" />
+                   <feBlend mode="multiply" in="texture" in2="SourceGraphic" />
+                </filter>
+                
+                <filter id="dropShadow" x="-20%" y="-20%" width="140%" height="140%">
+                  <feDropShadow dx="0" dy="4" stdDeviation="4" floodColor="#000000" floodOpacity="0.15" />
+                </filter>
+              </defs>
+
               {/* Sparkles for Level 5 */}
               {petLevel >= 5 && state !== 'sleep' && (
                 <g className="animate-pulse opacity-80">
@@ -298,70 +335,75 @@ export const OliverPet: React.FC<OliverPetProps> = ({
               {/* Shadow */}
               <ellipse cx="50" cy="88" rx="25" ry="5" fill="#E5E7EB" className="oliver-shadow" />
 
-              {/* Ears */}
-              <circle cx="28" cy="24" r="8" fill="#1F2937" />
-              <circle cx="28" cy="24" r="4" fill="#374151" />
-              <circle cx="72" cy="24" r="8" fill="#1F2937" />
-              <circle cx="72" cy="24" r="4" fill="#374151" />
+              <g filter="url(#dropShadow)">
+                {/* Ears */}
+                <circle cx="28" cy="24" r="8" fill="url(#blackGrad)" />
+                <circle cx="28" cy="24" r="4" fill="#111827" />
+                <circle cx="72" cy="24" r="8" fill="url(#blackGrad)" />
+                <circle cx="72" cy="24" r="4" fill="#111827" />
 
-              {/* Royal Cape (Level 5) */}
-              {petLevel >= 5 && (
-                <path d="M 25 50 Q 10 90 20 85 Q 50 95 80 85 Q 90 90 75 50 Z" fill="#EF4444" opacity="0.9" />
-              )}
+                {/* Royal Cape (Level 5) */}
+                {petLevel >= 5 && (
+                  <path d="M 25 50 Q 10 90 20 85 Q 50 95 80 85 Q 90 90 75 50 Z" fill="#EF4444" opacity="0.9" />
+                )}
 
-              {/* Body/Torso */}
-              <ellipse cx="50" cy="68" rx="22" ry="18" fill="#FFFFFF" stroke="#1F2937" strokeWidth="2" />
-              <ellipse cx="50" cy="71" rx="15" ry="11" fill="#F3F4F6" />
+                {/* Body/Torso */}
+                <ellipse cx="50" cy="68" rx="22" ry="18" fill="url(#bodyGrad)" filter="url(#furTexture)" />
+                <ellipse cx="50" cy="71" rx="15" ry="11" fill="#FFFFFF" opacity="0.8" />
 
-              {/* Equipped Body Cape */}
-              {equippedItems['body'] === 'body_cape' && (
-                <path d="M 28 50 Q 15 90 25 85 Q 50 95 75 85 Q 85 90 72 50 Z" fill="#EF4444" opacity="0.9" />
-              )}
+                {/* Equipped Body Cape */}
+                {equippedItems['body'] === 'body_cape' && (
+                  <path d="M 28 50 Q 15 90 25 85 Q 50 95 75 85 Q 85 90 72 50 Z" fill="#EF4444" opacity="0.9" />
+                )}
 
-              {/* Guardian Armor (Level 4+) */}
-              {petLevel >= 4 && (
-                <path d="M 36 60 Q 50 75 64 60 Q 50 50 36 60" fill="#9CA3AF" stroke="#6B7280" strokeWidth="1" />
-              )}
+                {/* Guardian Armor (Level 4+) */}
+                {petLevel >= 4 && (
+                  <path d="M 36 60 Q 50 75 64 60 Q 50 50 36 60" fill="#9CA3AF" stroke="#6B7280" strokeWidth="1" />
+                )}
 
-              {/* Left Arm */}
-              <path
-                d={
-                  state === 'slouch' ? "M 28 60 Q 20 68 28 76"
-                    : state === 'close' ? "M 28 60 Q 32 46 36 50"
-                    : "M 28 60 Q 20 54 24 48"
-                }
-                stroke="#1F2937" strokeWidth="8" strokeLinecap="round" fill="none"
-              />
+                {/* Left Arm */}
+                <path
+                  d={
+                    state === 'slouch' ? "M 28 60 Q 20 68 28 76"
+                      : state === 'close' ? "M 28 60 Q 32 46 36 50"
+                      : "M 28 60 Q 20 54 24 48"
+                  }
+                  stroke="url(#blackGrad)" strokeWidth="8" strokeLinecap="round" fill="none"
+                  filter="url(#dropShadow)"
+                />
 
-              {/* Right Arm */}
-              <path
-                d={
-                  state === 'slouch' ? "M 72 60 Q 80 68 72 76"
-                    : state === 'close' ? "M 72 60 Q 68 46 64 50"
-                    : state === 'success' ? "M 72 60 Q 82 45 88 50"
-                    : "M 72 60 Q 80 54 76 48"
-                }
-                stroke="#1F2937" strokeWidth="8" strokeLinecap="round" fill="none"
-              />
+                {/* Right Arm */}
+                <path
+                  d={
+                    state === 'slouch' ? "M 72 60 Q 80 68 72 76"
+                      : state === 'close' ? "M 72 60 Q 68 46 64 50"
+                      : state === 'success' ? "M 72 60 Q 82 45 88 50"
+                      : "M 72 60 Q 80 54 76 48"
+                  }
+                  stroke="url(#blackGrad)" strokeWidth="8" strokeLinecap="round" fill="none"
+                  filter="url(#dropShadow)"
+                />
 
-              {/* Legs */}
-              <ellipse cx="36" cy="85" rx="6" ry="5" fill="#1F2937" />
-              <ellipse cx="64" cy="85" rx="6" ry="5" fill="#1F2937" />
+                {/* Legs */}
+                <ellipse cx="36" cy="85" rx="7" ry="5" fill="url(#blackGrad)" />
+                <ellipse cx="64" cy="85" rx="7" ry="5" fill="url(#blackGrad)" />
 
-              {/* Student Bag (Level 2+) */}
-              {petLevel >= 2 && petLevel < 5 && (
-                <rect x="70" y="55" width="12" height="16" rx="3" fill="#3B82F6" stroke="#2563EB" strokeWidth="1" transform="rotate(-15 70 55)" />
-              )}
+                {/* Student Bag (Level 2+) */}
+                {petLevel >= 2 && petLevel < 5 && (
+                  <rect x="70" y="55" width="12" height="16" rx="3" fill="#3B82F6" stroke="#2563EB" strokeWidth="1" transform="rotate(-15 70 55)" />
+                )}
 
-              {/* Head base */}
-              <ellipse
-                cx="50" cy="38" rx="24" ry="20"
-                fill="#FFFFFF" stroke="#1F2937" strokeWidth="2.5"
-                style={{
-                  transformOrigin: '50% 50%',
-                  transform: state === 'slouch' ? 'rotate(8deg) translateY(2px)' : 'none',
-                }}
-              />
+                {/* Head base */}
+                <ellipse
+                  cx="50" cy="38" rx="25" ry="21"
+                  fill="url(#headGrad)"
+                  filter="url(#furTexture)"
+                  style={{
+                    transformOrigin: '50% 50%',
+                    transform: state === 'slouch' ? 'rotate(8deg) translateY(2px)' : 'none',
+                  }}
+                />
+              </g>
 
               {/* Face Elements – eyes follow mouse */}
               <g style={{
@@ -373,74 +415,74 @@ export const OliverPet: React.FC<OliverPetProps> = ({
                 transformOrigin: '50% 38%',
               }}>
                 {/* Eye Patches */}
-                <ellipse cx="40" cy="36" rx="6" ry="8" fill="#1F2937" style={{ transform: 'rotate(-10deg)', transformOrigin: '40px 36px' }} />
-                <ellipse cx="60" cy="36" rx="6" ry="8" fill="#1F2937" style={{ transform: 'rotate(10deg)', transformOrigin: '60px 36px' }} />
+                <ellipse cx="39" cy="36" rx="7" ry="9" fill="url(#blackGrad)" style={{ transform: 'rotate(-12deg)', transformOrigin: '39px 36px' }} />
+                <ellipse cx="61" cy="36" rx="7" ry="9" fill="url(#blackGrad)" style={{ transform: 'rotate(12deg)', transformOrigin: '61px 36px' }} />
 
                 {/* Equipped Glasses */}
                 {(equippedItems['eyes'] === 'eyes_glasses' || petLevel >= 2) && equippedItems['eyes'] !== 'eyes_sunglasses' && (
                   <g stroke="#FBBF24" strokeWidth="1.5" fill="none">
-                    <circle cx="40" cy="36" r="8" />
-                    <circle cx="60" cy="36" r="8" />
-                    <path d="M 48 36 L 52 36" />
+                    <circle cx="39" cy="36" r="8" />
+                    <circle cx="61" cy="36" r="8" />
+                    <path d="M 47 36 L 53 36" />
                   </g>
                 )}
 
                 {equippedItems['eyes'] === 'eyes_sunglasses' && (
                   <g>
-                    <path d="M 30 36 Q 40 30 48 36 Q 40 42 30 36" fill="#111827" stroke="#000" strokeWidth="1" />
-                    <path d="M 52 36 Q 60 30 70 36 Q 60 42 52 36" fill="#111827" stroke="#000" strokeWidth="1" />
-                    <path d="M 48 34 L 52 34" stroke="#111827" strokeWidth="2" />
+                    <path d="M 29 36 Q 39 30 47 36 Q 39 42 29 36" fill="#111827" stroke="#000" strokeWidth="1" />
+                    <path d="M 53 36 Q 61 30 71 36 Q 61 42 53 36" fill="#111827" stroke="#000" strokeWidth="1" />
+                    <path d="M 47 34 L 53 34" stroke="#111827" strokeWidth="2" />
                   </g>
                 )}
 
                 {/* Eyes – follow mouse! */}
                 {state === 'close' || state === 'sleep' ? (
                   <>
-                    <path d="M 37 36 L 43 36 M 38 34 L 42 38" stroke="#FFFFFF" strokeWidth="1.5" strokeLinecap="round" />
-                    <path d="M 57 36 L 63 36 M 58 38 L 62 34" stroke="#FFFFFF" strokeWidth="1.5" strokeLinecap="round" />
+                    <path d="M 36 36 L 42 36 M 37 34 L 41 38" stroke="#FFFFFF" strokeWidth="1.5" strokeLinecap="round" />
+                    <path d="M 58 36 L 64 36 M 59 38 L 63 34" stroke="#FFFFFF" strokeWidth="1.5" strokeLinecap="round" />
                   </>
                 ) : state === 'slouch' || state === 'tired' ? (
                   <>
-                    <path d="M 37 38 Q 40 34 43 37" fill="none" stroke="#FFFFFF" strokeWidth="2.0" strokeLinecap="round" />
-                    <path d="M 57 37 Q 60 34 63 38" fill="none" stroke="#FFFFFF" strokeWidth="2.0" strokeLinecap="round" />
+                    <path d="M 36 38 Q 39 34 42 37" fill="none" stroke="#FFFFFF" strokeWidth="2.0" strokeLinecap="round" />
+                    <path d="M 58 37 Q 61 34 64 38" fill="none" stroke="#FFFFFF" strokeWidth="2.0" strokeLinecap="round" />
                     {state === 'tired' && (
                       <>
-                        <circle cx="35" cy="40" r="1.5" fill="#60A5FA" />
-                        <circle cx="65" cy="40" r="1.5" fill="#60A5FA" />
+                        <circle cx="34" cy="40" r="1.5" fill="#60A5FA" />
+                        <circle cx="66" cy="40" r="1.5" fill="#60A5FA" />
                       </>
                     )}
                   </>
                 ) : (
                   /* Normal eyes that track mouse */
                   <>
-                    <circle cx={41 + eyeOffset.x} cy={35 + eyeOffset.y} r="2.5" fill="#FFFFFF" />
-                    <circle cx={42 + eyeOffset.x * 0.5} cy={34 + eyeOffset.y * 0.5} r="1.0" fill="#FFFFFF" />
-                    <circle cx={59 + eyeOffset.x} cy={35 + eyeOffset.y} r="2.5" fill="#FFFFFF" />
-                    <circle cx={60 + eyeOffset.x * 0.5} cy={34 + eyeOffset.y * 0.5} r="1.0" fill="#FFFFFF" />
+                    <circle cx={40 + eyeOffset.x} cy={35 + eyeOffset.y} r="2.8" fill="#FFFFFF" />
+                    <circle cx={41.5 + eyeOffset.x * 0.5} cy={34 + eyeOffset.y * 0.5} r="1.2" fill="#FFFFFF" />
+                    <circle cx={60 + eyeOffset.x} cy={35 + eyeOffset.y} r="2.8" fill="#FFFFFF" />
+                    <circle cx={61.5 + eyeOffset.x * 0.5} cy={34 + eyeOffset.y * 0.5} r="1.2" fill="#FFFFFF" />
                   </>
                 )}
 
                 {/* Cheeks blush */}
                 {(state === 'good' || state === 'success') && (
                   <>
-                    <circle cx="32" cy="42" r="2.5" fill="#FF8A8A" opacity="0.6" />
-                    <circle cx="68" cy="42" r="2.5" fill="#FF8A8A" opacity="0.6" />
+                    <circle cx="30" cy="42" r="3.5" fill="url(#blushGrad)" />
+                    <circle cx="70" cy="42" r="3.5" fill="url(#blushGrad)" />
                   </>
                 )}
 
                 {/* Snout */}
-                <ellipse cx="50" cy="44" rx="6" ry="4" fill="#F3F4F6" stroke="#E5E7EB" strokeWidth="0.5" />
+                <ellipse cx="50" cy="45" rx="7" ry="5" fill="#FFFFFF" stroke="#E5E7EB" strokeWidth="0.5" filter="url(#dropShadow)" />
 
                 {/* Nose */}
-                <path d="M 48 43 L 52 43 L 50 45 Z" fill="#1F2937" />
+                <path d="M 47.5 44 L 52.5 44 L 50 46 Z" fill="#1F2937" />
 
                 {/* Mouth */}
                 {state === 'good' || state === 'success' || state === 'writing' ? (
-                  <path d="M 47 47 Q 50 50 53 47" fill="none" stroke="#1F2937" strokeWidth="1.5" strokeLinecap="round" />
+                  <path d="M 46 48 Q 50 51 54 48" fill="none" stroke="#1F2937" strokeWidth="1.5" strokeLinecap="round" />
                 ) : state === 'sleep' ? (
-                  <circle cx="50" cy="48" r="1.5" fill="#1F2937" />
+                  <circle cx="50" cy="49" r="1.5" fill="#1F2937" />
                 ) : (
-                  <path d="M 47 49 Q 50 46 53 49" fill="none" stroke="#1F2937" strokeWidth="1.5" strokeLinecap="round" />
+                  <path d="M 46 50 Q 50 47 54 50" fill="none" stroke="#1F2937" strokeWidth="1.5" strokeLinecap="round" />
                 )}
               </g>
 

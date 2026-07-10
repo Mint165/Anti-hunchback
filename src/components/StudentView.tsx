@@ -1,7 +1,7 @@
 // Student Workspace Component - Premium Dashboard
 
 import React, { useState, useEffect, useRef } from 'react';
-import { AlertTriangle, RefreshCw, Trophy, BookOpen, Volume2, VolumeX, CameraOff, Play, Info } from 'lucide-react';
+import { AlertTriangle, RefreshCw, Trophy, BookOpen, Volume2, VolumeX, CameraOff, Play, Info, X } from 'lucide-react';
 import type { CalibrationData } from '../services/postureAI';
 import { loadUserStats, saveSessionRecord, addXP, getBadgesStatus } from '../services/db';
 import type { Badge } from '../services/db';
@@ -25,9 +25,11 @@ export const StudentView: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [showCamera, setShowCamera] = useState<boolean>(true);
   const [isAudioEnabled, setIsAudioEnabled] = useState<boolean>(true);
+  const [showTips, setShowTips] = useState<boolean>(false);
 
   const [sessionStartTime, setSessionStartTime] = useState<number>(Date.now());
-  const [totalSessionMinutes, setTotalSessionMinutes] = useState<number>(0);
+  const [sessionElapsedSeconds, setSessionElapsedSeconds] = useState<number>(0);
+  const totalSessionMinutes = Math.floor(sessionElapsedSeconds / 60);
 
   const warningsCountRef = useRef<number>(0);
   const blinkCountRef = useRef<number>(0);
@@ -49,8 +51,8 @@ export const StudentView: React.FC = () => {
   useEffect(() => {
     if (!hasStarted) return;
     const interval = setInterval(() => {
-      const mins = Math.floor((Date.now() - sessionStartTime) / 60000);
-      setTotalSessionMinutes(mins);
+      const elapsed = Math.floor((Date.now() - sessionStartTime) / 1000);
+      setSessionElapsedSeconds(elapsed);
     }, 1000);
 
     return () => clearInterval(interval);
@@ -182,7 +184,7 @@ export const StudentView: React.FC = () => {
     }
 
     setSessionStartTime(Date.now());
-    setTotalSessionMinutes(0);
+    setSessionElapsedSeconds(0);
     warningsCountRef.current = 0;
     blinkCountRef.current = 0;
     fidgetCountRef.current = 0;
@@ -244,11 +246,49 @@ export const StudentView: React.FC = () => {
   const scoreColor = healthScore >= 80 ? '#00d285' : healthScore >= 60 ? '#FFAA2C' : '#FF5E5E';
   const hh = Math.floor(totalSessionMinutes / 60).toString().padStart(2, '0');
   const mm = (totalSessionMinutes % 60).toString().padStart(2, '0');
+  const ss = (sessionElapsedSeconds % 60).toString().padStart(2, '0');
 
   return (
-    <div className={`min-h-full ${alertLevel === 'MILD_WARNING' ? 'screen-alert-glow' : ''} ${alertLevel === 'STRONG_WARNING' ? 'shake-warn' : ''}`}>
+    <div className={`min-h-full ${alertLevel === 'MILD_WARNING' ? 'screen-alert-glow' : ''}`}>
       
       {/* Overlays */}
+      {showTips && (
+        <div className="fixed inset-0 z-50 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-md p-8 shadow-2xl relative animate-slide-in-right">
+            <button onClick={() => setShowTips(false)} className="absolute top-4 right-4 p-2 bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 rounded-full transition-colors">
+              <X size={20} className="text-gray-600 dark:text-gray-300" />
+            </button>
+            <h3 className="text-2xl font-black text-gray-800 dark:text-white mb-6">Mẹo từ AI 🤖</h3>
+            <div className="space-y-4">
+              {metrics && metrics.slouchAngle > 10 ? (
+                <div className="p-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-100 dark:border-orange-800 rounded-xl">
+                  <div className="font-bold text-orange-800 dark:text-orange-300 mb-1">Cảnh báo: Hơi còng lưng</div>
+                  <div className="text-orange-600 dark:text-orange-400 text-sm">Góc lưng hiện tại là {Math.round(metrics.slouchAngle)}°. Hãy rướn người lên và mở rộng lồng ngực.</div>
+                </div>
+              ) : (
+                <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-800 rounded-xl">
+                  <div className="font-bold text-green-800 dark:text-green-300 mb-1">Tuyệt vời: Lưng rất thẳng!</div>
+                  <div className="text-green-600 dark:text-green-400 text-sm">Hãy tiếp tục duy trì tư thế này nhé.</div>
+                </div>
+              )}
+
+              {metrics && metrics.eyeDistanceCm < 50 ? (
+                <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800 rounded-xl">
+                  <div className="font-bold text-red-800 dark:text-red-300 mb-1">Cảnh báo: Mắt quá gần</div>
+                  <div className="text-red-600 dark:text-red-400 text-sm">Khoảng cách hiện tại: {metrics.eyeDistanceCm}cm. Hãy lùi ra xa màn hình ít nhất 50cm.</div>
+                </div>
+              ) : (
+                <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-xl">
+                  <div className="font-bold text-blue-800 dark:text-blue-300 mb-1">Tốt: Khoảng cách an toàn</div>
+                  <div className="text-blue-600 dark:text-blue-400 text-sm">Mắt bạn đang ở khoảng cách lý tưởng.</div>
+                </div>
+              )}
+            </div>
+            <button onClick={() => setShowTips(false)} className="w-full btn-primary py-3 mt-6">Đã hiểu</button>
+          </div>
+        </div>
+      )}
+
       {!hasStarted && (
         <div className="fixed inset-0 z-[60] bg-gray-900/95 backdrop-blur-3xl flex flex-col items-center justify-center text-white text-center p-8">
           <h2 className="text-5xl font-black mb-4 tracking-tight">Sẵn Sàng Học Tập!</h2>
@@ -277,14 +317,14 @@ export const StudentView: React.FC = () => {
       )}
 
       {alertLevel === 'STRONG_WARNING' && (
-        <div className="fixed inset-0 z-40 bg-red-900/40 backdrop-blur-xl flex flex-col items-center justify-center text-white text-center p-4">
-          <div className="premium-card bg-red-950/80 border border-red-500 p-10 max-w-lg shadow-[0_32px_64px_rgba(255,94,94,0.4)] animate-bounce">
+        <div className="fixed inset-0 z-50 bg-red-900/60 flex items-center justify-center p-4">
+          <div className="premium-card bg-red-950 border-2 border-red-500 p-10 max-w-lg shadow-[0_0_80px_rgba(255,94,94,0.3)] subtle-pulse relative">
             <AlertTriangle size={72} className="text-red-500 mx-auto mb-6 drop-shadow-[0_0_15px_rgba(255,94,94,0.5)]" />
-            <h2 className="text-4xl font-black mb-4">TƯ THẾ SAI NGHIÊM TRỌNG</h2>
-            <p className="text-red-100 text-lg mb-8 leading-relaxed font-medium">
+            <h2 className="text-4xl font-black text-white text-center mb-4">TƯ THẾ SAI NGHIÊM TRỌNG</h2>
+            <p className="text-red-100 text-center text-lg mb-8 leading-relaxed font-medium">
               Bạn đã ngồi sai tư thế liên tục hơn 2 phút! Hãy điều chỉnh lại khoảng cách và thẳng lưng ngay để bảo vệ cột sống và thị lực.
             </p>
-            <button onClick={() => resetBreak()} className="btn-primary w-full bg-red-500 text-white border-none py-4 text-lg">
+            <button onClick={() => resetBreak()} className="btn-primary w-full bg-red-500 hover:bg-red-600 text-white border-none py-4 text-lg font-bold">
               Tôi Đã Sửa Tư Thế
             </button>
           </div>
@@ -383,9 +423,12 @@ export const StudentView: React.FC = () => {
                  <div className="timer-colon">:</div>
                  <div className="timer-digit">{mm[0]}</div>
                  <div className="timer-digit">{mm[1]}</div>
+                 <div className="timer-colon">:</div>
+                 <div className="timer-digit">{ss[0]}</div>
+                 <div className="timer-digit">{ss[1]}</div>
               </div>
               <div className="timer-labels">
-                <span>Giờ</span><span>Phút</span>
+                <span>Giờ</span><span>Phút</span><span>Giây</span>
               </div>
               <button className="btn-secondary w-full" onClick={() => resetBreak()}>
                 Bắt đầu phiên học mới
@@ -526,7 +569,7 @@ export const StudentView: React.FC = () => {
                   <div className="tips-subtext">để cải thiện tư thế của bạn</div>
                 </div>
               </div>
-              <button className="btn-secondary w-full" style={{ background: '#00d285' }}>
+              <button className="btn-secondary w-full" style={{ background: '#00d285' }} onClick={() => setShowTips(true)}>
                 Xem Mẹo &rarr;
               </button>
             </div>

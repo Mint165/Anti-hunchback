@@ -4,8 +4,10 @@ import Layout from './components/Layout';
 import { syncFromSupabase } from './services/db';
 import { PostureProvider, usePostureContext } from './contexts/PostureContext';
 import { Toaster } from 'react-hot-toast';
-import { useMediaQuery } from 'react-responsive';
-import { User, Smartphone, ShieldCheck } from 'lucide-react';
+import { AuthScreen } from './components/AuthScreen';
+import type { AuthUser } from './components/AuthScreen';
+import { UserProfile } from './components/UserProfile';
+import { LanguageProvider } from './contexts/LanguageContext';
 
 // Lazy loaded components for code splitting
 const StudentView = React.lazy(() => import('./components/StudentView'));
@@ -15,19 +17,20 @@ const PetProfile = React.lazy(() => import('./components/PetProfile'));
 const FloatingPet = React.lazy(() => import('./components/FloatingPet'));
 const EyeExercise = React.lazy(() => import('./components/EyeExercise'));
 
-type ActiveTab = 'student' | 'parent' | 'pet' | 'settings';
-
-export type AppMode = 'student_front' | 'student_side' | 'parent';
+export type AppTab = 'student' | 'parent' | 'pet' | 'settings';
+export type AppMode = 'student' | 'parent';
 
 function AppContent() {
-  const [activeTab, setActiveTab] = useState<ActiveTab>('student');
-  const [isMobileModeSelected, setIsMobileModeSelected] = useState<boolean>(false);
-  const [appMode, setAppMode] = useState<AppMode | null>(null);
-
+  const [user, setUser] = useState<AuthUser | null>(() => {
+    const savedUser = localStorage.getItem('oliver_current_user');
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
+  
+  const [activeTab, setActiveTab] = useState<AppTab>('student');
+  const [showProfile, setShowProfile] = useState(false);
   const [isSynced, setIsSynced] = useState<boolean>(false);
-  const { eyeExerciseTriggered, onEyeExerciseComplete, metrics, poseLandmarks, setCameraMode } = usePostureContext();
-  const isMobile = useMediaQuery({ maxWidth: 768 });
-
+  const { eyeExerciseTriggered, onEyeExerciseComplete, metrics, poseLandmarks } = usePostureContext();
+  
   useEffect(() => {
     syncFromSupabase().then((success) => {
       if (success) {
@@ -40,6 +43,38 @@ function AppContent() {
     }
   }, []);
 
+  useEffect(() => {
+    if (user) {
+      localStorage.setItem('oliver_current_user', JSON.stringify(user));
+      if (user.role === 'parent' && activeTab !== 'parent' && activeTab !== 'settings') {
+        setActiveTab('parent');
+      } else if (user.role === 'student' && activeTab === 'parent') {
+        setActiveTab('student');
+      }
+    } else {
+      localStorage.removeItem('oliver_current_user');
+    }
+  }, [user]);
+
+  const handleLogin = (loggedInUser: AuthUser) => {
+    setUser(loggedInUser);
+  };
+
+  const handleLogout = () => {
+    setUser(null);
+    setShowProfile(false);
+  };
+
+  const handleUpdateParentCode = (code: string) => {
+    if (!user) return;
+    const updatedUser = { ...user, parentLinkedCode: code };
+    setUser(updatedUser);
+  };
+
+  if (!user) {
+    return <AuthScreen onLogin={handleLogin} />;
+  }
+
   // Simple loading fallback
   const LoadingFallback = () => (
     <div className="flex items-center justify-center h-full w-full">
@@ -47,62 +82,9 @@ function AppContent() {
     </div>
   );
 
-  const handleModeSelect = (mode: AppMode) => {
-    setAppMode(mode);
-    setIsMobileModeSelected(true);
-    if (mode === 'parent') {
-      setActiveTab('parent');
-    } else if (mode === 'student_side') {
-      setCameraMode('side');
-      setActiveTab('student');
-    } else {
-      setCameraMode('front');
-      setActiveTab('student');
-    }
-  };
-
-  // Mobile Mode Selector UI
-  if (isMobile && !isMobileModeSelected) {
-    return (
-      <div className="fixed inset-0 z-[100] bg-gray-50 flex flex-col p-6 items-center justify-center">
-        <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center text-blue-500 mb-6">
-          <Smartphone size={32} />
-        </div>
-        <h2 className="text-2xl font-bold text-gray-800 mb-2">Chọn Chế Độ Hoạt Động</h2>
-        <p className="text-gray-500 text-center mb-8 text-sm">Vui lòng chọn vai trò của bạn trên thiết bị này.</p>
-        
-        <div className="w-full max-w-sm space-y-4">
-          <button onClick={() => handleModeSelect('student_front')} className="w-full p-4 bg-white rounded-2xl border border-gray-200 shadow-sm flex items-center gap-4 hover:border-blue-500 hover:shadow-md transition-all text-left">
-            <div className="p-3 bg-blue-50 text-blue-600 rounded-xl"><User size={24} /></div>
-            <div>
-              <div className="font-bold text-gray-800">Học Sinh (Camera Trước)</div>
-              <div className="text-xs text-gray-500 mt-1">Để điện thoại trước mặt (như laptop).</div>
-            </div>
-          </button>
-          
-          <button onClick={() => handleModeSelect('student_side')} className="w-full p-4 bg-white rounded-2xl border border-gray-200 shadow-sm flex items-center gap-4 hover:border-purple-500 hover:shadow-md transition-all text-left">
-            <div className="p-3 bg-purple-50 text-purple-600 rounded-xl"><Smartphone size={24} /></div>
-            <div>
-              <div className="font-bold text-gray-800">Học Sinh (Camera Bên Hông)</div>
-              <div className="text-xs text-gray-500 mt-1">Đặt điện thoại quay ngang từ bên hông.</div>
-            </div>
-          </button>
-
-          <button onClick={() => handleModeSelect('parent')} className="w-full p-4 bg-white rounded-2xl border border-gray-200 shadow-sm flex items-center gap-4 hover:border-green-500 hover:shadow-md transition-all text-left">
-            <div className="p-3 bg-green-50 text-green-600 rounded-xl"><ShieldCheck size={24} /></div>
-            <div>
-              <div className="font-bold text-gray-800">Phụ Huynh Giám Sát</div>
-              <div className="text-xs text-gray-500 mt-1">Theo dõi tiến trình của con từ xa.</div>
-            </div>
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <>
-      {/* Global Eye Exercise Overlay - renders on top of everything */}
+      {/* Global Eye Exercise Overlay */}
       <Suspense fallback={null}>
         {eyeExerciseTriggered && (
           <EyeExercise
@@ -113,16 +95,25 @@ function AppContent() {
         )}
       </Suspense>
       
-      <Layout activeTab={activeTab} setActiveTab={setActiveTab} appMode={appMode || undefined}>
+      <Layout activeTab={activeTab} setActiveTab={setActiveTab} appMode={user.role} onAvatarClick={() => setShowProfile(true)} user={user}>
         <Suspense fallback={<LoadingFallback />}>
-          {activeTab === 'student' && <StudentView key={isSynced ? 'synced' : 'pending'} />}
-          {activeTab === 'pet' && <PetProfile key={isSynced ? 'synced_pet' : 'pending_pet'} />}
-          {activeTab === 'parent' && <ParentView key={isSynced ? 'synced' : 'pending'} />}
+          {activeTab === 'student' && user.role === 'student' && <StudentView key={isSynced ? 'synced' : 'pending'} />}
+          {activeTab === 'pet' && user.role === 'student' && <PetProfile key={isSynced ? 'synced_pet' : 'pending_pet'} />}
+          {activeTab === 'parent' && user.role === 'parent' && <ParentView key={isSynced ? 'synced' : 'pending'} />}
           {activeTab === 'settings' && <Settings key={isSynced ? 'synced' : 'pending'} />}
         </Suspense>
+
+        {showProfile && (
+          <UserProfile 
+            user={user} 
+            onClose={() => setShowProfile(false)} 
+            onLogout={handleLogout}
+            onUpdateParentCode={handleUpdateParentCode}
+          />
+        )}
       </Layout>
       <Suspense fallback={null}>
-        <FloatingPet />
+        {user.role === 'student' && <FloatingPet />}
       </Suspense>
       <Toaster position="top-center" />
     </>
@@ -131,9 +122,12 @@ function AppContent() {
 
 function App() {
   return (
-    <PostureProvider>
-      <AppContent />
-    </PostureProvider>
+    <LanguageProvider>
+      {/* Move PostureProvider here so its context is available to AppContent */}
+      <PostureProvider>
+        <AppContent />
+      </PostureProvider>
+    </LanguageProvider>
   );
 }
 
