@@ -60,9 +60,15 @@ export const PetProfile: React.FC = () => {
             <Info size={20} />
           </button>
           
+          {/* Custom speech bubble */}
+          <div className="mb-4 bg-green-50 dark:bg-slate-700 text-green-700 dark:text-green-300 border border-green-100 dark:border-slate-600 px-4 py-2 rounded-2xl text-sm font-semibold shadow-sm relative">
+            Tớ luôn sẵn sàng đồng hành cùng bạn!
+            <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-green-50 dark:bg-slate-700 border-r border-b border-green-100 dark:border-slate-600 rotate-45" />
+          </div>
+          
           <div className="w-48 h-48 bg-gray-50 rounded-full flex items-center justify-center mb-6 shadow-inner relative border-4 border-green-100">
              <div className="scale-75 absolute -bottom-4">
-               <OliverPet state="good" size={240} petLevel={stats.petLevel} equippedItems={stats.equippedItems} customText="Tớ luôn sẵn sàng đồng hành cùng bạn!" />
+               <OliverPet state="good" size={240} petLevel={stats.petLevel} equippedItems={stats.equippedItems} hideBubble={true} hideBadge={true} />
              </div>
           </div>
           

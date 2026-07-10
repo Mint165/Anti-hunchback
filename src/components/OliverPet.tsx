@@ -420,7 +420,7 @@ export const OliverPet: React.FC<OliverPetProps> = ({
 
                 {/* Equipped Glasses */}
                 {(equippedItems['eyes'] === 'eyes_glasses' || petLevel >= 2) && equippedItems['eyes'] !== 'eyes_sunglasses' && (
-                  <g stroke="#FBBF24" strokeWidth="1.5" fill="none">
+                  <g stroke="#1F2937" strokeWidth="2.5" fill="none">
                     <circle cx="39" cy="36" r="8" />
                     <circle cx="61" cy="36" r="8" />
                     <path d="M 47 36 L 53 36" />

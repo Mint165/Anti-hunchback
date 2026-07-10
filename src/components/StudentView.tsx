@@ -20,6 +20,8 @@ export const StudentView: React.FC = () => {
     poseLandmarks, faceLandmarks,
     sessionFatigueFlags, sessionAngleAccumulator,
     latestParentMessage,
+    isManualWritingMode,
+    setIsManualWritingMode
   } = usePostureContext();
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -106,16 +108,22 @@ export const StudentView: React.FC = () => {
   const playBeepSound = () => {
     try {
       const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(300, ctx.currentTime);
-      gain.gain.setValueAtTime(0.2, ctx.currentTime);
-      gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.5);
-      osc.start();
-      osc.stop(ctx.currentTime + 0.5);
+      const playTone = (start: number) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(880, ctx.currentTime + start);
+        gain.gain.setValueAtTime(0.2, ctx.currentTime + start);
+        gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + start + 0.1);
+        osc.start(ctx.currentTime + start);
+        osc.stop(ctx.currentTime + start + 0.1);
+      };
+      playTone(0);
+      playTone(0.15);
+      playTone(0.3);
+      setTimeout(() => ctx.close(), 500);
     } catch {}
   };
 
@@ -345,6 +353,13 @@ export const StudentView: React.FC = () => {
           </div>
           
           <div className="sv-actions">
+            <button 
+              onClick={() => setIsManualWritingMode(!isManualWritingMode)} 
+              className={`px-4 py-2 hidden sm:block rounded-xl font-bold text-sm transition-colors ${isManualWritingMode ? 'bg-indigo-100 text-indigo-700 border-2 border-indigo-500' : 'bg-white text-gray-600 border border-gray-200'}`}
+              title="Kích hoạt khi viết bài trên mặt bàn để tránh cảnh báo sai"
+            >
+              ✍️ Đang viết bài
+            </button>
             <button onClick={() => setIsAudioEnabled(!isAudioEnabled)} className="sv-audio-btn">
               {isAudioEnabled ? <Volume2 size={20} /> : <VolumeX size={20} />}
             </button>

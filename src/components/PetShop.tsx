@@ -14,6 +14,66 @@ export const SHOP_ITEMS = [
   { id: 'bg_aura', name: 'Hào Quang', slot: 'background', cost: 300, icon: '✨' },
 ];
 
+const renderItemIcon = (itemId: string) => {
+  switch (itemId) {
+    case 'hat_scholar':
+      return (
+        <svg viewBox="0 0 100 100" className="w-12 h-12 mx-auto overflow-visible">
+          <polygon points="10,55 50,30 90,55 50,80" fill="#1F2937" />
+          <rect x="35" y="55" width="30" height="25" fill="#1F2937" />
+          <path d="M 85 55 L 95 85" stroke="#FBBF24" strokeWidth="5" />
+        </svg>
+      );
+    case 'hat_crown_silver':
+      return (
+        <svg viewBox="0 0 100 100" className="w-12 h-12 mx-auto overflow-visible">
+          <polygon points="10,80 30,20 50,60 70,20 90,80" fill="#E5E7EB" stroke="#9CA3AF" strokeWidth="6" strokeLinejoin="round" />
+        </svg>
+      );
+    case 'hat_crown_gold':
+      return (
+        <svg viewBox="0 0 100 100" className="w-12 h-12 mx-auto overflow-visible">
+          <polygon points="10,80 30,20 50,60 70,20 90,80" fill="#FBBF24" stroke="#D97706" strokeWidth="6" strokeLinejoin="round" />
+          <circle cx="10" cy="80" r="8" fill="#EF4444" />
+          <circle cx="30" cy="20" r="10" fill="#3B82F6" />
+          <circle cx="50" cy="60" r="8" fill="#10B981" />
+          <circle cx="70" cy="20" r="10" fill="#3B82F6" />
+          <circle cx="90" cy="80" r="8" fill="#EF4444" />
+        </svg>
+      );
+    case 'eyes_glasses':
+      return (
+        <svg viewBox="0 0 100 100" className="w-12 h-12 mx-auto overflow-visible" fill="none" stroke="#1F2937" strokeWidth="8">
+          <circle cx="30" cy="50" r="20" />
+          <circle cx="70" cy="50" r="20" />
+          <path d="M 50 50 L 50 50" />
+          <path d="M 10 50 L 30 50 M 70 50 L 90 50" />
+        </svg>
+      );
+    case 'eyes_sunglasses':
+      return (
+        <svg viewBox="0 0 100 100" className="w-12 h-12 mx-auto overflow-visible">
+          <path d="M 10 50 Q 30 30 45 50 Q 30 70 10 50" fill="#111827" stroke="#000" strokeWidth="3" />
+          <path d="M 55 50 Q 75 30 90 50 Q 75 70 55 50" fill="#111827" stroke="#000" strokeWidth="3" />
+          <path d="M 45 45 L 55 45" stroke="#111827" strokeWidth="6" />
+        </svg>
+      );
+    case 'body_cape':
+      return (
+        <svg viewBox="0 0 100 100" className="w-12 h-12 mx-auto overflow-visible">
+          <path d="M 30 30 Q 10 90 30 95 Q 50 100 70 95 Q 90 90 70 30 Z" fill="#EF4444" opacity="0.9" />
+        </svg>
+      );
+    case 'bg_aura':
+      return (
+        <div className="w-10 h-10 mx-auto rounded-full shadow-[0_0_20px_rgba(78,173,99,0.8)] animate-pulse" style={{ backgroundColor: '#4EAD6330' }} />
+      );
+    default:
+      return null;
+  }
+};
+
+
 export const PetShop: React.FC = () => {
   const [stats, setStats] = useState<UserStats>(() => loadUserStats());
   const [previewItems, setPreviewItems] = useState<Record<string, string>>(stats.equippedItems || {});
@@ -103,7 +163,7 @@ export const PetShop: React.FC = () => {
                 }`}
                 onClick={() => isUnlocked ? handleEquipToggle(item.slot, item.id) : handlePreview(item.slot, item.id)}
               >
-                <div className="text-3xl text-center mb-2">{item.icon}</div>
+                <div className="flex items-center justify-center mb-3 h-12">{renderItemIcon(item.id)}</div>
                 <h4 className="text-xs font-bold text-gray-800 text-center mb-1">{item.name}</h4>
                 
                 <div className="mt-auto pt-2 flex items-center justify-center">

@@ -79,7 +79,8 @@ export function analyzePosture(
   canvasWidth: number,
   canvasHeight: number,
   movementHistory: { x: number; y: number }[],
-  cameraMode: CameraMode = 'front'
+  cameraMode: CameraMode = 'front',
+  isManualWritingMode: boolean = false
 ): PostureMetrics {
   const metrics: PostureMetrics = {
     eyeDistanceCm: 60,
@@ -248,15 +249,16 @@ export function analyzePosture(
     }
 
     // Context Awareness: Check if eye orientation is looking down AND neck is bent
-    // An average iris-to-lower-lid ratio > 0.75 indicates eyes looking downwards.
+    // An average iris-to-lower-lid ratio > 0.60 indicates eyes looking downwards.
     const avgIrisYRatio = (leftIrisRatio + rightIrisRatio) / 2;
-    if (avgIrisYRatio > 0.75 && metrics.neckAngle > 20) {
+    if (avgIrisYRatio > 0.60 && metrics.neckAngle > 20) {
       metrics.isWritingMode = true;
     }
 
     // Determine Posture State (Heuristic proxy for future ML Model)
-    if (metrics.isWritingMode) {
+    if (metrics.isWritingMode || isManualWritingMode) {
       metrics.state = 'WRITING';
+      metrics.isWritingMode = true;
     } else if (
       metrics.neckAngle > 20 || 
       metrics.shoulderTilt > 7 || 

@@ -45,18 +45,24 @@ export const FloatingPet: React.FC = () => {
   const state = getPetState();
   const bottomClass = isMobile ? 'bottom-24' : 'bottom-6';
   const rightClass = isMobile ? 'right-4' : 'right-6';
+  const isDanger = state === 'slouch' || state === 'close' || state === 'tired';
 
   if (isMinimized || isMobile) {
     return (
       <div 
-        className={`fixed ${bottomClass} ${rightClass} z-50 bg-white p-3 rounded-full shadow-lg border border-gray-200 cursor-pointer hover:shadow-xl transition-all hover:scale-110 flex items-center justify-center`}
+        className={`fixed ${bottomClass} ${rightClass} z-50 p-3 rounded-full shadow-lg border cursor-pointer hover:shadow-xl transition-all hover:scale-110 flex items-center justify-center ${isDanger ? 'border-red-500 bg-red-50 shadow-[0_0_15px_rgba(239,68,68,0.7)] animate-pulse' : 'bg-white border-gray-200'}`}
         onClick={() => !isMobile && setIsMinimized(false)}
         style={{ width: '60px', height: '60px' }}
       >
         <div className="scale-50 origin-center -ml-16 -mt-16 pointer-events-none">
-          <OliverPet state={state} size={150} petLevel={stats.petLevel} hideBubble={isMobile} />
+          <OliverPet state={state} size={150} petLevel={stats.petLevel} equippedItems={stats.equippedItems} hideBubble={true} hideBadge={true} />
         </div>
-        {!isMobile && (
+        {isDanger && (
+          <div className="absolute -top-1 -left-1 bg-red-600 text-white font-bold rounded-full w-6 h-6 flex items-center justify-center text-sm shadow-md animate-bounce">
+            !
+          </div>
+        )}
+        {!isMobile && !isDanger && (
           <div className="absolute top-0 right-0 bg-blue-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
             <Maximize2 size={10} />
           </div>
@@ -75,7 +81,7 @@ export const FloatingPet: React.FC = () => {
           <Minimize2 size={14} />
         </button>
         <div className="transform scale-75 origin-bottom-right">
-          <OliverPet state={state} size={180} petLevel={stats.petLevel} />
+          <OliverPet state={state} size={180} petLevel={stats.petLevel} equippedItems={stats.equippedItems} />
         </div>
       </div>
     </div>

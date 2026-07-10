@@ -4,11 +4,14 @@ import React, { useState, useEffect } from 'react';
 import { Save, RefreshCw, Volume2, Shield } from 'lucide-react';
 import { loadSettings, saveSettings, DEFAULT_SETTINGS } from '../services/db';
 import type { AppSettings } from '../services/db';
+import { useLanguage } from '../contexts/LanguageContext';
 
 export const Settings: React.FC = () => {
+  const { lang, setLang, t } = useLanguage();
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [isSaved, setIsSaved] = useState<boolean>(false);
   const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
+  const [alertDelay, setAlertDelay] = useState<string>(() => localStorage.getItem('oliver_alert_delay') || '120');
 
   useEffect(() => {
     setSettings(loadSettings());
@@ -29,6 +32,7 @@ export const Settings: React.FC = () => {
 
   const handleSave = () => {
     saveSettings(settings);
+    localStorage.setItem('oliver_alert_delay', alertDelay);
     setIsSaved(true);
     setTimeout(() => setIsSaved(false), 2000);
   };
@@ -88,6 +92,21 @@ export const Settings: React.FC = () => {
             >
               <div className={`w-5 h-5 rounded-full bg-white transition-transform ${isDarkMode ? 'translate-x-7' : 'translate-x-0'}`} />
             </button>
+          </div>
+
+          <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-xl">
+            <div>
+              <div className="font-bold text-gray-800 dark:text-gray-100">Ngôn ngữ / Language</div>
+              <div className="text-xs text-gray-500">Thay đổi ngôn ngữ giao diện (Requires reload)</div>
+            </div>
+            <select
+              value={lang}
+              onChange={(e) => setLang(e.target.value as 'vi' | 'en')}
+              className="bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-2 text-sm focus:outline-none dark:text-gray-100"
+            >
+              <option value="vi">Tiếng Việt</option>
+              <option value="en">English</option>
+            </select>
           </div>
         </div>
 
@@ -205,17 +224,32 @@ export const Settings: React.FC = () => {
             </select>
           </div>
 
-          <div className="flex items-center justify-between md:col-span-2 p-3.5 bg-gray-50 rounded-xl border border-gray-100">
+          <div className="flex flex-col md:flex-row items-center justify-between md:col-span-2 p-3.5 bg-gray-50 dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 gap-4">
             <div>
-              <span className="text-sm font-semibold text-gray-800 block">Kích hoạt âm thanh cảnh báo</span>
-              <span className="text-2xs text-gray-400">Phát âm thanh bíp lớn khi trẻ ngồi sai tư thế liên tục trên 2 phút.</span>
+              <span className="text-sm font-semibold text-gray-800 dark:text-gray-100 block">Kích hoạt âm thanh cảnh báo</span>
+              <span className="text-2xs text-gray-400">Phát chuỗi âm thanh bíp khi trẻ ngồi sai tư thế liên tục vượt thời gian cho phép.</span>
             </div>
-            <input 
-              type="checkbox" 
-              checked={settings.soundAlertEnabled}
-              onChange={(e) => handleChange('soundAlertEnabled', e.target.checked)}
-              className="w-5 h-5 rounded text-green-600 accent-green-600 focus:ring-green-500"
-            />
+            <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-end">
+              <select 
+                value={alertDelay} 
+                onChange={(e) => setAlertDelay(e.target.value)}
+                className="bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-green-500 dark:text-white"
+              >
+                <option value="5">Sau 5 giây (Test)</option>
+                <option value="10">Sau 10 giây</option>
+                <option value="30">Sau 30 giây</option>
+                <option value="60">Sau 1 phút</option>
+                <option value="120">Sau 2 phút (Mặc định)</option>
+                <option value="300">Sau 5 phút</option>
+              </select>
+              
+              <input 
+                type="checkbox" 
+                checked={settings.soundAlertEnabled}
+                onChange={(e) => handleChange('soundAlertEnabled', e.target.checked)}
+                className="w-5 h-5 rounded text-green-600 accent-green-600 focus:ring-green-500"
+              />
+            </div>
           </div>
         </div>
 

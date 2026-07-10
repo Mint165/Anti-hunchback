@@ -29,5 +29,9 @@ export const en: Record<string, string> = {
   'profile.saved': 'Link code saved!',
   
   // Settings
+  'settings.title': 'System Settings',
   'settings.language': 'Language',
+  'settings.darkMode': 'Dark Mode',
+  'settings.notifications': 'Notifications',
+  'settings.save': 'Save Settings',
 };

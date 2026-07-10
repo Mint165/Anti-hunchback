@@ -35,9 +35,10 @@ interface PostureContextType {
   };
   // Parent messaging
   latestParentMessage: string | null;
-  // Camera Mode (Front / Side)
   cameraMode: CameraMode;
   setCameraMode: (mode: CameraMode) => void;
+  isManualWritingMode: boolean;
+  setIsManualWritingMode: (val: boolean) => void;
 }
 
 const PostureContext = createContext<PostureContextType | undefined>(undefined);
@@ -52,6 +53,7 @@ export const PostureProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [healthScore, setHealthScore] = useState<number>(100);
   const [goodPostureStreak, setGoodPostureStreak] = useState<number>(0);
   const [cameraMode, setCameraMode] = useState<CameraMode>('front');
+  const [isManualWritingMode, setIsManualWritingMode] = useState<boolean>(false);
 
   const { alertLevel, startSession, resetBreak, hasStarted } = useAlertEngine(metrics?.state || 'GOOD_POSTURE');
   
@@ -128,13 +130,14 @@ export const PostureProvider: React.FC<{ children: React.ReactNode }> = ({ child
       640,
       480,
       movementHistoryRef.current,
-      cameraMode
+      cameraMode,
+      isManualWritingMode
     );
 
     setMetrics(calculatedMetrics);
     setHealthScore(calculateHealthScore(calculatedMetrics));
 
-  }, [poseLandmarks, faceLandmarks, isModelReady, calibration, cameraMode]);
+  }, [poseLandmarks, faceLandmarks, isModelReady, calibration, cameraMode, isManualWritingMode]);
 
   // Keep a ref to latest metrics to avoid reading via setState callback
   const metricsRef = useRef<PostureMetrics | null>(null);
@@ -237,6 +240,8 @@ export const PostureProvider: React.FC<{ children: React.ReactNode }> = ({ child
       latestParentMessage,
       cameraMode,
       setCameraMode,
+      isManualWritingMode,
+      setIsManualWritingMode
     }}>
       <video
         id="global-webcam"

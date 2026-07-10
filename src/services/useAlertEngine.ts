@@ -35,11 +35,14 @@ export function useAlertEngine(currentState: PostureState) {
       }
 
       // Determine new alert level
+      const savedDelay = parseInt(localStorage.getItem('oliver_alert_delay') || '120', 10);
+      const mildDelay = Math.max(5, Math.floor(savedDelay / 4));
+
       if (sessionTimer.current >= 45 * 60) {
         setAlertLevel('BREAK_TIME');
-      } else if (badPostureTimer.current >= 120) { // 2 minutes
+      } else if (badPostureTimer.current >= savedDelay) { 
         setAlertLevel('STRONG_WARNING');
-      } else if (badPostureTimer.current >= 30) { // 30 seconds
+      } else if (badPostureTimer.current >= mildDelay) { 
         setAlertLevel('MILD_WARNING');
       } else {
         setAlertLevel('NONE');

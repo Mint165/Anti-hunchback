@@ -29,5 +29,9 @@ export const vi: Record<string, string> = {
   'profile.saved': 'Đã lưu mã liên kết!',
   
   // Settings
+  'settings.title': 'Cài Đặt Hệ Thống',
   'settings.language': 'Ngôn ngữ',
+  'settings.darkMode': 'Chế độ tối',
+  'settings.notifications': 'Thông báo',
+  'settings.save': 'Lưu cài đặt',
 };

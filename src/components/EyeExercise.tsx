@@ -18,17 +18,6 @@ export const EyeExercise: React.FC<EyeExerciseProps> = ({ isBlinking, poseLandma
   const [exerciseStatus, setExerciseStatus] = useState<'active' | 'success'>('active');
   
   const wasBlinkingRef = useRef<boolean>(false);
-  const requestRef = useRef<number | undefined>(undefined);
-
-  const targetPosRef = useRef(targetPos);
-  const bambooCountRef = useRef(bambooCount);
-  const exerciseStatusRef = useRef(exerciseStatus);
-
-  useEffect(() => {
-    targetPosRef.current = targetPos;
-    bambooCountRef.current = bambooCount;
-    exerciseStatusRef.current = exerciseStatus;
-  }, [targetPos, bambooCount, exerciseStatus]);
 
   // Generate new bamboo position
   const spawnBamboo = () => {
@@ -39,9 +28,9 @@ export const EyeExercise: React.FC<EyeExerciseProps> = ({ isBlinking, poseLandma
     setTargetPos({ x, y });
   };
 
-  // Game Loop using requestAnimationFrame
-  const gameLoop = () => {
-    if (exerciseStatusRef.current !== 'active') return;
+  // Process landmarks natively through React effects (approx 30fps from MediaPipe)
+  useEffect(() => {
+    if (exerciseStatus !== 'active') return;
 
     if (poseLandmarks && poseLandmarks[0]) {
       const nose = poseLandmarks[0];
@@ -52,8 +41,8 @@ export const EyeExercise: React.FC<EyeExerciseProps> = ({ isBlinking, poseLandma
       setNosePos({ x, y });
 
       // Collision detection
-      const dx = x - targetPosRef.current.x;
-      const dy = y - targetPosRef.current.y;
+      const dx = x - targetPos.x;
+      const dy = y - targetPos.y;
       const distance = Math.sqrt(dx * dx + dy * dy);
 
       if (distance < 8) {
@@ -63,16 +52,7 @@ export const EyeExercise: React.FC<EyeExerciseProps> = ({ isBlinking, poseLandma
         spawnBamboo();
       }
     }
-
-    requestRef.current = requestAnimationFrame(gameLoop);
-  };
-
-  useEffect(() => {
-    requestRef.current = requestAnimationFrame(gameLoop);
-    return () => {
-      if (requestRef.current) cancelAnimationFrame(requestRef.current);
-    };
-  }, [poseLandmarks]);
+  }, [poseLandmarks, exerciseStatus, targetPos]);
 
   // Blink counter logic
   useEffect(() => {
@@ -114,6 +94,7 @@ export const EyeExercise: React.FC<EyeExerciseProps> = ({ isBlinking, poseLandma
       gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.15);
       osc.start();
       osc.stop(ctx.currentTime + 0.15);
+      setTimeout(() => ctx.close(), 200);
     } catch {}
   };
 
@@ -135,6 +116,7 @@ export const EyeExercise: React.FC<EyeExerciseProps> = ({ isBlinking, poseLandma
       playTone(659.25, 0.15, 0.15); // E5
       playTone(783.99, 0.3, 0.15); // G5
       playTone(1046.50, 0.45, 0.4); // C6
+      setTimeout(() => ctx.close(), 1000);
     } catch {}
   };
 
