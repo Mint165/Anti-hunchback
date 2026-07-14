@@ -3,6 +3,8 @@ import { loadUserStats, buyItem, equipItem } from '../services/db';
 import type { UserStats } from '../services/db';
 import OliverPet from './OliverPet';
 import { ShoppingBag, Star, Lock } from 'lucide-react';
+import confetti from 'canvas-confetti';
+import { toast } from 'react-hot-toast';
 
 export const SHOP_ITEMS = [
   { id: 'hat_scholar', name: 'Mũ Cử Nhân', slot: 'head', cost: 50, icon: '🎓' },
@@ -85,11 +87,38 @@ export const PetShop: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
+  const playSuccessSound = () => {
+    try {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const playTone = (start: number, freq: number) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, ctx.currentTime + start);
+        gain.gain.setValueAtTime(0, ctx.currentTime + start);
+        gain.gain.linearRampToValueAtTime(0.2, ctx.currentTime + start + 0.05);
+        gain.gain.linearRampToValueAtTime(0, ctx.currentTime + start + 0.3);
+        osc.start(ctx.currentTime + start);
+        osc.stop(ctx.currentTime + start + 0.3);
+      };
+      playTone(0, 523.25); // C5
+      playTone(0.1, 659.25); // E5
+      playTone(0.2, 783.99); // G5
+      playTone(0.3, 1046.50); // C6
+      setTimeout(() => ctx.close(), 1000);
+    } catch {}
+  };
+
   const handleBuy = (itemId: string, cost: number) => {
     if (buyItem(itemId, cost)) {
       setStats(loadUserStats());
+      confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, zIndex: 10000 });
+      playSuccessSound();
+      toast.success('Mua vật phẩm thành công! 🎉');
     } else {
-      alert('Không đủ Xu để mua vật phẩm này!');
+      toast.error('Không đủ Xu để mua vật phẩm này!');
     }
   };
 

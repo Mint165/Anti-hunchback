@@ -7,9 +7,11 @@ import { loadUserStats, saveSessionRecord, addXP, getBadgesStatus } from '../ser
 import type { Badge } from '../services/db';
 import { broadcastStudentStatus, broadcastFatigueAlert } from '../services/parentSync';
 import { usePostureContext } from '../contexts/PostureContext';
+import { voiceService } from '../services/voiceService';
 import OliverPet from './OliverPet';
 import type { PetState } from './OliverPet';
 import Calibration from './Calibration';
+import BackboneVisualizer from './BackboneVisualizer';
 import toast from 'react-hot-toast';
 import confetti from 'canvas-confetti';
 
@@ -108,22 +110,27 @@ export const StudentView: React.FC = () => {
   const playBeepSound = () => {
     try {
       const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const playTone = (start: number) => {
+      const playChime = (start: number, freq: number) => {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
         osc.connect(gain);
         gain.connect(ctx.destination);
         osc.type = 'sine';
-        osc.frequency.setValueAtTime(880, ctx.currentTime + start);
-        gain.gain.setValueAtTime(0.2, ctx.currentTime + start);
-        gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + start + 0.1);
+        osc.frequency.setValueAtTime(freq, ctx.currentTime + start);
+        gain.gain.setValueAtTime(0, ctx.currentTime + start);
+        gain.gain.linearRampToValueAtTime(0.3, ctx.currentTime + start + 0.05);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + start + 1.5);
         osc.start(ctx.currentTime + start);
-        osc.stop(ctx.currentTime + start + 0.1);
+        osc.stop(ctx.currentTime + start + 1.5);
       };
-      playTone(0);
-      playTone(0.15);
-      playTone(0.3);
-      setTimeout(() => ctx.close(), 500);
+      playChime(0, 523.25); // C5
+      playChime(0.1, 659.25); // E5
+      playChime(0.2, 783.99); // G5
+      setTimeout(() => ctx.close(), 2000);
+
+      setTimeout(() => {
+        voiceService.speak("Chủ nhân ơi, ngồi thẳng lên nhé!");
+      }, 500);
     } catch {}
   };
 
@@ -493,7 +500,7 @@ export const StudentView: React.FC = () => {
                    {showCamera ? 'Tắt' : 'Bật'}
                  </button>
                </div>
-               <div className="camera-wrapper">
+               <div className="camera-wrapper relative">
                  <video
                     ref={videoRef}
                     className={`camera-video ${!showCamera ? 'hidden' : ''}`}
@@ -503,6 +510,13 @@ export const StudentView: React.FC = () => {
                     <div className="camera-placeholder">
                       <CameraOff size={24} />
                     </div>
+                 )}
+                 {showCamera && metrics && (
+                   <BackboneVisualizer 
+                     neckAngle={metrics.neckAngle} 
+                     slouchAngle={metrics.slouchAngle} 
+                     healthScore={healthScore} 
+                   />
                  )}
                </div>
             </div>

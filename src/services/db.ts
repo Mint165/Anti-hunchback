@@ -2,6 +2,7 @@
 import type { CalibrationData } from './postureAI';
 import { DEFAULT_CALIBRATION } from './postureAI';
 import { supabase, isSupabaseConfigured } from './supabase';
+import { encryptData, decryptData } from '../utils/crypto';
 
 export interface AppSettings {
   screenDistanceThreshold: number; // default 50cm
@@ -280,12 +281,24 @@ export function loadUserStats(): UserStats {
     equippedItems: {},
   };
   if (!statsStr) return defaultStats;
-  const stats = JSON.parse(statsStr);
+  
+  let stats;
+  try {
+    const decrypted = decryptData(statsStr);
+    if (decrypted) {
+      stats = decrypted;
+    } else {
+      stats = JSON.parse(statsStr); // fallback
+    }
+  } catch {
+    stats = {};
+  }
+  
   return { ...defaultStats, ...stats };
 }
 
 export function saveUserStats(stats: UserStats): void {
-  localStorage.setItem(STORAGE_KEYS.STATS, JSON.stringify(stats));
+  localStorage.setItem(STORAGE_KEYS.STATS, encryptData(stats));
   pushUserStatsToSupabase(stats);
 }
 

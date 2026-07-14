@@ -58,6 +58,8 @@ export const PostureProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const { alertLevel, startSession, resetBreak, hasStarted } = useAlertEngine(metrics?.state || 'GOOD_POSTURE');
   
   const movementHistoryRef = useRef<{ x: number; y: number }[]>([]);
+  const autoWritingTimerRef = useRef<number>(0);
+  const autoWritingEndTimerRef = useRef<number>(0);
 
   // --- Eye Exercise (20-20-20 Rule) ---
   const [eyeExerciseTriggered, setEyeExerciseTriggered] = useState<boolean>(false);
@@ -205,6 +207,30 @@ export const PostureProvider: React.FC<{ children: React.ReactNode }> = ({ child
         // Reset buffer
         fatigueBufferRef.current = { blinkTicks: 0, fidgetSum: 0, sampleCount: 0 };
         lastFatigueCheckRef.current = now;
+      }
+
+      // --- Auto Writing Mode ---
+      const isWritingCondition = 
+        currentMetrics.neckAngle >= 25 && 
+        currentMetrics.shoulderTilt < 5 && 
+        currentMetrics.eyeDistanceCm < 55;
+
+      if (isWritingCondition) {
+        autoWritingTimerRef.current += 1;
+        autoWritingEndTimerRef.current = 0;
+        if (autoWritingTimerRef.current >= 5 && !isManualWritingMode) {
+          setIsManualWritingMode(true);
+        }
+      } else {
+        autoWritingTimerRef.current = 0;
+        if (isManualWritingMode && currentMetrics.neckAngle < 20) {
+          autoWritingEndTimerRef.current += 1;
+          if (autoWritingEndTimerRef.current >= 2) {
+            setIsManualWritingMode(false);
+          }
+        } else {
+          autoWritingEndTimerRef.current = 0;
+        }
       }
 
       // --- Pet XP logic ---

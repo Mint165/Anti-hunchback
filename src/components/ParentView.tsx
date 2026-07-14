@@ -37,6 +37,27 @@ export const ParentView: React.FC = () => {
   const [alerts, setAlerts] = useState<AlertLog[]>([]);
   const [sessions, setSessions] = useState<SessionRecord[]>([]);
 
+  // Time Filter State
+  const [timeFilter, setTimeFilter] = useState<'7' | '30' | 'all'>('7');
+
+  const filteredSessions = React.useMemo(() => {
+    if (timeFilter === 'all') return sessions;
+    const now = new Date().getTime();
+    const daysMs = parseInt(timeFilter) * 24 * 60 * 60 * 1000;
+    return sessions.filter(s => {
+       const sessionTime = new Date(s.date).getTime();
+       // if date parsing fails, fallback to include it
+       if (isNaN(sessionTime)) return true; 
+       return now - sessionTime <= daysMs;
+    });
+  }, [sessions, timeFilter]);
+
+  // Pagination for Session Table
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
+  const totalPages = Math.max(1, Math.ceil(filteredSessions.length / itemsPerPage));
+  const currentTableData = filteredSessions.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
   // Push notifications queue
   const [fatigueAlerts, setFatigueAlerts] = useState<string[]>([]);
   
@@ -110,18 +131,18 @@ export const ParentView: React.FC = () => {
   // Recharts calculations
   // 1. Posture ratio calculations for Pie Chart
   const getPieChartData = () => {
-    if (sessions.length === 0) return [];
+    if (filteredSessions.length === 0) return [];
     
     // Average metrics over sessions
     let straight = 0;
     let slouched = 0;
     
-    sessions.forEach(s => {
+    filteredSessions.forEach(s => {
       straight += s.goodPosturePercentage;
       slouched += (100 - s.goodPosturePercentage);
     });
 
-    const total = sessions.length;
+    const total = filteredSessions.length;
     return [
       { name: 'Ngồi đúng chuẩn', value: Math.round(straight / total) },
       { name: 'Ngồi sai tư thế', value: Math.round(slouched / total) },
@@ -133,7 +154,7 @@ export const ParentView: React.FC = () => {
 
   // 2. Trend chart data mapping
   const getTrendData = (): ChartDataPoint[] => {
-    return sessions.map(s => ({
+    return filteredSessions.map(s => ({
       name: s.date || 'Học',
       PHI: s.averageHealthScore,
       duration: s.durationMinutes,
@@ -144,7 +165,7 @@ export const ParentView: React.FC = () => {
 
   // 3. Concentration density chart data
   const getConcentrationData = () => {
-    return sessions.map(s => {
+    return filteredSessions.map(s => {
       // Simulate concentration based on fatigue flags (each flag reduces concentration by ~15%)
       const penalty = (s.fatigueFlags || s.fidgetFlagsCount || 0) * 15;
       const conc = Math.max(30, 100 - penalty); // Min 30%
@@ -435,6 +456,15 @@ export const ParentView: React.FC = () => {
             </div>
           ) : (
             <>
+          {/* Filter Bar */}
+          <div className="flex justify-end mb-4">
+            <div className="flex items-center gap-2 bg-white rounded-lg p-1 border border-gray-200 shadow-sm">
+              <button onClick={() => { setTimeFilter('7'); setCurrentPage(1); }} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors ${timeFilter === '7' ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:bg-gray-50'}`}>7 Ngày</button>
+              <button onClick={() => { setTimeFilter('30'); setCurrentPage(1); }} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors ${timeFilter === '30' ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:bg-gray-50'}`}>30 Ngày</button>
+              <button onClick={() => { setTimeFilter('all'); setCurrentPage(1); }} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors ${timeFilter === 'all' ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:bg-gray-50'}`}>Tất cả</button>
+            </div>
+          </div>
+
           {/* Grid of charts */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             
@@ -523,6 +553,61 @@ export const ParentView: React.FC = () => {
               </div>
             </div>
 
+          </div>
+
+          {/* Session History Table with Pagination */}
+          <div className="premium-card p-5">
+            <h3 className="widget-label mb-4">Lịch sử buổi học</h3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left">
+                <thead className="text-xs text-gray-500 bg-gray-50 uppercase rounded-t-lg">
+                  <tr>
+                    <th className="px-4 py-3 rounded-tl-lg">Ngày</th>
+                    <th className="px-4 py-3">Thời gian học</th>
+                    <th className="px-4 py-3">Điểm PHI</th>
+                    <th className="px-4 py-3 rounded-tr-lg">Tư thế chuẩn</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {currentTableData.length > 0 ? currentTableData.map((s, idx) => (
+                    <tr key={idx} className="border-b border-gray-100 last:border-0 hover:bg-gray-50">
+                      <td className="px-4 py-3 font-medium text-gray-700">{s.date}</td>
+                      <td className="px-4 py-3 text-gray-600">{s.durationMinutes} phút</td>
+                      <td className="px-4 py-3 font-bold" style={{ color: s.averageHealthScore >= 80 ? '#4EAD63' : s.averageHealthScore >= 60 ? '#FFAA2C' : '#FF5E5E' }}>
+                        {s.averageHealthScore}
+                      </td>
+                      <td className="px-4 py-3 text-gray-600">{s.goodPosturePercentage}%</td>
+                    </tr>
+                  )) : (
+                    <tr>
+                      <td colSpan={4} className="px-4 py-8 text-center text-gray-500">Không có dữ liệu trong khoảng thời gian này</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
+                <span className="text-xs text-gray-500">Trang {currentPage} / {totalPages}</span>
+                <div className="flex gap-2">
+                  <button 
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    className="px-3 py-1.5 text-xs font-semibold border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Trước
+                  </button>
+                  <button 
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    className="px-3 py-1.5 text-xs font-semibold border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Sau
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Interactive Notifications panel & Message Sender */}

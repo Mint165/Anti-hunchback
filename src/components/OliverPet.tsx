@@ -230,8 +230,17 @@ export const OliverPet: React.FC<OliverPetProps> = ({
         >
           {/* Floating + Breathing animation wrapper */}
           <div
-            className={`w-full h-full ${state === 'sleep' ? '' : 'oliver-float'} ${isJumping ? 'oliver-jump' : ''}`}
+            className={`w-full h-full ${state === 'sleep' ? '' : 'oliver-float'} ${isJumping ? 'oliver-jump' : isHovered && state !== 'sleep' ? 'oliver-wiggle' : ''}`}
           >
+            {/* Zzz Sleep Effect */}
+            {state === 'sleep' && (
+              <>
+                <div className="oliver-zz" style={{ top: '20%', left: '60%', fontSize: '28px', animationDelay: '0s' }}>Z</div>
+                <div className="oliver-zz" style={{ top: '15%', left: '70%', fontSize: '20px', animationDelay: '1s' }}>z</div>
+                <div className="oliver-zz" style={{ top: '10%', left: '80%', fontSize: '14px', animationDelay: '2s' }}>z</div>
+              </>
+            )}
+
             {/* Particles overlay */}
             {particles.length > 0 && (
               <div className="absolute inset-0 pointer-events-none z-20 overflow-visible">
@@ -592,6 +601,28 @@ export const OliverPet: React.FC<OliverPetProps> = ({
         }
         .oliver-shadow {
           animation: oliver-shadow-pulse 3s ease-in-out infinite;
+        }
+
+        @keyframes oliver-zz {
+          0% { opacity: 0; transform: translate(0, 0) scale(0.5); }
+          50% { opacity: 1; transform: translate(15px, -20px) scale(1.1); }
+          100% { opacity: 0; transform: translate(30px, -40px) scale(1.5); }
+        }
+        .oliver-zz {
+          animation: oliver-zz 3s infinite linear;
+          position: absolute;
+          color: #9CA3AF;
+          font-weight: 900;
+          pointer-events: none;
+          z-index: 10;
+        }
+
+        @keyframes oliver-wiggle {
+          0%, 100% { transform: rotate(-5deg); }
+          50% { transform: rotate(5deg); }
+        }
+        .oliver-wiggle {
+          animation: oliver-wiggle 0.4s ease-in-out infinite;
         }
       `}</style>
     </div>

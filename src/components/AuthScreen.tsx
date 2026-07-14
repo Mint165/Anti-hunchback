@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
-import { User, Shield, Lock, Mail, ArrowLeft, CheckCircle2, ShieldAlert, Eye } from 'lucide-react';
+import { User, Shield, Lock, Mail, ArrowLeft, CheckCircle2, ShieldAlert, Eye, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { encryptData, decryptData } from '../utils/crypto';
 
 export interface AuthUser {
   name: string;
@@ -55,28 +56,35 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
   const [generatedOtp, setGeneratedOtp] = useState('');
   const [pendingUser, setPendingUser] = useState<(AuthUser & { password: string }) | null>(null);
   const [pendingEmail, setPendingEmail] = useState('');
+  const [showMockEmailModal, setShowMockEmailModal] = useState(false);
+
+  const getUsers = () => {
+    const usersData = localStorage.getItem('oliver_users');
+    if (!usersData) return {};
+    try {
+      const decrypted = decryptData(usersData);
+      if (decrypted) return decrypted;
+      return JSON.parse(usersData);
+    } catch {
+      return {};
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     
     if (isLogin) {
-      // Mock login with localStorage
-      const usersData = localStorage.getItem('oliver_users');
-      if (usersData) {
-        const users: Record<string, AuthUser & { password: string }> = JSON.parse(usersData);
-        if (users[email]) {
-          if (users[email].password === password) {
-            const { password: _, ...userWithoutPassword } = users[email];
-            toast.success('Đăng nhập thành công! 🎉');
-            onLogin(userWithoutPassword);
-          } else {
-            setError(t('auth.invalidCredentials'));
-            toast.error('Mật khẩu không đúng!');
-          }
+      // Login with localStorage
+      const users: Record<string, AuthUser & { password: string }> = getUsers();
+      if (users[email]) {
+        if (users[email].password === password) {
+          const { password: _, ...userWithoutPassword } = users[email];
+          toast.success('Đăng nhập thành công! 🎉');
+          onLogin(userWithoutPassword);
         } else {
           setError(t('auth.invalidCredentials'));
-          toast.error('Tài khoản không tồn tại!');
+          toast.error('Mật khẩu không đúng!');
         }
       } else {
         setError(t('auth.invalidCredentials'));
@@ -90,8 +98,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
         return;
       }
       
-      const usersData = localStorage.getItem('oliver_users');
-      const users: Record<string, AuthUser & { password: string }> = usersData ? JSON.parse(usersData) : {};
+      const users: Record<string, AuthUser & { password: string }> = getUsers();
       
       if (users[email]) {
         setError(t('auth.emailExists'));
@@ -118,8 +125,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
       console.log(`[MOCK EMAIL SERVICE] Sent verification code ${otp} to ${email}`);
       toast.success(`Mã xác nhận đã gửi đến ${email}!`, { duration: 6000 });
       
-      // Alert developer of simulated code in UI so they can proceed immediately
-      alert(`[Nhà phát triển - Giả lập Email]\nMã xác nhận của bạn là: ${otp}\n(Vui lòng nhập mã này vào màn hình kế tiếp để kích hoạt tài khoản)`);
+      setShowMockEmailModal(true);
     }
   };
 
@@ -129,11 +135,10 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
 
     if (otpCode.toUpperCase() === generatedOtp) {
       if (pendingUser && pendingEmail) {
-        const usersData = localStorage.getItem('oliver_users');
-        const users = usersData ? JSON.parse(usersData) : {};
+        const users = getUsers();
         
         users[pendingEmail] = pendingUser;
-        localStorage.setItem('oliver_users', JSON.stringify(users));
+        localStorage.setItem('oliver_users', encryptData(users));
         
         toast.success('Kích hoạt tài khoản thành công! 🌟');
         const { password: _, ...userWithoutPassword } = pendingUser;
@@ -150,7 +155,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
     setGeneratedOtp(otp);
     toast.success('Đã gửi lại mã xác nhận mới!');
     console.log(`[MOCK EMAIL SERVICE] Resent verification code ${otp} to ${pendingEmail}`);
-    alert(`[Nhà phát triển - Gửi lại Email]\nMã xác nhận mới của bạn là: ${otp}`);
+    setShowMockEmailModal(true);
   };
 
   if (isVerifying) {
@@ -217,6 +222,27 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
             </button>
           </div>
         </div>
+
+        {showMockEmailModal && (
+          <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-slate-800 rounded-3xl p-8 max-w-sm w-full shadow-2xl animate-fade-in text-center relative">
+               <button onClick={() => setShowMockEmailModal(false)} className="absolute top-4 right-4 text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white">
+                 <X size={20} />
+               </button>
+               <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                 <Mail size={32} className="text-blue-500" />
+               </div>
+               <h3 className="text-2xl font-black text-gray-800 dark:text-white mb-2">Email giả lập</h3>
+               <p className="text-gray-600 dark:text-gray-300 mb-6">Mã xác nhận của bạn là:</p>
+               <div className="text-4xl font-black text-primary tracking-[0.2em] mb-6 bg-primary/10 py-3 rounded-xl border border-primary/20">
+                 {generatedOtp}
+               </div>
+               <button onClick={() => setShowMockEmailModal(false)} className="btn-primary w-full py-3">
+                 Đóng
+               </button>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
