@@ -7,7 +7,7 @@ import type { AppSettings } from '../services/db';
 import { useLanguage } from '../contexts/LanguageContext';
 
 export const Settings: React.FC = () => {
-  const { lang, setLang, t } = useLanguage();
+  const { lang, setLang } = useLanguage();
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [isSaved, setIsSaved] = useState<boolean>(false);
   const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
