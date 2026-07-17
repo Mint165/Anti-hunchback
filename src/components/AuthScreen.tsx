@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
-import { User, Shield, Lock, Mail, ArrowLeft, CheckCircle2, ShieldAlert, Eye, X, Phone } from 'lucide-react';
+import { User, Shield, Lock, Mail, ArrowLeft, CheckCircle2, ShieldAlert, Eye, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { encryptData, decryptData } from '../utils/crypto';
 
@@ -39,10 +39,10 @@ const generateVerificationCode = () => {
   return chars.join('');
 };
 
-const validateEmailOrPhone = (input: string) => {
+const validateEmailOrUsername = (input: string) => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  const phoneRegex = /^[0-9]{9,11}$/;
-  return emailRegex.test(input) || phoneRegex.test(input);
+  const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/;
+  return emailRegex.test(input) || usernameRegex.test(input);
 };
 
 export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
@@ -104,8 +104,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
         return;
       }
 
-      if (!validateEmailOrPhone(email)) {
-        setError('Vui lòng nhập Email hoặc Số điện thoại hợp lệ (9-11 chữ số).');
+      if (!validateEmailOrUsername(email)) {
+        setError('Vui lòng nhập Email hợp lệ hoặc Tên đăng nhập (3-20 ký tự, không dấu, không khoảng trắng, chỉ dùng chữ, số và dấu gạch dưới).');
         toast.error('Định dạng không hợp lệ!');
         return;
       }
@@ -113,8 +113,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
       const users: Record<string, AuthUser & { password: string }> = getUsers();
       
       if (users[email]) {
-        const isPhone = /^[0-9]{9,11}$/.test(email);
-        const errMsg = isPhone ? 'Số điện thoại này đã được sử dụng!' : 'Email này đã được sử dụng!';
+        const isEmailInput = email.includes('@');
+        const errMsg = isEmailInput ? 'Email này đã được sử dụng!' : 'Tên đăng nhập này đã được sử dụng!';
         setError(errMsg);
         toast.error(errMsg);
         return;
@@ -135,14 +135,14 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
       setPendingUser(newUser);
       setIsVerifying(true);
       
-      const isPhone = /^[0-9]/.test(email);
+      const isEmailInput = email.includes('@');
       // Simulate sending verification code
-      if (isPhone) {
-        console.log(`[MOCK SMS SERVICE] Sent verification code ${otp} to ${email}`);
-        toast.success(`Mã xác nhận đã gửi đến số điện thoại ${email}!`, { duration: 6000 });
-      } else {
+      if (isEmailInput) {
         console.log(`[MOCK EMAIL SERVICE] Sent verification code ${otp} to ${email}`);
         toast.success(`Mã xác nhận đã gửi đến email ${email}!`, { duration: 6000 });
+      } else {
+        console.log(`[MOCK USERNAME SERVICE] Generated verification code ${otp} for username ${email}`);
+        toast.success(`Mã xác nhận đã được tạo cho tên đăng nhập ${email}!`, { duration: 6000 });
       }
       
       setShowMockEmailModal(true);
@@ -199,7 +199,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
             </div>
             <h2 className="text-2xl font-black tracking-tight text-white animate-fade-in">Xác Minh Tài Khoản</h2>
             <p className="text-gray-300 mt-2 text-sm">
-              Chúng tôi đã gửi một mã xác nhận gồm 6 ký tự (3 chữ, 3 số) đến {/^[0-9]/.test(pendingEmail) ? 'số điện thoại' : 'email'} <span className="font-bold text-primary">{pendingEmail}</span>.
+              Chúng tôi đã gửi một mã xác nhận gồm 6 ký tự (3 chữ, 3 số) đến {pendingEmail.includes('@') ? 'email' : 'tên đăng nhập'} <span className="font-bold text-primary">{pendingEmail}</span>.
             </p>
           </div>
 
@@ -244,7 +244,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
         </div>
 
         {showMockEmailModal && (() => {
-          const isPhone = /^[0-9]/.test(pendingEmail);
+          const isEmailInput = pendingEmail.includes('@');
           return (
             <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
               <div className="bg-white dark:bg-slate-800 rounded-3xl p-8 max-w-sm w-full shadow-2xl animate-fade-in text-center relative">
@@ -252,15 +252,15 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
                    <X size={20} />
                  </button>
                  <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-                   {isPhone ? <Phone size={32} className="text-blue-500" /> : <Mail size={32} className="text-blue-500" />}
+                   {isEmailInput ? <Mail size={32} className="text-blue-500" /> : <User size={32} className="text-blue-500" />}
                  </div>
                  <h3 className="text-2xl font-black text-gray-800 dark:text-white mb-2">
-                   {isPhone ? 'SMS giả lập' : 'Email giả lập'}
+                   {isEmailInput ? 'Email giả lập' : 'Xác thực giả lập'}
                  </h3>
                  <p className="text-gray-600 dark:text-gray-300 mb-6 text-sm leading-relaxed">
-                   {isPhone 
-                     ? 'Đây là mã xác thực số điện thoại giả lập. Hãy nhập mã này vào trang sau để có thể xác thực tài khoản và bắt đầu sử dụng.'
-                     : 'Đây là mã xác thực email giả lập. Hãy nhập mã này vào trang sau để có thể xác thực tài khoản và bắt đầu sử dụng.'}
+                   {isEmailInput 
+                     ? 'Đây là mã xác thực email giả lập. Hãy nhập mã này vào trang sau để có thể xác thực tài khoản và bắt đầu sử dụng.'
+                     : 'Đây là mã xác thực tài khoản giả lập. Hãy nhập mã này vào trang sau để có thể xác thực tài khoản và bắt đầu sử dụng.'}
                  </p>
                  <div className="text-4xl font-black text-primary tracking-[0.2em] mb-6 bg-primary/10 py-3 rounded-xl border border-primary/20">
                    {generatedOtp}
@@ -350,18 +350,18 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
           )}
 
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-1">Email hoặc Số điện thoại</label>
+            <label className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-1">Email hoặc Tên đăng nhập</label>
             <div className="relative">
               <input
                 type="text"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full pl-10 pr-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:outline-none focus:ring-2 focus:ring-primary text-white"
-                placeholder="Email hoặc Số điện thoại"
+                placeholder="Email hoặc Tên đăng nhập"
                 required
               />
               <div className="absolute left-3 top-3.5 text-gray-500">
-                {/^[0-9]/.test(email) ? <Phone size={18} /> : <Mail size={18} />}
+                {email && !email.includes('@') ? <User size={18} /> : <Mail size={18} />}
               </div>
             </div>
           </div>
