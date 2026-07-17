@@ -272,7 +272,14 @@ export const PostureProvider: React.FC<{ children: React.ReactNode }> = ({ child
       <video
         id="global-webcam"
         ref={videoRef}
-        style={{ display: 'none' }}
+        style={{
+          position: 'absolute',
+          width: '1px',
+          height: '1px',
+          opacity: 0,
+          overflow: 'hidden',
+          pointerEvents: 'none',
+        }}
         autoPlay
         playsInline
         muted

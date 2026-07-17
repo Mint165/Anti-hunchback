@@ -18,7 +18,7 @@ import confetti from 'canvas-confetti';
 export const StudentView: React.FC = () => {
   const {
     metrics, healthScore, alertLevel, hasStarted, startSession, resetBreak,
-    isModelReady, isLoading, calibration, setCalibration, 
+    isModelReady, isLoading, error, calibration, setCalibration, 
     poseLandmarks, faceLandmarks,
     sessionFatigueFlags, sessionAngleAccumulator,
     latestParentMessage,
@@ -47,10 +47,30 @@ export const StudentView: React.FC = () => {
   // Attach global video stream to local video element for preview
   useEffect(() => {
     const globalVideo = document.getElementById('global-webcam') as HTMLVideoElement;
-    if (globalVideo && videoRef.current && videoRef.current.srcObject !== globalVideo.srcObject) {
-       videoRef.current.srcObject = globalVideo.srcObject;
-    }
-  }, [showCamera, hasStarted]); // Run when camera is toggled or session starts
+    if (!globalVideo) return;
+
+    const syncStream = () => {
+      if (videoRef.current && videoRef.current.srcObject !== globalVideo.srcObject) {
+         videoRef.current.srcObject = globalVideo.srcObject;
+      }
+    };
+
+    // Sync immediately
+    syncStream();
+
+    // Also sync on loadedmetadata / play events when the stream starts
+    globalVideo.addEventListener('loadedmetadata', syncStream);
+    globalVideo.addEventListener('play', syncStream);
+
+    // Also set up an interval to ensure sync (in case events fire before we attach)
+    const interval = setInterval(syncStream, 1000);
+
+    return () => {
+      globalVideo.removeEventListener('loadedmetadata', syncStream);
+      globalVideo.removeEventListener('play', syncStream);
+      clearInterval(interval);
+    };
+  }, [showCamera, hasStarted, isModelReady]);
 
   useEffect(() => {
     if (!hasStarted) return;
@@ -243,14 +263,19 @@ export const StudentView: React.FC = () => {
         <div className="premium-card calibration-card">
           <h2 className="calibration-title">Bắt đầu phiên học</h2>
           <p className="calibration-desc">Hệ thống AI sẽ hiệu chỉnh để nhận diện tư thế chuẩn của bạn.</p>
-          <div className="calibration-video-wrapper">
+          <div className="calibration-video-wrapper relative">
             <video ref={videoRef} className="calibration-video" autoPlay playsInline muted />
-            {isLoading && (
+            {error ? (
+              <div className="absolute inset-0 bg-red-950/85 backdrop-blur-md flex flex-col items-center justify-center text-center p-6 rounded-3xl z-10">
+                <AlertTriangle size={40} className="text-red-500 mb-2 animate-bounce" />
+                <span className="font-bold text-red-200 text-sm">{error}</span>
+              </div>
+            ) : isLoading ? (
               <div className="calibration-loading">
                 <div className="spinner" />
                 <span>Đang tải AI Engine...</span>
               </div>
-            )}
+            ) : null}
           </div>
           <Calibration poseLandmarks={poseLandmarks} faceLandmarks={faceLandmarks} onCalibrationComplete={handleCalibrationComplete} isModelReady={isModelReady} />
         </div>
@@ -501,6 +526,12 @@ export const StudentView: React.FC = () => {
                  </button>
                </div>
                <div className="camera-wrapper relative">
+                 {error && showCamera ? (
+                   <div className="absolute inset-0 bg-red-950/85 backdrop-blur-md flex flex-col items-center justify-center text-center p-4 rounded-3xl z-20">
+                     <AlertTriangle size={32} className="text-red-500 mb-1" />
+                     <span className="font-semibold text-red-200 text-xs">{error}</span>
+                   </div>
+                 ) : null}
                  <video
                     ref={videoRef}
                     className={`camera-video ${!showCamera ? 'hidden' : ''}`}
@@ -511,7 +542,7 @@ export const StudentView: React.FC = () => {
                       <CameraOff size={24} />
                     </div>
                  )}
-                 {showCamera && metrics && (
+                 {showCamera && metrics && !error && (
                    <BackboneVisualizer 
                      neckAngle={metrics.neckAngle} 
                      slouchAngle={metrics.slouchAngle} 
