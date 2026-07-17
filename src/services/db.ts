@@ -4,6 +4,12 @@ import { DEFAULT_CALIBRATION } from './postureAI';
 import { supabase, isSupabaseConfigured } from './supabase';
 import { encryptData, decryptData } from '../utils/crypto';
 
+async function getUserId(): Promise<string> {
+  if (!isSupabaseConfigured || !supabase) return 'default';
+  const { data } = await supabase.auth.getSession();
+  return data.session?.user.id || 'default';
+}
+
 export interface AppSettings {
   screenDistanceThreshold: number; // default 50cm
   neckTiltThreshold: number;       // default 20 deg
@@ -83,8 +89,10 @@ const STORAGE_KEYS = {
 async function pushCalibrationToSupabase(data: CalibrationData) {
   if (!isSupabaseConfigured || !supabase) return;
   try {
+    const userId = await getUserId();
+    if (userId === 'default') return;
     await supabase.from('calibration').upsert({
-      id: 'default',
+      user_id: userId,
       base_eye_distance: data.baseEyeDistance,
       base_neck_y_offset: data.baseNeckYOffset,
       base_shoulder_y_diff: data.baseShoulderYDiff,
@@ -99,8 +107,10 @@ async function pushCalibrationToSupabase(data: CalibrationData) {
 async function pushSettingsToSupabase(settings: AppSettings) {
   if (!isSupabaseConfigured || !supabase) return;
   try {
+    const userId = await getUserId();
+    if (userId === 'default') return;
     await supabase.from('settings').upsert({
-      id: 'default',
+      user_id: userId,
       screen_distance_threshold: settings.screenDistanceThreshold,
       neck_tilt_threshold: settings.neckTiltThreshold,
       shoulder_tilt_threshold: settings.shoulderTiltThreshold,
@@ -119,8 +129,10 @@ async function pushSettingsToSupabase(settings: AppSettings) {
 async function pushUserStatsToSupabase(stats: UserStats) {
   if (!isSupabaseConfigured || !supabase) return;
   try {
+    const userId = await getUserId();
+    if (userId === 'default') return;
     await supabase.from('user_stats').upsert({
-      id: 'default',
+      user_id: userId,
       xp: stats.xp,
       level: stats.level,
       streak: stats.streak,
@@ -139,8 +151,11 @@ async function pushUserStatsToSupabase(stats: UserStats) {
 async function pushSessionToSupabase(record: SessionRecord) {
   if (!isSupabaseConfigured || !supabase) return;
   try {
+    const userId = await getUserId();
+    if (userId === 'default') return;
     await supabase.from('sessions').upsert({
       id: record.id,
+      user_id: userId,
       date: record.date,
       start_time: record.startTime,
       end_time: record.endTime,
@@ -162,8 +177,11 @@ async function pushSessionToSupabase(record: SessionRecord) {
 export async function syncFromSupabase(): Promise<boolean> {
   if (!isSupabaseConfigured || !supabase) return false;
   try {
+    const userId = await getUserId();
+    if (userId === 'default') return false;
+
     // 1. Fetch Calibration
-    const { data: calibrationData } = await supabase.from('calibration').select('*').eq('id', 'default').single();
+    const { data: calibrationData } = await supabase.from('calibration').select('*').eq('user_id', userId).single();
     if (calibrationData) {
       const calibration: CalibrationData = {
         baseEyeDistance: calibrationData.base_eye_distance,
@@ -176,7 +194,7 @@ export async function syncFromSupabase(): Promise<boolean> {
     }
 
     // 2. Fetch Settings
-    const { data: settingsData } = await supabase.from('settings').select('*').eq('id', 'default').single();
+    const { data: settingsData } = await supabase.from('settings').select('*').eq('user_id', userId).single();
     if (settingsData) {
       const settings: AppSettings = {
         screenDistanceThreshold: settingsData.screen_distance_threshold,
@@ -193,7 +211,7 @@ export async function syncFromSupabase(): Promise<boolean> {
     }
 
     // 3. Fetch Stats
-    const { data: statsData } = await supabase.from('user_stats').select('*').eq('id', 'default').single();
+    const { data: statsData } = await supabase.from('user_stats').select('*').eq('user_id', userId).single();
     if (statsData) {
       const localStatsRaw = localStorage.getItem(STORAGE_KEYS.STATS);
       const localStats = localStatsRaw ? JSON.parse(localStatsRaw) : null;
@@ -214,8 +232,8 @@ export async function syncFromSupabase(): Promise<boolean> {
       localStorage.setItem(STORAGE_KEYS.STATS, JSON.stringify(stats));
     }
 
-    // 4. Fetch Sessions
-    const { data: sessionsData } = await supabase.from('sessions').select('*');
+    // 4. Fetch Sessions (RLS ensures we only get our own sessions, but we can also filter)
+    const { data: sessionsData } = await supabase.from('sessions').select('*').eq('user_id', userId);
     if (sessionsData) {
       const sessions: SessionRecord[] = sessionsData.map(s => ({
         id: s.id,

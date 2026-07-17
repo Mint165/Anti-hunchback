@@ -3,6 +3,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { User, Shield, Lock, Mail, ArrowLeft, CheckCircle2, ShieldAlert, Eye, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { encryptData, decryptData } from '../utils/crypto';
+import { supabase } from '../services/supabase';
 
 export interface AuthUser {
   name: string;
@@ -76,25 +77,50 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     
     if (isLogin) {
-      // Login with localStorage
-      const users: Record<string, AuthUser & { password: string }> = getUsers();
-      if (users[email]) {
-        if (users[email].password === password) {
-          const { password: _, ...userWithoutPassword } = users[email];
+      if (supabase) {
+        // Supabase Auth Login
+        const { data, error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password
+        });
+        
+        if (signInError) {
+          setError(signInError.message);
+          toast.error('Đăng nhập thất bại: ' + signInError.message);
+          return;
+        }
+        
+        if (data.user) {
+          const metadata = data.user.user_metadata || {};
           toast.success('Đăng nhập thành công! 🎉');
-          onLogin(userWithoutPassword);
-        } else {
-          setError(t('auth.invalidCredentials'));
-          toast.error('Mật khẩu không đúng!');
+          onLogin({
+            name: metadata.name || email.split('@')[0],
+            role: metadata.role || 'student',
+            linkedCode: metadata.linkedCode,
+            parentLinkedCode: metadata.parentLinkedCode
+          });
         }
       } else {
-        setError(t('auth.invalidCredentials'));
-        toast.error('Tài khoản không tồn tại!');
+        // Fallback to localStorage
+        const users: Record<string, AuthUser & { password: string }> = getUsers();
+        if (users[email]) {
+          if (users[email].password === password) {
+            const { password: _, ...userWithoutPassword } = users[email];
+            toast.success('Đăng nhập thành công (Local)! 🎉');
+            onLogin(userWithoutPassword);
+          } else {
+            setError(t('auth.invalidCredentials'));
+            toast.error('Mật khẩu không đúng!');
+          }
+        } else {
+          setError(t('auth.invalidCredentials'));
+          toast.error('Tài khoản không tồn tại!');
+        }
       }
     } else {
       // Register validation
@@ -110,42 +136,76 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
         return;
       }
       
-      const users: Record<string, AuthUser & { password: string }> = getUsers();
-      
-      if (users[email]) {
-        const isEmailInput = email.includes('@');
-        const errMsg = isEmailInput ? 'Email này đã được sử dụng!' : 'Tên đăng nhập này đã được sử dụng!';
-        setError(errMsg);
-        toast.error(errMsg);
-        return;
-      }
-
-      // Generate OTP Code (3 letters + 3 numbers)
-      const otp = generateVerificationCode();
-      setGeneratedOtp(otp);
-      setPendingEmail(email);
-      
-      const newUser: AuthUser & { password: string } = {
-        name,
-        role,
-        password,
-        linkedCode: role === 'student' ? generateLinkCode() : undefined
-      };
-      
-      setPendingUser(newUser);
-      setIsVerifying(true);
-      
       const isEmailInput = email.includes('@');
-      // Simulate sending verification code
-      if (isEmailInput) {
-        console.log(`[MOCK EMAIL SERVICE] Sent verification code ${otp} to ${email}`);
-        toast.success(`Mã xác nhận đã gửi đến email ${email}!`, { duration: 6000 });
-      } else {
-        console.log(`[MOCK USERNAME SERVICE] Generated verification code ${otp} for username ${email}`);
-        toast.success(`Mã xác nhận đã được tạo cho tên đăng nhập ${email}!`, { duration: 6000 });
-      }
       
-      setShowMockEmailModal(true);
+      if (supabase && isEmailInput) {
+        // Supabase Auth Register (Only for emails)
+        const linkedCode = role === 'student' ? generateLinkCode() : undefined;
+        const { data, error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              name,
+              role,
+              linkedCode
+            }
+          }
+        });
+        
+        if (signUpError) {
+          setError(signUpError.message);
+          toast.error('Đăng ký thất bại: ' + signUpError.message);
+          return;
+        }
+        
+        if (data.session) {
+          toast.success('Đăng ký thành công! 🌟');
+          onLogin({
+            name,
+            role,
+            linkedCode
+          });
+        } else {
+          toast.success('Vui lòng kiểm tra email của bạn để xác thực tài khoản!', { duration: 6000 });
+        }
+      } else {
+        // Fallback to Mock Auth (or Username since Supabase needs real email)
+        const users: Record<string, AuthUser & { password: string }> = getUsers();
+        
+        if (users[email]) {
+          const errMsg = isEmailInput ? 'Email này đã được sử dụng!' : 'Tên đăng nhập này đã được sử dụng!';
+          setError(errMsg);
+          toast.error(errMsg);
+          return;
+        }
+
+        // Generate OTP Code (3 letters + 3 numbers)
+        const otp = generateVerificationCode();
+        setGeneratedOtp(otp);
+        setPendingEmail(email);
+        
+        const newUser: AuthUser & { password: string } = {
+          name,
+          role,
+          password,
+          linkedCode: role === 'student' ? generateLinkCode() : undefined
+        };
+        
+        setPendingUser(newUser);
+        setIsVerifying(true);
+        
+        // Simulate sending verification code
+        if (isEmailInput) {
+          console.log(`[MOCK EMAIL SERVICE] Sent verification code ${otp} to ${email}`);
+          toast.success(`Mã xác nhận đã gửi đến email ${email}!`, { duration: 6000 });
+        } else {
+          console.log(`[MOCK USERNAME SERVICE] Generated verification code ${otp} for username ${email}`);
+          toast.success(`Mã xác nhận đã được tạo cho tên đăng nhập ${email}!`, { duration: 6000 });
+        }
+        
+        setShowMockEmailModal(true);
+      }
     }
   };
 

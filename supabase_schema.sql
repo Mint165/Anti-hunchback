@@ -1,9 +1,9 @@
--- Supabase Database Schema for Anti-Hunchback (Oliver)
+-- Supabase Database Schema for Anti-Hunchback (Multi-tenant)
 -- Copy and paste this into the SQL Editor of your Supabase project (https://supabase.com)
 
 -- 1. Create Calibration Table
 CREATE TABLE IF NOT EXISTS calibration (
-    id TEXT PRIMARY KEY DEFAULT 'default',
+    user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     base_eye_distance INT NOT NULL,
     base_neck_y_offset INT NOT NULL,
     base_shoulder_y_diff INT NOT NULL,
@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS calibration (
 
 -- 2. Create Settings Table
 CREATE TABLE IF NOT EXISTS settings (
-    id TEXT PRIMARY KEY DEFAULT 'default',
+    user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     screen_distance_threshold INT NOT NULL,
     neck_tilt_threshold INT NOT NULL,
     shoulder_tilt_threshold INT NOT NULL,
@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS settings (
 
 -- 3. Create User Stats Table
 CREATE TABLE IF NOT EXISTS user_stats (
-    id TEXT PRIMARY KEY DEFAULT 'default',
+    user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     xp INT NOT NULL DEFAULT 0,
     level INT NOT NULL DEFAULT 1,
     streak INT NOT NULL DEFAULT 0,
@@ -45,6 +45,7 @@ CREATE TABLE IF NOT EXISTS user_stats (
 -- 4. Create Sessions Table
 CREATE TABLE IF NOT EXISTS sessions (
     id TEXT PRIMARY KEY,
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
     date TEXT NOT NULL,
     start_time BIGINT NOT NULL,
     end_time BIGINT NOT NULL,
@@ -59,26 +60,33 @@ CREATE TABLE IF NOT EXISTS sessions (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- Create Index on Sessions Date to optimize queries
-CREATE INDEX IF NOT EXISTS idx_sessions_date ON sessions(date);
+-- Create Index on Sessions Date and user_id to optimize queries
+CREATE INDEX IF NOT EXISTS idx_sessions_user_date ON sessions(user_id, date);
 
--- Disable Row Level Security (RLS) for simple setup (or configure public RLS policies)
-ALTER TABLE calibration DISABLE ROW LEVEL SECURITY;
-ALTER TABLE settings DISABLE ROW LEVEL SECURITY;
-ALTER TABLE user_stats DISABLE ROW LEVEL SECURITY;
-ALTER TABLE sessions DISABLE ROW LEVEL SECURITY;
+-- Enable Row Level Security (RLS)
+ALTER TABLE calibration ENABLE ROW LEVEL SECURITY;
+ALTER TABLE settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_stats ENABLE ROW LEVEL SECURITY;
+ALTER TABLE sessions ENABLE ROW LEVEL SECURITY;
 
--- Seed default calibration data
-INSERT INTO calibration (id, base_eye_distance, base_neck_y_offset, base_shoulder_y_diff, base_torso_height, base_ear)
-VALUES ('default', 80, 120, 0, 180, 0.28)
-ON CONFLICT (id) DO NOTHING;
+-- Create RLS Policies for Calibration
+CREATE POLICY "Users can manage their own calibration data" 
+ON calibration FOR ALL 
+USING (auth.uid() = user_id);
 
--- Seed default settings data
-INSERT INTO settings (id, screen_distance_threshold, neck_tilt_threshold, shoulder_tilt_threshold, slouch_threshold, min_blink_rate, max_blink_rate, session_break_interval, eye_exercise_interval, sound_alert_enabled)
-VALUES ('default', 50, 20, 7, 15, 4, 25, 45, 20, true)
-ON CONFLICT (id) DO NOTHING;
+-- Create RLS Policies for Settings
+CREATE POLICY "Users can manage their own settings data" 
+ON settings FOR ALL 
+USING (auth.uid() = user_id);
 
--- Seed default user stats data
-INSERT INTO user_stats (id, xp, level, streak, last_session_date, total_study_time, badges)
-VALUES ('default', 0, 1, 0, null, 0, '{}')
-ON CONFLICT (id) DO NOTHING;
+-- Create RLS Policies for User Stats
+CREATE POLICY "Users can manage their own user_stats data" 
+ON user_stats FOR ALL 
+USING (auth.uid() = user_id);
+
+-- Create RLS Policies for Sessions
+CREATE POLICY "Users can manage their own sessions data" 
+ON sessions FOR ALL 
+USING (auth.uid() = user_id);
+
+-- Note: The frontend will automatically handle inserting initial default rows using "upsert" on first login/save.
