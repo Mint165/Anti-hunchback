@@ -4,6 +4,7 @@ import { User, Shield, Lock, Mail, ArrowLeft, CheckCircle2, ShieldAlert, Eye, X 
 import { toast } from 'react-hot-toast';
 import { encryptData, decryptData } from '../utils/crypto';
 import { supabase } from '../services/supabase';
+import { Globe } from 'lucide-react';
 
 export interface AuthUser {
   name: string;
@@ -47,7 +48,7 @@ const validateEmailOrUsername = (input: string) => {
 };
 
 export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
-  const { t } = useLanguage();
+  const { t, lang, setLang } = useLanguage();
   const [isLogin, setIsLogin] = useState(true);
   const [role, setRole] = useState<'student' | 'parent'>('student');
   
@@ -97,7 +98,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
         
         if (data.user) {
           const metadata = data.user.user_metadata || {};
-          toast.success('Đăng nhập thành công! 🎉');
+          toast.success(t('auth.loginSuccess'));
           onLogin({
             name: metadata.name || email.split('@')[0],
             role: metadata.role || 'student',
@@ -155,12 +156,12 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
         
         if (signUpError) {
           setError(signUpError.message);
-          toast.error('Đăng ký thất bại: ' + signUpError.message);
+          toast.error(t('auth.loginFailed') + signUpError.message);
           return;
         }
         
+        toast.success(t('auth.registerSuccess'));
         if (data.session) {
-          toast.success('Đăng ký thành công! 🌟');
           onLogin({
             name,
             role,
@@ -298,7 +299,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
               onClick={handleResendOtp}
               className="text-primary font-bold mt-2 hover:underline transition-all"
             >
-              Gửi lại mã xác nhận
+              {t('auth.resendCode')}
             </button>
           </div>
         </div>
@@ -315,18 +316,16 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
                    {isEmailInput ? <Mail size={32} className="text-blue-500" /> : <User size={32} className="text-blue-500" />}
                  </div>
                  <h3 className="text-2xl font-black text-gray-800 dark:text-white mb-2">
-                   {isEmailInput ? 'Email giả lập' : 'Xác thực giả lập'}
+                   {isEmailInput ? t('auth.mockEmailTitle') : t('auth.mockAuthTitle')}
                  </h3>
                  <p className="text-gray-600 dark:text-gray-300 mb-6 text-sm leading-relaxed">
-                   {isEmailInput 
-                     ? 'Đây là mã xác thực email giả lập. Hãy nhập mã này vào trang sau để có thể xác thực tài khoản và bắt đầu sử dụng.'
-                     : 'Đây là mã xác thực tài khoản giả lập. Hãy nhập mã này vào trang sau để có thể xác thực tài khoản và bắt đầu sử dụng.'}
+                   {isEmailInput ? t('auth.mockEmailDesc') : t('auth.mockAuthDesc')}
                  </p>
                  <div className="text-4xl font-black text-primary tracking-[0.2em] mb-6 bg-primary/10 py-3 rounded-xl border border-primary/20">
                    {generatedOtp}
                  </div>
                  <button onClick={() => setShowMockEmailModal(false)} className="btn-primary w-full py-3">
-                   Đóng
+                   {t('auth.closeBtn')}
                  </button>
               </div>
             </div>
@@ -337,20 +336,36 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
   }
 
   return (
-    <div className="w-full min-h-screen bg-slate-950 flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Colorful gradient bubbles in background */}
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/20 rounded-full blur-[120px] pointer-events-none animate-pulse"></div>
-      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-600/20 rounded-full blur-[120px] pointer-events-none animate-pulse" style={{ animationDelay: '2s' }}></div>
+    <div className="w-full min-h-screen bg-[var(--bg-page)] flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Background Decor */}
+      <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-primary/20 rounded-full blur-[120px] pointer-events-none animate-pulse"></div>
+      <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-purple-600/20 rounded-full blur-[120px] pointer-events-none animate-pulse" style={{ animationDelay: '2s' }}></div>
 
-      <div className="relative z-10 w-full max-w-md p-6 sm:p-8 rounded-3xl bg-white/10 dark:bg-slate-900/60 backdrop-blur-xl border border-white/20 dark:border-slate-800/80 shadow-[0_20px_50px_rgba(0,0,0,0.3)] text-white">
+      {/* Language Toggle */}
+      <div className="absolute top-6 right-6 z-50 flex items-center gap-2 bg-white/20 dark:bg-slate-900/40 backdrop-blur-md px-4 py-2 rounded-full border border-white/30 dark:border-slate-700/50 shadow-lg">
+        <Globe size={18} className="text-gray-700 dark:text-gray-200" />
+        <button 
+          onClick={() => setLang(lang === 'vi' ? 'en' : 'vi')}
+          className="text-sm font-bold text-gray-800 dark:text-white hover:text-primary transition-colors flex items-center gap-2"
+        >
+          <span className={lang === 'vi' ? 'text-primary' : 'text-gray-500'}>VI</span>
+          <span className="w-8 h-4 bg-gray-300 dark:bg-gray-600 rounded-full relative inline-block transition-colors">
+            <span className={`absolute top-0.5 left-0.5 w-3 h-3 bg-white rounded-full transition-transform ${lang === 'en' ? 'translate-x-4' : ''}`}></span>
+          </span>
+          <span className={lang === 'en' ? 'text-primary' : 'text-gray-500'}>EN</span>
+        </button>
+      </div>
+
+      {/* Main Glassmorphism Card */}
+      <div className="relative z-10 w-full max-w-md p-8 sm:p-10 rounded-3xl premium-card shadow-2xl">
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-gradient-to-br from-primary to-purple-600 rounded-2xl flex items-center justify-center text-white mx-auto mb-4 shadow-lg shadow-primary/40 transform hover:scale-105 transition-all">
-            <Eye size={32} className="text-white" />
+          <div className="w-20 h-20 bg-gradient-to-br from-primary to-purple-600 rounded-3xl flex items-center justify-center text-white mx-auto mb-6 shadow-xl shadow-primary/30 transform hover:scale-105 hover:rotate-3 transition-all">
+            <Eye size={40} className="text-white" />
           </div>
-          <h2 className="text-3xl font-black tracking-tight text-white">
+          <h2 className="text-3xl font-black tracking-tight text-[var(--text-main)]">
             {isLogin ? t('auth.loginTitle') : t('auth.registerTitle')}
           </h2>
-          <p className="text-gray-300 mt-2 text-sm">
+          <p className="text-[var(--text-muted)] mt-2 text-sm font-medium">
             {isLogin ? t('auth.loginDesc') : t('auth.registerDesc')}
           </p>
         </div>
@@ -392,13 +407,13 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-1">{t('auth.fullName')}</label>
-                <div className="relative">
+                <label className="block text-xs font-bold uppercase tracking-wider text-[var(--text-muted)] mb-1">{t('auth.fullName')}</label>
+                <div className="relative group">
                   <input
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:outline-none focus:ring-2 focus:ring-primary text-white"
+                    className="w-full pl-11 pr-4 py-3.5 rounded-xl bg-gray-50/50 border border-gray-200/50 focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white text-[var(--text-main)] transition-all"
                     placeholder="Nguyễn Văn A"
                   />
                   <div className="absolute left-3 top-3.5 text-gray-500">
@@ -410,14 +425,14 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
           )}
 
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-1">Email hoặc Tên đăng nhập</label>
-            <div className="relative">
+            <label className="block text-xs font-bold uppercase tracking-wider text-[var(--text-muted)] mb-1">{t('auth.emailOrUsername')}</label>
+            <div className="relative group">
               <input
                 type="text"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:outline-none focus:ring-2 focus:ring-primary text-white"
-                placeholder="Email hoặc Tên đăng nhập"
+                className="w-full pl-11 pr-4 py-3.5 rounded-xl bg-gray-50/50 border border-gray-200/50 focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white text-[var(--text-main)] transition-all"
+                placeholder={t('auth.emailOrUsername')}
                 required
               />
               <div className="absolute left-3 top-3.5 text-gray-500">
@@ -427,13 +442,13 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
           </div>
 
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-1">{t('auth.password')}</label>
-            <div className="relative">
+            <label className="block text-xs font-bold uppercase tracking-wider text-[var(--text-muted)] mb-1">{t('auth.password')}</label>
+            <div className="relative group">
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 rounded-xl bg-white/5 border border-white/10 focus:outline-none focus:ring-2 focus:ring-primary text-white"
+                className="w-full pl-11 pr-4 py-3.5 rounded-xl bg-gray-50/50 border border-gray-200/50 focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white text-[var(--text-main)] transition-all"
                 placeholder="••••••••"
                 required
               />
@@ -445,24 +460,24 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
 
           <button 
             type="submit" 
-            className="w-full py-4 rounded-xl bg-gradient-to-r from-primary to-purple-600 hover:from-primary-hover hover:to-purple-700 font-extrabold text-white shadow-[0_4px_20px_rgba(92,60,241,0.4)] hover:shadow-[0_4px_25px_rgba(92,60,241,0.6)] hover:scale-[1.03] active:scale-[0.98] transition-all duration-300 mt-6"
+            className="w-full py-4 rounded-xl bg-gradient-to-r from-primary to-purple-600 hover:from-primary-hover hover:to-purple-700 font-extrabold text-white shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 active:scale-95 transition-all duration-200 mt-8"
           >
             {isLogin ? t('auth.loginBtn') : t('auth.registerBtn')}
           </button>
         </form>
 
-        <div className="mt-8 text-center border-t border-white/10 pt-6 flex flex-col items-center gap-3">
-          <span className="text-sm text-gray-400">
-            {isLogin ? "Bạn mới tham gia?" : "Đã có tài khoản?"}
+        <div className="mt-8 text-center border-t border-gray-200/60 pt-6 flex flex-col items-center gap-4">
+          <span className="text-sm font-medium text-[var(--text-muted)]">
+            {isLogin ? t('auth.newToApp') : t('auth.alreadyHaveAccount')}
           </span>
           <button
             onClick={() => {
               setIsLogin(!isLogin);
               setError('');
             }}
-            className="w-full py-3.5 px-6 rounded-xl border border-white/20 bg-white/5 hover:bg-white/10 text-white font-bold transition-all transform hover:scale-[1.02] active:scale-[0.98] duration-200"
+            className="w-full py-3.5 px-6 rounded-xl border-2 border-gray-200/50 bg-white/50 hover:bg-gray-50 text-[var(--text-main)] font-bold transition-all transform hover:-translate-y-0.5 active:scale-95 duration-200"
           >
-            {isLogin ? "Đăng ký tài khoản mới" : "Đăng nhập ngay"}
+            {isLogin ? t('auth.switchToRegisterBtn') : t('auth.switchToLoginBtn')}
           </button>
         </div>
       </div>

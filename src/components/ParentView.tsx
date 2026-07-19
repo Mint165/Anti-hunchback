@@ -6,6 +6,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { getSessionRecords } from '../services/db';
 import type { SessionRecord } from '../services/db';
 import { subscribeToStudentSync, broadcastParentMessage } from '../services/parentSync';
+import { useLanguage } from '../contexts/LanguageContext';
 // @ts-ignore
 import html2pdf from 'html2pdf.js';
 
@@ -22,6 +23,7 @@ interface AlertLog {
 }
 
 export const ParentView: React.FC = () => {
+  const { t } = useLanguage();
   // Sync state with child webcam session
   const [studentActive, setStudentActive] = useState<boolean>(false);
   const [studentStatus, setStudentStatus] = useState<'good' | 'warning' | 'danger' | 'offline'>('offline');
@@ -314,19 +316,19 @@ export const ParentView: React.FC = () => {
   };
 
   return (
-    <div className="min-h-full p-6 lg:p-8" style={{ background: 'var(--bg-page)' }}>
+    <div className="min-h-full p-6 lg:p-8 bg-transparent">
       
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
         <div>
           <div className="flex items-center gap-2 mb-2">
-            <span className="text-xs font-bold uppercase tracking-widest px-3 py-1 rounded-full bg-purple-100 text-purple-700">Phụ Huynh Dashboard</span>
+            <span className="text-xs font-bold uppercase tracking-widest px-3 py-1 rounded-full bg-purple-100 text-purple-700">{t('parent.dashboard')}</span>
           </div>
-          <h1 className="text-2xl font-black text-gray-800">Giám sát Từ xa 🏠</h1>
-          <p className="text-gray-400 text-sm font-medium mt-0.5">Theo dõi tư thế, khoảng cách an toàn và tình trạng mệt mỏi của con.</p>
+          <h1 className="text-2xl font-black text-gray-800 dark:text-white">{t('parent.title')}</h1>
+          <p className="text-gray-500 dark:text-gray-400 text-sm font-medium mt-0.5">{t('parent.desc')}</p>
         </div>
-        <button onClick={handleExportPDF} className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-700 shadow-sm hover:bg-gray-50 hide-on-pdf">
-          <Download size={16} /> Báo Cáo PDF
+        <button onClick={handleExportPDF} className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl text-sm font-bold text-gray-700 dark:text-gray-300 shadow-sm hover:bg-gray-50 dark:hover:bg-slate-700 hide-on-pdf transition-all">
+          <Download size={16} /> {t('parent.exportPdf')}
         </button>
       </div>
 
@@ -342,7 +344,7 @@ export const ParentView: React.FC = () => {
             <div className="absolute -top-20 -right-20 w-40 h-40 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-blob"></div>
             <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-green-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-blob animation-delay-2000"></div>
             
-            <h3 className="widget-label mb-8 relative z-10">Trạng thái ngồi học trực tiếp</h3>
+            <h3 className="widget-label mb-8 relative z-10">{t('parent.liveStatus')}</h3>
             
             {/* Pulsing indicator */}
             <div className="relative mb-8 flex justify-center w-full">
@@ -375,58 +377,58 @@ export const ParentView: React.FC = () => {
               )}
             </div>
 
-            <h4 className="text-xl font-bold text-gray-800 relative z-10">
-              {studentStatus === 'good' && 'Con đang ngồi học đúng chuẩn'}
-              {studentStatus === 'warning' && 'Con ngồi hơi sai tư thế'}
-              {studentStatus === 'danger' && 'Tư thế sai nghiêm trọng!'}
-              {studentStatus === 'offline' && 'Thiết bị học sinh ngoại tuyến'}
+            <h4 className="text-xl font-bold text-gray-800 dark:text-white relative z-10">
+              {studentStatus === 'good' && t('parent.goodPosture')}
+              {studentStatus === 'warning' && t('parent.warningPosture')}
+              {studentStatus === 'danger' && t('parent.dangerPosture')}
+              {studentStatus === 'offline' && t('parent.offline')}
             </h4>
             
-            <p className="text-xs text-gray-400 mt-1 mb-4 font-medium">
-              {studentActive ? 'Trạng thái được đồng bộ thời gian thực' : 'Chờ thiết bị học sinh kết nối...'}
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 mb-4 font-medium">
+              {studentActive ? t('parent.syncLive') : t('parent.waitConnect')}
             </p>
 
             {/* Live Metrics details */}
             {studentActive && (
-              <div className="w-full grid grid-cols-2 gap-2 mt-4 text-left border-t border-gray-100 pt-4 relative z-10">
-                <div className="p-3 bg-gray-50 rounded-xl">
-                  <span className="text-[10px] text-gray-400 block uppercase font-bold">Điểm PHI</span>
-                  <span className="text-lg font-black text-gray-700">{studentDetails.healthScore}</span>
+              <div className="w-full grid grid-cols-2 gap-3 mt-4 text-left border-t border-gray-100/50 pt-5 relative z-10">
+                <div className="p-3 bg-white/40 dark:bg-slate-800/40 rounded-xl backdrop-blur-sm border border-white/40">
+                  <span className="text-[10px] text-gray-500 dark:text-gray-400 block uppercase font-bold">{t('parent.phiScore')}</span>
+                  <span className="text-lg font-black text-gray-800 dark:text-white">{studentDetails.healthScore}</span>
                 </div>
-                <div className="p-3 bg-gray-50 rounded-xl">
-                  <span className="text-[10px] text-gray-400 block uppercase font-bold">Mắt cách màn</span>
-                  <span className="text-lg font-black text-gray-700">{studentDetails.eyeDistanceCm} cm</span>
+                <div className="p-3 bg-white/40 dark:bg-slate-800/40 rounded-xl backdrop-blur-sm border border-white/40">
+                  <span className="text-[10px] text-gray-500 dark:text-gray-400 block uppercase font-bold">{t('parent.eyeDistance')}</span>
+                  <span className="text-lg font-black text-gray-800 dark:text-white">{studentDetails.eyeDistanceCm} cm</span>
                 </div>
-                <div className="p-3 bg-gray-50 rounded-xl">
-                  <span className="text-[10px] text-gray-400 block uppercase font-bold">Cúi cổ</span>
-                  <span className="text-lg font-black text-gray-700">{Math.round(studentDetails.neckAngle)}°</span>
+                <div className="p-3 bg-white/40 dark:bg-slate-800/40 rounded-xl backdrop-blur-sm border border-white/40">
+                  <span className="text-[10px] text-gray-500 dark:text-gray-400 block uppercase font-bold">{t('parent.neckAngle')}</span>
+                  <span className="text-lg font-black text-gray-800 dark:text-white">{Math.round(studentDetails.neckAngle)}°</span>
                 </div>
-                <div className="p-3 bg-gray-50 rounded-xl">
-                  <span className="text-[10px] text-gray-400 block uppercase font-bold">Nghiêng vai</span>
-                  <span className="text-lg font-black text-gray-700">{Math.round(studentDetails.shoulderTilt)}°</span>
+                <div className="p-3 bg-white/40 dark:bg-slate-800/40 rounded-xl backdrop-blur-sm border border-white/40">
+                  <span className="text-[10px] text-gray-500 dark:text-gray-400 block uppercase font-bold">{t('parent.shoulderTilt')}</span>
+                  <span className="text-lg font-black text-gray-800 dark:text-white">{Math.round(studentDetails.shoulderTilt)}°</span>
                 </div>
               </div>
             )}
             
             {/* Privacy Guarantee Badge */}
-            <div className="mt-5 flex items-start gap-2.5 bg-green-50 text-green-800 p-3.5 rounded-xl border border-green-100 text-xs text-left leading-relaxed relative z-10 w-full shadow-sm">
+            <div className="mt-5 flex items-start gap-2.5 bg-green-50/80 dark:bg-green-900/20 text-green-800 dark:text-green-300 p-4 rounded-xl border border-green-100 dark:border-green-800 text-xs text-left leading-relaxed relative z-10 w-full shadow-sm backdrop-blur-sm">
               <Shield size={20} className="flex-shrink-0 text-green-500 mt-0.5" />
-              <span><strong>Cam kết bảo mật:</strong> Hệ thống sử dụng AI xử lý tại biên trên máy học sinh. Tuyệt đối không truyền tải hình ảnh/video thực tế để bảo vệ quyền riêng tư.</span>
+              <span><strong>{t('parent.privacyGuarantee')}</strong> {t('parent.privacyDesc')}</span>
             </div>
           </div>
 
           {/* Health Analysis Prediction */}
-          <div className="premium-card p-5">
-            <h3 className="text-sm font-semibold text-gray-600 mb-3 flex items-center gap-1.5">
-              <Heart size={16} className="text-red-500" /> DỰ BÁO SỨC KHỎE (PHI)
+          <div className="premium-card p-6">
+            <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-4 flex items-center gap-2 uppercase tracking-wider">
+              <Heart size={18} className="text-red-500" /> {t('parent.healthPrediction')}
             </h3>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-gray-700">Mức độ nguy cơ cột sống:</span>
-              <span className="text-sm font-bold" style={{ color: healthPrediction.color }}>
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm font-medium text-gray-600 dark:text-gray-400">{t('parent.riskLevel')}</span>
+              <span className="text-sm font-black px-3 py-1 rounded-full bg-white/50 border border-white/50 shadow-sm" style={{ color: healthPrediction.color }}>
                 {healthPrediction.status}
               </span>
             </div>
-            <p className="text-xs text-gray-500 leading-relaxed bg-gray-50 p-3 rounded-xl border border-gray-100">
+            <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed bg-white/40 dark:bg-slate-800/40 p-4 rounded-xl border border-white/50 dark:border-slate-700 backdrop-blur-sm shadow-sm">
               {healthPrediction.description}
             </p>
             {healthPrediction.risks && healthPrediction.risks.length > 1 && (
@@ -448,20 +450,20 @@ export const ParentView: React.FC = () => {
         <div className="lg:col-span-2 flex flex-col gap-6">
           {sessions.length === 0 ? (
             <div className="premium-card p-10 flex flex-col items-center justify-center text-center h-full min-h-[400px]">
-               <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center text-gray-400 mb-4 border border-gray-100">
+               <div className="w-20 h-20 bg-gray-50 dark:bg-slate-800 rounded-full flex items-center justify-center text-gray-400 dark:text-gray-500 mb-4 border border-gray-100 dark:border-slate-700">
                  <Shield size={40} />
                </div>
-               <h3 className="text-xl font-bold text-gray-700 mb-2">Chưa có dữ liệu học tập</h3>
-               <p className="text-gray-500 max-w-sm">Học sinh chưa hoàn thành phiên học nào. Hệ thống sẽ tự động cập nhật biểu đồ phân tích và cảnh báo ngay khi có dữ liệu mới.</p>
+               <h3 className="text-xl font-bold text-gray-700 dark:text-white mb-2">{t('parent.noData')}</h3>
+               <p className="text-gray-500 dark:text-gray-400 max-w-sm">{t('parent.noDataDesc')}</p>
             </div>
           ) : (
             <>
           {/* Filter Bar */}
           <div className="flex justify-end mb-4">
-            <div className="flex items-center gap-2 bg-white rounded-lg p-1 border border-gray-200 shadow-sm">
-              <button onClick={() => { setTimeFilter('7'); setCurrentPage(1); }} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors ${timeFilter === '7' ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:bg-gray-50'}`}>7 Ngày</button>
-              <button onClick={() => { setTimeFilter('30'); setCurrentPage(1); }} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors ${timeFilter === '30' ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:bg-gray-50'}`}>30 Ngày</button>
-              <button onClick={() => { setTimeFilter('all'); setCurrentPage(1); }} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors ${timeFilter === 'all' ? 'bg-blue-50 text-blue-600' : 'text-gray-500 hover:bg-gray-50'}`}>Tất cả</button>
+            <div className="flex items-center gap-1.5 bg-white/60 dark:bg-slate-800/60 backdrop-blur-md rounded-xl p-1.5 border border-white/50 dark:border-slate-700 shadow-sm">
+              <button onClick={() => { setTimeFilter('7'); setCurrentPage(1); }} className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${timeFilter === '7' ? 'bg-primary text-white shadow-md' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100/50 dark:hover:bg-slate-700/50'}`}>{t('parent.filter7Days')}</button>
+              <button onClick={() => { setTimeFilter('30'); setCurrentPage(1); }} className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${timeFilter === '30' ? 'bg-primary text-white shadow-md' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100/50 dark:hover:bg-slate-700/50'}`}>{t('parent.filter30Days')}</button>
+              <button onClick={() => { setTimeFilter('all'); setCurrentPage(1); }} className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${timeFilter === 'all' ? 'bg-primary text-white shadow-md' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100/50 dark:hover:bg-slate-700/50'}`}>{t('parent.filterAll')}</button>
             </div>
           </div>
 
@@ -469,8 +471,8 @@ export const ParentView: React.FC = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             
             {/* Posture Pie Distribution (Recharts) */}
-            <div className="premium-card p-5 flex flex-col justify-between">
-              <h3 className="widget-label mb-4">Tỷ lệ tư thế ngồi</h3>
+            <div className="premium-card p-6 flex flex-col justify-between">
+              <h3 className="widget-label mb-4 uppercase tracking-wider">{t('parent.postureRatio')}</h3>
               <div className="h-44 flex items-center justify-center relative">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
@@ -492,7 +494,7 @@ export const ParentView: React.FC = () => {
                 </ResponsiveContainer>
                 {/* Center text overlay */}
                 <div className="absolute text-center mt-1">
-                  <span className="text-[10px] text-gray-400 font-bold block">TỐT NHẤT</span>
+                  <span className="text-[10px] text-gray-400 font-bold block">{t('parent.best')}</span>
                   <span className="text-2xl font-black text-green-600">
                     {pieData[0] ? `${pieData[0].value}%` : '80%'}
                   </span>
@@ -508,16 +510,16 @@ export const ParentView: React.FC = () => {
               </div>
             </div>
 
-            {/* PHI Score & Time Trend (Recharts Area) */}
-            <div className="premium-card p-5">
-              <h3 className="widget-label mb-4">Xu hướng điểm sức khỏe PHI</h3>
-              <div className="h-56 mt-2">
+            {/* Trend Area Chart (Recharts) */}
+            <div className="premium-card p-6 flex flex-col justify-between">
+              <h3 className="widget-label mb-4 uppercase tracking-wider">{t('parent.trend')}</h3>
+              <div className="h-44 w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={trendData}>
                     <defs>
                       <linearGradient id="colorPHI" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#7E5BEF" stopOpacity={0.25}/>
-                        <stop offset="95%" stopColor="#7E5BEF" stopOpacity={0.0}/>
+                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F3F4F6" />
@@ -531,12 +533,12 @@ export const ParentView: React.FC = () => {
             </div>
 
             {/* Concentration Density (Bar Chart) */}
-            <div className="premium-card p-5 lg:col-span-2">
+            <div className="premium-card p-6 flex flex-col justify-between lg:col-span-2">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="widget-label">Mật độ tập trung trong ngày</h3>
-                <span className="text-[10px] text-blue-600 bg-blue-50 px-3 py-1 rounded-full font-bold uppercase">Phân tích bằng AI</span>
+                <h3 className="widget-label uppercase tracking-wider">{t('parent.concentration')}</h3>
+                <span className="text-[10px] text-blue-600 bg-blue-50 px-3 py-1 rounded-full font-bold uppercase shadow-sm">AI Analysis</span>
               </div>
-              <div className="h-52">
+              <div className="h-52 w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={concData} barSize={32}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F3F4F6" />
@@ -545,7 +547,7 @@ export const ParentView: React.FC = () => {
                     <Tooltip 
                       cursor={{ fill: '#F3F4F6', opacity: 0.5 }}
                       contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 8px 16px rgba(0,0,0,0.1)' }}
-                      formatter={(value) => [`${value}%`, 'Mức độ tập trung']}
+                      formatter={(value) => [`${value}%`, 'Concentration']}
                     />
                     <Bar dataKey="concentration" fill="#3b82f6" radius={[6, 6, 0, 0]} />
                   </BarChart>
@@ -556,31 +558,31 @@ export const ParentView: React.FC = () => {
           </div>
 
           {/* Session History Table with Pagination */}
-          <div className="premium-card p-5">
-            <h3 className="widget-label mb-4">Lịch sử buổi học</h3>
+          <div className="premium-card p-6">
+            <h3 className="widget-label mb-6 uppercase tracking-wider">{t('parent.history')}</h3>
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-left">
-                <thead className="text-xs text-gray-500 bg-gray-50 uppercase rounded-t-lg">
+                <thead className="text-xs text-gray-500 dark:text-gray-400 bg-gray-50/50 dark:bg-slate-800/50 uppercase rounded-t-lg">
                   <tr>
-                    <th className="px-4 py-3 rounded-tl-lg">Ngày</th>
-                    <th className="px-4 py-3">Thời gian học</th>
-                    <th className="px-4 py-3">Điểm PHI</th>
-                    <th className="px-4 py-3 rounded-tr-lg">Tư thế chuẩn</th>
+                    <th className="px-4 py-3 rounded-tl-lg font-bold">Ngày</th>
+                    <th className="px-4 py-3 font-bold">Thời gian học</th>
+                    <th className="px-4 py-3 font-bold">Điểm PHI</th>
+                    <th className="px-4 py-3 rounded-tr-lg font-bold">Tư thế chuẩn</th>
                   </tr>
                 </thead>
                 <tbody>
                   {currentTableData.length > 0 ? currentTableData.map((s, idx) => (
-                    <tr key={idx} className="border-b border-gray-100 last:border-0 hover:bg-gray-50">
-                      <td className="px-4 py-3 font-medium text-gray-700">{s.date}</td>
-                      <td className="px-4 py-3 text-gray-600">{s.durationMinutes} phút</td>
+                    <tr key={idx} className="border-b border-gray-100/50 dark:border-slate-700/50 last:border-0 hover:bg-gray-50/50 dark:hover:bg-slate-800/50 transition-colors">
+                      <td className="px-4 py-3 font-medium text-gray-700 dark:text-gray-300">{s.date}</td>
+                      <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{s.durationMinutes} phút</td>
                       <td className="px-4 py-3 font-bold" style={{ color: s.averageHealthScore >= 80 ? '#4EAD63' : s.averageHealthScore >= 60 ? '#FFAA2C' : '#FF5E5E' }}>
                         {s.averageHealthScore}
                       </td>
-                      <td className="px-4 py-3 text-gray-600">{s.goodPosturePercentage}%</td>
+                      <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{s.goodPosturePercentage}%</td>
                     </tr>
                   )) : (
                     <tr>
-                      <td colSpan={4} className="px-4 py-8 text-center text-gray-500">Không có dữ liệu trong khoảng thời gian này</td>
+                      <td colSpan={4} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400 font-medium">Không có dữ liệu trong khoảng thời gian này</td>
                     </tr>
                   )}
                 </tbody>
