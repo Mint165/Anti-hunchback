@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { User, Shield, Lock, Mail, ArrowLeft, CheckCircle2, ShieldAlert, Eye, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-hot-toast';
 import { encryptData, decryptData } from '../utils/crypto';
 import { supabase } from '../services/supabase';
@@ -241,34 +242,59 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
 
   if (isVerifying) {
     return (
-      <div className="w-full min-h-screen bg-slate-950 flex items-center justify-center p-4 relative overflow-hidden">
-        {/* Colorful gradient bubbles in background */}
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/20 rounded-full blur-[120px] pointer-events-none animate-pulse"></div>
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-600/20 rounded-full blur-[120px] pointer-events-none animate-pulse" style={{ animationDelay: '2s' }}></div>
+      <motion.div
+        className="w-full min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
+        style={{ background: 'linear-gradient(135deg, #1E1B4B 0%, #0F0D1A 50%, #1E1B4B 100%)' }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+      >
+        {/* Decorative orbs */}
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full blur-[120px] pointer-events-none animate-pulse" style={{ background: 'rgba(124, 58, 237, 0.2)' }}></div>
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 rounded-full blur-[120px] pointer-events-none animate-pulse" style={{ background: 'rgba(168, 85, 247, 0.15)', animationDelay: '2s' }}></div>
 
-        <div className="relative z-10 w-full max-w-md p-6 sm:p-8 rounded-3xl bg-white/10 dark:bg-slate-900/60 backdrop-blur-xl border border-white/20 dark:border-slate-800/80 shadow-[0_20px_50px_rgba(0,0,0,0.3)] text-white">
-          <button 
+        <motion.div
+          className="relative z-10 w-full max-w-md p-6 sm:p-8 text-white"
+          style={{ background: 'rgba(255,255,255,0.06)', backdropFilter: 'blur(24px)', borderRadius: 'var(--radius-2xl)', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 20px 50px rgba(0,0,0,0.4)' }}
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+        >
+          <motion.button 
             onClick={() => setIsVerifying(false)}
-            className="absolute top-6 left-6 p-2 rounded-full hover:bg-white/10 transition-colors text-white"
+            className="absolute top-6 left-6 p-2 rounded-full transition-colors text-white"
+            style={{ background: 'rgba(255,255,255,0.1)' }}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
           >
             <ArrowLeft size={20} />
-          </button>
+          </motion.button>
 
           <div className="text-center mb-8 mt-4">
-            <div className="w-16 h-16 bg-gradient-to-br from-green-400 to-emerald-600 rounded-2xl flex items-center justify-center text-white mx-auto mb-4 shadow-lg shadow-emerald-500/30">
+            <motion.div
+              className="w-16 h-16 rounded-2xl flex items-center justify-center text-white mx-auto mb-4"
+              style={{ background: 'linear-gradient(135deg, var(--secondary), #059669)', boxShadow: '0 8px 24px rgba(16, 185, 129, 0.3)' }}
+              initial={{ scale: 0, rotate: -180 }}
+              animate={{ scale: 1, rotate: 0 }}
+              transition={{ type: 'spring', stiffness: 300, delay: 0.1 }}
+            >
               <CheckCircle2 size={32} />
-            </div>
-            <h2 className="text-2xl font-black tracking-tight text-white animate-fade-in">Xác Minh Tài Khoản</h2>
+            </motion.div>
+            <h2 className="text-2xl font-black tracking-tight text-white">Xác Minh Tài Khoản</h2>
             <p className="text-gray-300 mt-2 text-sm">
-              Chúng tôi đã gửi một mã xác nhận gồm 6 ký tự (3 chữ, 3 số) đến {pendingEmail.includes('@') ? 'email' : 'tên đăng nhập'} <span className="font-bold text-primary">{pendingEmail}</span>.
+              Chúng tôi đã gửi một mã xác nhận gồm 6 ký tự (3 chữ, 3 số) đến {pendingEmail.includes('@') ? 'email' : 'tên đăng nhập'} <span className="font-bold" style={{ color: 'var(--primary)' }}>{pendingEmail}</span>.
             </p>
           </div>
 
           {error && (
-            <div className="bg-red-500/20 text-red-200 p-3 rounded-xl mb-6 text-sm font-medium border border-red-500/30 flex items-center gap-2">
+            <motion.div
+              className="p-3 rounded-xl mb-6 text-sm font-medium flex items-center gap-2"
+              style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#FCA5A5', border: '1px solid rgba(239, 68, 68, 0.3)' }}
+              initial={{ x: -20, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+            >
               <ShieldAlert size={16} />
               <span>{error}</span>
-            </div>
+            </motion.div>
           )}
 
           <form onSubmit={handleVerifyOtp} className="space-y-6">
@@ -278,210 +304,307 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
                 type="text"
                 value={otpCode}
                 onChange={(e) => setOtpCode(e.target.value)}
-                className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-center font-black tracking-[0.3em] text-2xl text-white placeholder-gray-600 transition-all"
+                className="w-full p-4 text-center font-black tracking-[0.3em] text-2xl text-white placeholder-gray-600 transition-all"
+                style={{ background: 'rgba(255,255,255,0.05)', border: '2px solid rgba(255,255,255,0.1)', borderRadius: 'var(--radius-lg)', outline: 'none' }}
                 placeholder="A1B2C3"
                 maxLength={6}
                 required
               />
             </div>
 
-            <button 
+            <motion.button 
               type="submit" 
-              className="w-full py-4 rounded-xl bg-gradient-to-r from-primary to-purple-600 hover:from-primary-hover hover:to-purple-700 font-extrabold text-white shadow-[0_4px_20px_rgba(92,60,241,0.4)] hover:shadow-[0_4px_25px_rgba(92,60,241,0.6)] hover:scale-[1.03] active:scale-[0.98] transition-all duration-300"
+              className="btn-3d btn-3d-secondary w-full py-4 text-lg"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.97 }}
             >
               Kích hoạt tài khoản
-            </button>
+            </motion.button>
           </form>
 
-          <div className="mt-8 text-center border-t border-white/10 pt-6">
+          <div className="mt-8 text-center pt-6" style={{ borderTop: '1px solid rgba(255,255,255,0.1)' }}>
             <p className="text-sm text-gray-400">Không nhận được mã?</p>
             <button
               onClick={handleResendOtp}
-              className="text-primary font-bold mt-2 hover:underline transition-all"
+              className="font-bold mt-2 hover:underline transition-all"
+              style={{ color: 'var(--primary)' }}
             >
               {t('auth.resendCode')}
             </button>
           </div>
-        </div>
+        </motion.div>
 
         {showMockEmailModal && (() => {
           const isEmailInput = pendingEmail.includes('@');
           return (
-            <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
-              <div className="bg-white dark:bg-slate-800 rounded-3xl p-8 max-w-sm w-full shadow-2xl animate-fade-in text-center relative">
-                 <button onClick={() => setShowMockEmailModal(false)} className="absolute top-4 right-4 text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white">
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.8)' }}>
+              <motion.div
+                className="p-8 max-w-sm w-full text-center relative"
+                style={{ background: 'var(--bg-card)', borderRadius: 'var(--radius-2xl)', boxShadow: 'var(--shadow-xl)' }}
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+              >
+                 <button onClick={() => setShowMockEmailModal(false)} className="absolute top-4 right-4" style={{ color: 'var(--text-muted)' }}>
                    <X size={20} />
                  </button>
-                 <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-                   {isEmailInput ? <Mail size={32} className="text-blue-500" /> : <User size={32} className="text-blue-500" />}
+                 <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: 'var(--primary-light)' }}>
+                   {isEmailInput ? <Mail size={32} style={{ color: 'var(--primary)' }} /> : <User size={32} style={{ color: 'var(--primary)' }} />}
                  </div>
-                 <h3 className="text-2xl font-black text-gray-800 dark:text-white mb-2">
+                 <h3 className="text-2xl font-black mb-2" style={{ color: 'var(--text-main)' }}>
                    {isEmailInput ? t('auth.mockEmailTitle') : t('auth.mockAuthTitle')}
                  </h3>
-                 <p className="text-gray-600 dark:text-gray-300 mb-6 text-sm leading-relaxed">
+                 <p className="mb-6 text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
                    {isEmailInput ? t('auth.mockEmailDesc') : t('auth.mockAuthDesc')}
                  </p>
-                 <div className="text-4xl font-black text-primary tracking-[0.2em] mb-6 bg-primary/10 py-3 rounded-xl border border-primary/20">
+                 <div className="text-4xl font-black tracking-[0.2em] mb-6 py-3 rounded-xl" style={{ color: 'var(--primary)', background: 'var(--primary-light)', border: '2px solid rgba(124,58,237,0.2)' }}>
                    {generatedOtp}
                  </div>
-                 <button onClick={() => setShowMockEmailModal(false)} className="btn-primary w-full py-3">
+                 <motion.button
+                   onClick={() => setShowMockEmailModal(false)}
+                   className="btn-3d btn-3d-primary w-full py-3"
+                   whileTap={{ scale: 0.97 }}
+                 >
                    {t('auth.closeBtn')}
-                 </button>
-              </div>
+                 </motion.button>
+              </motion.div>
             </div>
           );
         })()}
-      </div>
+      </motion.div>
     );
   }
 
   return (
-    <div className="w-full min-h-screen bg-[var(--bg-page)] flex items-center justify-center p-4 relative overflow-hidden">
+    <motion.div
+      className="w-full min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
+      style={{ background: 'var(--bg-page)' }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+    >
       {/* Background Decor */}
-      <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-primary/20 rounded-full blur-[120px] pointer-events-none animate-pulse"></div>
-      <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-purple-600/20 rounded-full blur-[120px] pointer-events-none animate-pulse" style={{ animationDelay: '2s' }}></div>
+      <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] rounded-full blur-[120px] pointer-events-none animate-pulse" style={{ background: 'rgba(124, 58, 237, 0.15)' }}></div>
+      <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] rounded-full blur-[120px] pointer-events-none animate-pulse" style={{ background: 'rgba(168, 85, 247, 0.1)', animationDelay: '2s' }}></div>
 
       {/* Language Toggle */}
-      <div className="absolute top-6 right-6 z-50 flex items-center gap-2 bg-white/20 dark:bg-slate-900/40 backdrop-blur-md px-4 py-2 rounded-full border border-white/30 dark:border-slate-700/50 shadow-lg">
-        <Globe size={18} className="text-gray-700 dark:text-gray-200" />
+      <motion.div
+        className="absolute top-6 right-6 z-50 flex items-center gap-2 px-4 py-2 rounded-full"
+        style={{ background: 'var(--bg-card)', border: '2px solid rgba(124,58,237,0.1)', boxShadow: 'var(--shadow-md)' }}
+        initial={{ y: -20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ delay: 0.3 }}
+      >
+        <Globe size={16} style={{ color: 'var(--primary)' }} />
         <button 
           onClick={() => setLang(lang === 'vi' ? 'en' : 'vi')}
-          className="text-sm font-bold text-gray-800 dark:text-white hover:text-primary transition-colors flex items-center gap-2"
+          className="text-sm font-bold flex items-center gap-2"
+          style={{ color: 'var(--text-main)', background: 'none', border: 'none', cursor: 'pointer' }}
         >
-          <span className={lang === 'vi' ? 'text-primary' : 'text-gray-500'}>VI</span>
-          <span className="w-8 h-4 bg-gray-300 dark:bg-gray-600 rounded-full relative inline-block transition-colors">
-            <span className={`absolute top-0.5 left-0.5 w-3 h-3 bg-white rounded-full transition-transform ${lang === 'en' ? 'translate-x-4' : ''}`}></span>
+          <span style={{ color: lang === 'vi' ? 'var(--primary)' : 'var(--text-muted)', fontWeight: lang === 'vi' ? 900 : 600 }}>VI</span>
+          <span
+            style={{
+              width: 32,
+              height: 18,
+              background: 'var(--primary)',
+              borderRadius: 9999,
+              position: 'relative',
+              display: 'inline-block',
+            }}
+          >
+            <motion.span
+              style={{
+                position: 'absolute',
+                top: 2,
+                left: 2,
+                width: 14,
+                height: 14,
+                borderRadius: '50%',
+                background: 'white',
+              }}
+              animate={{ x: lang === 'en' ? 14 : 0 }}
+              transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+            />
           </span>
-          <span className={lang === 'en' ? 'text-primary' : 'text-gray-500'}>EN</span>
+          <span style={{ color: lang === 'en' ? 'var(--primary)' : 'var(--text-muted)', fontWeight: lang === 'en' ? 900 : 600 }}>EN</span>
         </button>
-      </div>
+      </motion.div>
 
-      {/* Main Glassmorphism Card */}
-      <div className="relative z-10 w-full max-w-md p-8 sm:p-10 rounded-3xl premium-card shadow-2xl">
+      {/* Main Card */}
+      <motion.div
+        className="relative z-10 w-full max-w-md p-8 sm:p-10"
+        style={{ background: 'var(--bg-card)', borderRadius: 'var(--radius-2xl)', boxShadow: 'var(--shadow-xl)', border: '1px solid rgba(124,58,237,0.08)' }}
+        initial={{ scale: 0.9, y: 20, opacity: 0 }}
+        animate={{ scale: 1, y: 0, opacity: 1 }}
+        transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+      >
         <div className="text-center mb-8">
-          <div className="w-20 h-20 bg-gradient-to-br from-primary to-purple-600 rounded-3xl flex items-center justify-center text-white mx-auto mb-6 shadow-xl shadow-primary/30 transform hover:scale-105 hover:rotate-3 transition-all">
-            <Eye size={40} className="text-white" />
-          </div>
-          <h2 className="text-3xl font-black tracking-tight text-[var(--text-main)]">
-            {isLogin ? t('auth.loginTitle') : t('auth.registerTitle')}
-          </h2>
-          <p className="text-[var(--text-muted)] mt-2 text-sm font-medium">
-            {isLogin ? t('auth.loginDesc') : t('auth.registerDesc')}
-          </p>
+          <motion.div
+            className="w-20 h-20 rounded-2xl flex items-center justify-center text-white mx-auto mb-6"
+            style={{ background: 'linear-gradient(135deg, var(--primary), #A855F7)', boxShadow: 'var(--shadow-glow-primary)' }}
+            whileHover={{ scale: 1.05, rotate: 3 }}
+            transition={{ type: 'spring', stiffness: 400 }}
+          >
+            <Eye size={40} />
+          </motion.div>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={isLogin ? 'login' : 'register'}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2 }}
+            >
+              <h2 className="text-3xl font-black tracking-tight" style={{ color: 'var(--text-main)' }}>
+                {isLogin ? t('auth.loginTitle') : t('auth.registerTitle')}
+              </h2>
+              <p className="mt-2 text-sm font-medium" style={{ color: 'var(--text-muted)' }}>
+                {isLogin ? t('auth.loginDesc') : t('auth.registerDesc')}
+              </p>
+            </motion.div>
+          </AnimatePresence>
         </div>
 
         {error && (
-          <div className="bg-red-50 dark:bg-red-500/20 text-red-600 dark:text-red-200 p-3 rounded-xl mb-6 text-sm font-medium border border-red-200 dark:border-red-500/30 flex items-center gap-2">
+          <motion.div
+            className="p-3 rounded-xl mb-6 text-sm font-medium flex items-center gap-2"
+            style={{ background: 'var(--danger-light)', color: 'var(--danger)', border: '1px solid rgba(239,68,68,0.2)' }}
+            initial={{ x: -20, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+          >
             <ShieldAlert size={16} className="flex-shrink-0" />
             <span>{error}</span>
-          </div>
+          </motion.div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-5">
+          <AnimatePresence>
           {!isLogin && (
-            <>
-              {/* Vibrant interactive Role Selector Cards */}
-              <div className="grid grid-cols-2 gap-4 mb-4">
-                <div
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              style={{ overflow: 'hidden' }}
+            >
+              {/* Duolingo-style Pill Toggle for Role */}
+              <div className="flex rounded-xl overflow-hidden mb-4" style={{ background: 'var(--primary-light)', padding: 4 }}>
+                <motion.button
+                  type="button"
                   onClick={() => setRole('student')}
-                  className={`cursor-pointer p-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 ${
-                    role === 'student'
-                      ? 'border-primary bg-primary/10 dark:bg-primary/20 text-primary dark:text-white shadow-lg shadow-primary/10'
-                      : 'border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10'
-                  }`}
+                  className="flex-1 flex items-center justify-center gap-2 py-3 rounded-lg font-bold text-sm transition-colors"
+                  style={{
+                    background: role === 'student' ? 'var(--primary)' : 'transparent',
+                    color: role === 'student' ? 'white' : 'var(--text-secondary)',
+                    boxShadow: role === 'student' ? 'var(--shadow-glow-primary)' : 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                  }}
+                  whileTap={{ scale: 0.95 }}
                 >
-                  <User size={24} />
-                  <span className="font-bold text-sm">{t('auth.roleStudent')}</span>
-                </div>
-                <div
+                  <User size={18} />
+                  {t('auth.roleStudent')}
+                </motion.button>
+                <motion.button
+                  type="button"
                   onClick={() => setRole('parent')}
-                  className={`cursor-pointer p-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 ${
-                    role === 'parent'
-                      ? 'border-purple-500 bg-purple-500/10 dark:bg-purple-500/20 text-purple-600 dark:text-white shadow-lg shadow-purple-500/10'
-                      : 'border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10'
-                  }`}
+                  className="flex-1 flex items-center justify-center gap-2 py-3 rounded-lg font-bold text-sm transition-colors"
+                  style={{
+                    background: role === 'parent' ? 'var(--primary)' : 'transparent',
+                    color: role === 'parent' ? 'white' : 'var(--text-secondary)',
+                    boxShadow: role === 'parent' ? 'var(--shadow-glow-primary)' : 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                  }}
+                  whileTap={{ scale: 0.95 }}
                 >
-                  <Shield size={24} />
-                  <span className="font-bold text-sm">{t('auth.roleParent')}</span>
-                </div>
+                  <Shield size={18} />
+                  {t('auth.roleParent')}
+                </motion.button>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-[var(--text-muted)] mb-1">{t('auth.fullName')}</label>
-                <div className="relative group">
+              <div className="mb-4">
+                <label className="block text-xs font-bold uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>{t('auth.fullName')}</label>
+                <div className="relative">
                   <input
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="w-full pl-11 pr-4 py-3.5 rounded-xl bg-gray-50/50 border border-gray-200/50 focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white text-[var(--text-main)] transition-all"
+                    className="w-full pl-11 pr-4 py-3.5 transition-all"
+                    style={{ borderRadius: 'var(--radius-md)', background: 'var(--bg-page)', border: '2px solid rgba(124,58,237,0.1)', color: 'var(--text-main)', outline: 'none', fontFamily: 'var(--font-sans)' }}
                     placeholder="Nguyễn Văn A"
                   />
-                  <div className="absolute left-3 top-3.5 text-gray-500">
+                  <div className="absolute left-3 top-3.5" style={{ color: 'var(--text-muted)' }}>
                     <User size={18} />
                   </div>
                 </div>
               </div>
-            </>
+            </motion.div>
           )}
+          </AnimatePresence>
 
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-[var(--text-muted)] mb-1">{t('auth.emailOrUsername')}</label>
-            <div className="relative group">
+            <label className="block text-xs font-bold uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>{t('auth.emailOrUsername')}</label>
+            <div className="relative">
               <input
                 type="text"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full pl-11 pr-4 py-3.5 rounded-xl bg-gray-50/50 border border-gray-200/50 focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white text-[var(--text-main)] transition-all"
+                className="w-full pl-11 pr-4 py-3.5 transition-all"
+                style={{ borderRadius: 'var(--radius-md)', background: 'var(--bg-page)', border: '2px solid rgba(124,58,237,0.1)', color: 'var(--text-main)', outline: 'none', fontFamily: 'var(--font-sans)' }}
                 placeholder={t('auth.emailOrUsername')}
                 required
               />
-              <div className="absolute left-3 top-3.5 text-gray-500">
+              <div className="absolute left-3 top-3.5" style={{ color: 'var(--text-muted)' }}>
                 {email && !email.includes('@') ? <User size={18} /> : <Mail size={18} />}
               </div>
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-[var(--text-muted)] mb-1">{t('auth.password')}</label>
-            <div className="relative group">
+            <label className="block text-xs font-bold uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>{t('auth.password')}</label>
+            <div className="relative">
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-11 pr-4 py-3.5 rounded-xl bg-gray-50/50 border border-gray-200/50 focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white text-[var(--text-main)] transition-all"
+                className="w-full pl-11 pr-4 py-3.5 transition-all"
+                style={{ borderRadius: 'var(--radius-md)', background: 'var(--bg-page)', border: '2px solid rgba(124,58,237,0.1)', color: 'var(--text-main)', outline: 'none', fontFamily: 'var(--font-sans)' }}
                 placeholder="••••••••"
                 required
               />
-              <div className="absolute left-3 top-3.5 text-gray-500">
+              <div className="absolute left-3 top-3.5" style={{ color: 'var(--text-muted)' }}>
                 <Lock size={18} />
               </div>
             </div>
           </div>
 
-          <button 
+          <motion.button 
             type="submit" 
-            className="w-full py-4 rounded-xl bg-gradient-to-r from-primary to-purple-600 hover:from-primary-hover hover:to-purple-700 font-extrabold text-white shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 active:scale-95 transition-all duration-200 mt-8"
+            className="btn-3d btn-3d-primary w-full py-4 text-lg mt-8"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.97 }}
           >
             {isLogin ? t('auth.loginBtn') : t('auth.registerBtn')}
-          </button>
+          </motion.button>
         </form>
 
-        <div className="mt-8 text-center border-t border-gray-200/60 pt-6 flex flex-col items-center gap-4">
-          <span className="text-sm font-medium text-[var(--text-muted)]">
+        <div className="mt-8 text-center pt-6 flex flex-col items-center gap-4" style={{ borderTop: '1px solid rgba(124,58,237,0.08)' }}>
+          <span className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>
             {isLogin ? t('auth.newToApp') : t('auth.alreadyHaveAccount')}
           </span>
-          <button
+          <motion.button
             onClick={() => {
               setIsLogin(!isLogin);
               setError('');
             }}
-            className="w-full py-3.5 px-6 rounded-xl border-2 border-gray-200/50 bg-white/50 hover:bg-gray-50 text-[var(--text-main)] font-bold transition-all transform hover:-translate-y-0.5 active:scale-95 duration-200"
+            className="btn-3d btn-3d-ghost w-full py-3.5"
+            whileTap={{ scale: 0.97 }}
           >
             {isLogin ? t('auth.switchToRegisterBtn') : t('auth.switchToLoginBtn')}
-          </button>
+          </motion.button>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };
 
