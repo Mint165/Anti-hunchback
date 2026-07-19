@@ -33,16 +33,23 @@ function AppContent() {
   const { eyeExerciseTriggered, onEyeExerciseComplete, metrics, poseLandmarks } = usePostureContext();
   
   useEffect(() => {
-    syncFromSupabase().then((success) => {
-      if (success) {
-        setIsSynced(true);
-      }
-    });
     // Check dark mode
     if (localStorage.getItem('oliver_dark_mode') === 'true') {
       document.documentElement.classList.add('dark');
     }
   }, []);
+
+  useEffect(() => {
+    if (user) {
+      syncFromSupabase().then((success) => {
+        if (success) {
+          setIsSynced(true);
+        }
+      });
+    } else {
+      setIsSynced(false);
+    }
+  }, [user]);
 
   useEffect(() => {
     if (user) {
