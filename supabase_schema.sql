@@ -1,8 +1,11 @@
 -- Supabase Database Schema for Anti-Hunchback (Multi-tenant)
 -- Copy and paste this into the SQL Editor of your Supabase project (https://supabase.com)
 
+-- 0. Clean old tables to ensure fresh setup
+DROP TABLE IF EXISTS calibration, settings, user_stats, sessions CASCADE;
+
 -- 1. Create Calibration Table
-CREATE TABLE IF NOT EXISTS calibration (
+CREATE TABLE calibration (
     user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     base_eye_distance INT NOT NULL,
     base_neck_y_offset INT NOT NULL,
@@ -13,7 +16,7 @@ CREATE TABLE IF NOT EXISTS calibration (
 );
 
 -- 2. Create Settings Table
-CREATE TABLE IF NOT EXISTS settings (
+CREATE TABLE settings (
     user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     screen_distance_threshold INT NOT NULL,
     neck_tilt_threshold INT NOT NULL,
@@ -28,7 +31,7 @@ CREATE TABLE IF NOT EXISTS settings (
 );
 
 -- 3. Create User Stats Table
-CREATE TABLE IF NOT EXISTS user_stats (
+CREATE TABLE user_stats (
     user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     xp INT NOT NULL DEFAULT 0,
     level INT NOT NULL DEFAULT 1,
@@ -43,7 +46,7 @@ CREATE TABLE IF NOT EXISTS user_stats (
 );
 
 -- 4. Create Sessions Table
-CREATE TABLE IF NOT EXISTS sessions (
+CREATE TABLE sessions (
     id TEXT PRIMARY KEY,
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
     date TEXT NOT NULL,
@@ -61,7 +64,7 @@ CREATE TABLE IF NOT EXISTS sessions (
 );
 
 -- Create Index on Sessions Date and user_id to optimize queries
-CREATE INDEX IF NOT EXISTS idx_sessions_user_date ON sessions(user_id, date);
+CREATE INDEX idx_sessions_user_date ON sessions(user_id, date);
 
 -- Enable Row Level Security (RLS)
 ALTER TABLE calibration ENABLE ROW LEVEL SECURITY;
