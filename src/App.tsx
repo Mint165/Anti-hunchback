@@ -1,4 +1,4 @@
-// Main Application Shell
+// Main Application Shell — with PageTransition animations
 import React, { useState, useEffect, Suspense } from 'react';
 import Layout from './components/Layout';
 import { syncFromSupabase } from './services/db';
@@ -8,6 +8,7 @@ import { AuthScreen } from './components/AuthScreen';
 import type { AuthUser } from './components/AuthScreen';
 import { UserProfile } from './components/UserProfile';
 import { LanguageProvider } from './contexts/LanguageContext';
+import PageTransition from './components/ui/PageTransition';
 
 // Lazy loaded components for code splitting
 const StudentView = React.lazy(() => import('./components/StudentView'));
@@ -75,12 +76,27 @@ function AppContent() {
     return <AuthScreen onLogin={handleLogin} />;
   }
 
-  // Simple loading fallback
+  // Loading fallback with brand colors
   const LoadingFallback = () => (
     <div className="flex items-center justify-center h-full w-full">
-      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <div className="spinner" />
     </div>
   );
+
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 'student':
+        return user.role === 'student' ? <StudentView key={isSynced ? 'synced' : 'pending'} /> : null;
+      case 'pet':
+        return user.role === 'student' ? <PetProfile key={isSynced ? 'synced_pet' : 'pending_pet'} /> : null;
+      case 'parent':
+        return user.role === 'parent' ? <ParentView key={isSynced ? 'synced' : 'pending'} /> : null;
+      case 'settings':
+        return <Settings key={isSynced ? 'synced' : 'pending'} />;
+      default:
+        return null;
+    }
+  };
 
   return (
     <>
@@ -97,10 +113,9 @@ function AppContent() {
       
       <Layout activeTab={activeTab} setActiveTab={setActiveTab} appMode={user.role} onAvatarClick={() => setShowProfile(true)} user={user}>
         <Suspense fallback={<LoadingFallback />}>
-          {activeTab === 'student' && user.role === 'student' && <StudentView key={isSynced ? 'synced' : 'pending'} />}
-          {activeTab === 'pet' && user.role === 'student' && <PetProfile key={isSynced ? 'synced_pet' : 'pending_pet'} />}
-          {activeTab === 'parent' && user.role === 'parent' && <ParentView key={isSynced ? 'synced' : 'pending'} />}
-          {activeTab === 'settings' && <Settings key={isSynced ? 'synced' : 'pending'} />}
+          <PageTransition pageKey={activeTab}>
+            {renderTabContent()}
+          </PageTransition>
         </Suspense>
 
         {showProfile && (
@@ -123,7 +138,6 @@ function AppContent() {
 function App() {
   return (
     <LanguageProvider>
-      {/* Move PostureProvider here so its context is available to AppContent */}
       <PostureProvider>
         <AppContent />
       </PostureProvider>

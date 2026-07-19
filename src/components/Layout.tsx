@@ -1,10 +1,12 @@
-// Layout Component - Premium Sidebar Design
-
-import React from 'react';
+// Layout Component — Floating Sidebar + Dynamic Island + 3D Particle BG
+import React, { Suspense } from 'react';
 import { LayoutDashboard, Shield, Settings as SettingsIcon, PawPrint, Eye, Globe } from 'lucide-react';
 import { useMediaQuery } from 'react-responsive';
+import { motion } from 'framer-motion';
 import type { AuthUser } from './AuthScreen';
 import { useLanguage } from '../contexts/LanguageContext';
+
+const ParticleBackground = React.lazy(() => import('./ui/ParticleBackground'));
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -31,10 +33,14 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTa
   return (
     <div className={`app-container ${isMobile ? 'mobile-layout' : ''}`}>
 
-      {/* ─── Sidebar Navigation (Desktop) ─────────────────────────── */}
+      {/* 3D Particle Background */}
+      <Suspense fallback={null}>
+        <ParticleBackground />
+      </Suspense>
+
+      {/* ─── Floating Sidebar (Desktop) ─────────────────────────── */}
       {!isMobile && (
         <aside className="premium-sidebar">
-          
           {/* Brand */}
           <div className="sidebar-brand">
             <div className="sidebar-logo">
@@ -54,32 +60,71 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTa
             {menuItems.map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.id;
-              
-              // Hide student tabs if parent, hide parent tabs if student
+
               if (displayUser.role === 'parent' && (item.id === 'student' || item.id === 'pet')) return null;
               if (displayUser.role === 'student' && item.id === 'parent') return null;
 
               return (
-                <button
+                <motion.button
                   key={item.id}
                   onClick={() => setActiveTab(item.id)}
                   className={`sidebar-item ${isActive ? 'active' : ''}`}
+                  whileHover={{ x: isActive ? 0 : 4 }}
+                  whileTap={{ scale: 0.97 }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 25 }}
                 >
                   <Icon size={18} strokeWidth={isActive ? 2.5 : 2} />
                   {item.name}
-                </button>
+                </motion.button>
               );
             })}
           </nav>
 
-          {/* Bottom User Area or Footer */}
-          <div className="sidebar-footer cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-700/50 rounded-xl p-2 transition-colors" onClick={onAvatarClick}>
-            <div className="user-avatar bg-gradient-to-br from-primary to-purple-600 text-white font-black text-lg">
+          {/* Language Toggle */}
+          <div className="flex items-center gap-3 px-3 py-3 mb-3 rounded-xl" style={{ background: 'var(--primary-light)' }}>
+            <Globe size={16} style={{ color: 'var(--primary)' }} />
+            <button
+              onClick={() => setLang(lang === 'vi' ? 'en' : 'vi')}
+              className="flex items-center gap-2 text-sm font-bold"
+              style={{ color: 'var(--text-main)', background: 'none', border: 'none', cursor: 'pointer' }}
+            >
+              <span style={{ color: lang === 'vi' ? 'var(--primary)' : 'var(--text-muted)', fontWeight: lang === 'vi' ? 900 : 600 }}>VI</span>
+              <span
+                style={{
+                  width: 32,
+                  height: 18,
+                  background: 'var(--primary)',
+                  borderRadius: 9999,
+                  position: 'relative',
+                  display: 'inline-block',
+                }}
+              >
+                <motion.span
+                  style={{
+                    position: 'absolute',
+                    top: 2,
+                    left: 2,
+                    width: 14,
+                    height: 14,
+                    borderRadius: '50%',
+                    background: 'white',
+                  }}
+                  animate={{ x: lang === 'en' ? 14 : 0 }}
+                  transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                />
+              </span>
+              <span style={{ color: lang === 'en' ? 'var(--primary)' : 'var(--text-muted)', fontWeight: lang === 'en' ? 900 : 600 }}>EN</span>
+            </button>
+          </div>
+
+          {/* User Area */}
+          <div className="sidebar-footer cursor-pointer hover:opacity-80 rounded-xl p-2 transition-all" onClick={onAvatarClick}>
+            <div className="user-avatar">
               {displayUser.name.charAt(0).toUpperCase()}
             </div>
             <div className="user-info">
               <div className="user-name truncate max-w-[130px]">{displayUser.name}</div>
-              <div className="user-plan text-xs">{displayUser.role === 'student' ? t('layout.roleStudent') : t('layout.roleParent')}</div>
+              <div className="user-plan">{displayUser.role === 'student' ? t('layout.roleStudent') : t('layout.roleParent')}</div>
             </div>
           </div>
         </aside>
@@ -87,20 +132,19 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTa
 
       {/* ─── Main Content Area ───────────────────────────── */}
       <main className="premium-main relative">
-        {/* Language Toggle Inside Main Area */}
-        <div className="absolute top-4 right-4 sm:top-6 sm:right-6 z-[100] flex items-center gap-2 bg-white/20 dark:bg-slate-900/40 backdrop-blur-md px-4 py-2 rounded-full border border-gray-200 dark:border-slate-700/50 shadow-sm hover:shadow-md transition-all">
-          <Globe size={18} className="text-gray-500 dark:text-gray-300" />
-          <button 
-            onClick={() => setLang(lang === 'vi' ? 'en' : 'vi')}
-            className="text-sm font-bold text-gray-800 dark:text-white hover:text-primary transition-colors flex items-center gap-2"
-          >
-            <span className={lang === 'vi' ? 'text-primary' : 'text-gray-500'}>VI</span>
-            <span className="w-8 h-4 bg-gray-300 dark:bg-gray-600 rounded-full relative inline-block transition-colors">
-              <span className={`absolute top-0.5 left-0.5 w-3 h-3 bg-white rounded-full transition-transform ${lang === 'en' ? 'translate-x-4' : ''}`}></span>
-            </span>
-            <span className={lang === 'en' ? 'text-primary' : 'text-gray-500'}>EN</span>
-          </button>
-        </div>
+        {/* Mobile language toggle */}
+        {isMobile && (
+          <div className="flex justify-end mb-3">
+            <button
+              onClick={() => setLang(lang === 'vi' ? 'en' : 'vi')}
+              className="flex items-center gap-2 px-3 py-2 rounded-full text-xs font-bold"
+              style={{ background: 'var(--primary-light)', color: 'var(--primary)', border: 'none', cursor: 'pointer' }}
+            >
+              <Globe size={14} />
+              {lang === 'vi' ? 'EN' : 'VI'}
+            </button>
+          </div>
+        )}
 
         {children}
       </main>
@@ -111,21 +155,22 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTa
           {menuItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
-            
+
             if (displayUser.role === 'parent' && (item.id === 'student' || item.id === 'pet')) return null;
             if (displayUser.role === 'student' && item.id === 'parent') return null;
 
             return (
-              <button
+              <motion.button
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
                 className={`bottom-nav-item ${isActive ? 'active' : ''}`}
+                whileTap={{ scale: 0.9 }}
               >
                 <div className="bottom-nav-icon">
-                  <Icon size={24} strokeWidth={isActive ? 2.5 : 2} />
+                  <Icon size={22} strokeWidth={isActive ? 2.5 : 2} />
                 </div>
                 <span>{item.name}</span>
-              </button>
+              </motion.button>
             );
           })}
         </div>
