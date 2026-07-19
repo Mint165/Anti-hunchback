@@ -489,14 +489,17 @@ export function getBadgesStatus(): Badge[] {
   const stats = loadUserStats();
   return BADGES.map(badge => ({
     ...badge,
+    unlocked: stats.badges.includes(badge.id),
+  }));
 }
 
 // --- Realtime Subscriptions ---
 export function subscribeToSupabaseChanges(onSettingsChange: (settings: AppSettings) => void) {
-  if (!isSupabaseConfigured || !supabase) return () => {};
+  const client = supabase;
+  if (!isSupabaseConfigured || !client) return () => {};
 
   const getUserIdSync = async () => {
-    const { data } = await supabase.auth.getSession();
+    const { data } = await client.auth.getSession();
     return data.session?.user.id;
   };
 
@@ -505,7 +508,7 @@ export function subscribeToSupabaseChanges(onSettingsChange: (settings: AppSetti
   getUserIdSync().then((userId) => {
     if (!userId) return;
 
-    subscription = supabase
+    subscription = client
       .channel('public:settings')
       .on(
         'postgres_changes',
@@ -537,6 +540,6 @@ export function subscribeToSupabaseChanges(onSettingsChange: (settings: AppSetti
   });
 
   return () => {
-    if (subscription) supabase.removeChannel(subscription);
+    if (subscription) client.removeChannel(subscription);
   };
 }
