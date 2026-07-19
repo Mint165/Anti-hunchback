@@ -371,8 +371,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
         </div>
 
         {error && (
-          <div className="bg-red-500/20 text-red-200 p-3 rounded-xl mb-6 text-sm font-medium border border-red-500/30 flex items-center gap-2">
-            <ShieldAlert size={16} />
+          <div className="bg-red-50 dark:bg-red-500/20 text-red-600 dark:text-red-200 p-3 rounded-xl mb-6 text-sm font-medium border border-red-200 dark:border-red-500/30 flex items-center gap-2">
+            <ShieldAlert size={16} className="flex-shrink-0" />
             <span>{error}</span>
           </div>
         )}
@@ -386,8 +386,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
                   onClick={() => setRole('student')}
                   className={`cursor-pointer p-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 ${
                     role === 'student'
-                      ? 'border-primary bg-primary/20 text-white shadow-lg shadow-primary/10'
-                      : 'border-white/10 bg-white/5 text-gray-400 hover:bg-white/10'
+                      ? 'border-primary bg-primary/10 dark:bg-primary/20 text-primary dark:text-white shadow-lg shadow-primary/10'
+                      : 'border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10'
                   }`}
                 >
                   <User size={24} />
@@ -397,8 +397,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
                   onClick={() => setRole('parent')}
                   className={`cursor-pointer p-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 ${
                     role === 'parent'
-                      ? 'border-purple-500 bg-purple-500/20 text-white shadow-lg shadow-purple-500/10'
-                      : 'border-white/10 bg-white/5 text-gray-400 hover:bg-white/10'
+                      ? 'border-purple-500 bg-purple-500/10 dark:bg-purple-500/20 text-purple-600 dark:text-white shadow-lg shadow-purple-500/10'
+                      : 'border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10'
                   }`}
                 >
                   <Shield size={24} />

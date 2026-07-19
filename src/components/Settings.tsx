@@ -202,12 +202,12 @@ export const Settings: React.FC = () => {
             <select 
               value={settings.eyeExerciseInterval} 
               onChange={(e) => handleChange('eyeExerciseInterval', parseInt(e.target.value))}
-              className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-green-500"
+              className="w-full bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-green-500 text-gray-800 dark:text-white"
             >
-              <option value="15">Mỗi 15 phút</option>
-              <option value="20">Mỗi 20 phút (Khuyên dùng)</option>
-              <option value="30">Mỗi 30 phút</option>
-              <option value="45">Mỗi 45 phút</option>
+              <option value="15" className="text-gray-800 dark:text-white bg-white dark:bg-slate-800">Mỗi 15 phút</option>
+              <option value="20" className="text-gray-800 dark:text-white bg-white dark:bg-slate-800">Mỗi 20 phút (Khuyên dùng)</option>
+              <option value="30" className="text-gray-800 dark:text-white bg-white dark:bg-slate-800">Mỗi 30 phút</option>
+              <option value="45" className="text-gray-800 dark:text-white bg-white dark:bg-slate-800">Mỗi 45 phút</option>
             </select>
           </div>
 
@@ -216,11 +216,11 @@ export const Settings: React.FC = () => {
             <select 
               value={settings.sessionBreakInterval} 
               onChange={(e) => handleChange('sessionBreakInterval', parseInt(e.target.value))}
-              className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-green-500"
+              className="w-full bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-green-500 text-gray-800 dark:text-white"
             >
-              <option value="30">Mỗi 30 phút</option>
-              <option value="45">Mỗi 45 phút (Khuyên dùng)</option>
-              <option value="60">Mỗi 60 phút</option>
+              <option value="30" className="text-gray-800 dark:text-white bg-white dark:bg-slate-800">Mỗi 30 phút</option>
+              <option value="45" className="text-gray-800 dark:text-white bg-white dark:bg-slate-800">Mỗi 45 phút (Khuyên dùng)</option>
+              <option value="60" className="text-gray-800 dark:text-white bg-white dark:bg-slate-800">Mỗi 60 phút</option>
             </select>
           </div>
 
@@ -233,14 +233,14 @@ export const Settings: React.FC = () => {
               <select 
                 value={alertDelay} 
                 onChange={(e) => setAlertDelay(e.target.value)}
-                className="bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-green-500 dark:text-white"
+                className="bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-green-500 text-gray-800 dark:text-white"
               >
-                <option value="5">Sau 5 giây (Test)</option>
-                <option value="10">Sau 10 giây</option>
-                <option value="30">Sau 30 giây</option>
-                <option value="60">Sau 1 phút</option>
-                <option value="120">Sau 2 phút (Mặc định)</option>
-                <option value="300">Sau 5 phút</option>
+                <option value="5" className="text-gray-800 dark:text-white bg-white dark:bg-slate-800">Sau 5 giây (Test)</option>
+                <option value="10" className="text-gray-800 dark:text-white bg-white dark:bg-slate-800">Sau 10 giây</option>
+                <option value="30" className="text-gray-800 dark:text-white bg-white dark:bg-slate-800">Sau 30 giây</option>
+                <option value="60" className="text-gray-800 dark:text-white bg-white dark:bg-slate-800">Sau 1 phút</option>
+                <option value="120" className="text-gray-800 dark:text-white bg-white dark:bg-slate-800">Sau 2 phút (Mặc định)</option>
+                <option value="300" className="text-gray-800 dark:text-white bg-white dark:bg-slate-800">Sau 5 phút</option>
               </select>
               
               <input 

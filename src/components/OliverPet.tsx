@@ -128,20 +128,121 @@ const PandaModel = ({ state, petLevel, equippedItems }: any) => {
           <meshStandardMaterial color="#1f2937" roughness={0.8} />
         </Sphere>
         
-        {/* Royal Crown */}
+        {/* Royal Crown or Hats */}
         {(petLevel >= 5 || equippedItems?.head === 'hat_crown_gold') && (
            <mesh position={[0, 1.6, 0]}>
              <cylinderGeometry args={[0.2, 0.2, 0.2, 6]} />
              <meshStandardMaterial color="#fbbf24" metalness={0.8} roughness={0.2} />
            </mesh>
         )}
+        {equippedItems?.head === 'hat_crown_silver' && (
+           <mesh position={[0, 1.6, 0]}>
+             <cylinderGeometry args={[0.2, 0.2, 0.2, 6]} />
+             <meshStandardMaterial color="#e5e7eb" metalness={0.8} roughness={0.2} />
+           </mesh>
+        )}
+        {equippedItems?.head === 'hat_scholar' && (
+           <group position={[0, 1.55, 0]}>
+             <mesh>
+               <boxGeometry args={[0.6, 0.05, 0.6]} />
+               <meshStandardMaterial color="#1f2937" />
+             </mesh>
+             <mesh position={[0, -0.1, 0]}>
+               <cylinderGeometry args={[0.2, 0.2, 0.2, 16]} />
+               <meshStandardMaterial color="#1f2937" />
+             </mesh>
+             <mesh position={[0.25, -0.15, 0]} rotation={[0, 0, 0.5]}>
+               <cylinderGeometry args={[0.01, 0.01, 0.3]} />
+               <meshStandardMaterial color="#fbbf24" />
+             </mesh>
+           </group>
+        )}
+
+        {/* Glasses */}
+        {equippedItems?.eyes === 'eyes_glasses' && (
+          <group position={[0, 0.92, 0.8]}>
+             <mesh position={[-0.28, 0, 0]}>
+               <torusGeometry args={[0.15, 0.03, 16, 32]} />
+               <meshStandardMaterial color="#1f2937" />
+             </mesh>
+             <mesh position={[0.28, 0, 0]}>
+               <torusGeometry args={[0.15, 0.03, 16, 32]} />
+               <meshStandardMaterial color="#1f2937" />
+             </mesh>
+             <mesh position={[0, 0, 0]}>
+               <boxGeometry args={[0.2, 0.03, 0.03]} />
+               <meshStandardMaterial color="#1f2937" />
+             </mesh>
+          </group>
+        )}
+        {equippedItems?.eyes === 'eyes_sunglasses' && (
+          <group position={[0, 0.92, 0.8]}>
+             <mesh position={[-0.28, 0, 0]}>
+               <cylinderGeometry args={[0.16, 0.16, 0.05, 32]} />
+               <meshStandardMaterial color="#111827" roughness={0.1} />
+             </mesh>
+             <mesh position={[0.28, 0, 0]} rotation={[Math.PI/2, 0, 0]}>
+               <cylinderGeometry args={[0.16, 0.16, 0.05, 32]} />
+               <meshStandardMaterial color="#111827" roughness={0.1} />
+             </mesh>
+             <mesh position={[0, 0, 0]}>
+               <boxGeometry args={[0.2, 0.05, 0.05]} />
+               <meshStandardMaterial color="#111827" />
+             </mesh>
+          </group>
+        )}
+
+        {/* Cape */}
+        {equippedItems?.body === 'body_cape' && (
+           <mesh position={[0, -0.2, -0.9]} rotation={[-0.2, 0, 0]}>
+             <planeGeometry args={[1.5, 1.8]} />
+             <meshStandardMaterial color="#ef4444" side={THREE.DoubleSide} />
+           </mesh>
+        )}
+
+        {/* Mouth (Emotions) */}
+        {(state === 'good' || state === 'success') && (
+          <mesh position={[0, 0.55, 0.73]} rotation={[0.2, 0, 0]}>
+            <torusGeometry args={[0.08, 0.02, 16, 32, Math.PI]} />
+            <meshStandardMaterial color="#111827" />
+          </mesh>
+        )}
+        {(state === 'tired' || state === 'slouch' || state === 'close') && (
+          <mesh position={[0, 0.55, 0.75]} rotation={[0, 0, Math.PI]}>
+            <torusGeometry args={[0.08, 0.02, 16, 32, Math.PI]} />
+            <meshStandardMaterial color="#111827" />
+          </mesh>
+        )}
+        {(state === 'slouch' || state === 'close') && (
+          <group position={[0, 1.1, 0.7]}>
+            <mesh position={[-0.2, 0, 0]} rotation={[0, 0, 0.3]}>
+              <boxGeometry args={[0.15, 0.02, 0.02]} />
+              <meshStandardMaterial color="#1f2937" />
+            </mesh>
+            <mesh position={[0.2, 0, 0]} rotation={[0, 0, -0.3]}>
+              <boxGeometry args={[0.15, 0.02, 0.02]} />
+              <meshStandardMaterial color="#1f2937" />
+            </mesh>
+          </group>
+        )}
         
         {/* Particles / Sparkles for Good State */}
-        {state === 'good' && (
+        {state === 'good' && !equippedItems?.aura && (
           <Sparkles count={30} scale={3} size={2} color="#4EAD63" speed={0.4} opacity={0.5} />
         )}
-        {state === 'success' && (
+        {state === 'success' && !equippedItems?.aura && (
           <Sparkles count={50} scale={4} size={3} color="#7E5BEF" speed={1} opacity={0.8} />
+        )}
+
+        {/* Auras from Shop */}
+        {equippedItems?.aura === 'aura_fire' && (
+          <Sparkles count={60} scale={3.5} size={5} color="#ef4444" speed={2} opacity={0.8} noise={1} />
+        )}
+        {equippedItems?.aura === 'aura_ice' && (
+          <Sparkles count={50} scale={4} size={3} color="#60a5fa" speed={0.5} opacity={0.6} noise={0.5} />
+        )}
+        {equippedItems?.aura === 'aura_electric' && (
+          <Sparkles count={40} scale={3.5} size={2.5} color="#fcd34d" speed={4} opacity={0.9} noise={2} />
         )}
       </Float>
     </group>
@@ -235,12 +336,13 @@ export const OliverPet: React.FC<OliverPetProps> = ({
           <spotLight position={[5, 10, 5]} intensity={1.5} castShadow angle={0.3} penumbra={1} />
           <directionalLight position={[-5, 5, 5]} intensity={0.8} />
           <PandaModel state={state} petLevel={petLevel} equippedItems={equippedItems} />
-          <ContactShadows position={[0, -1.8, 0]} opacity={0.6} scale={5} blur={2.5} far={4} />
+          <ContactShadows position={[0, -1.2, 0]} opacity={0.6} scale={5} blur={2.5} far={4} />
           <OrbitControls 
             enablePan={false} 
             enableZoom={false} 
             minPolarAngle={Math.PI / 3} 
             maxPolarAngle={Math.PI / 2} 
+            target={[0, 0.5, 0]}
           />
         </Canvas>
       </div>

@@ -7,6 +7,7 @@ import { loadUserStats, saveSessionRecord, addXP, getBadgesStatus } from '../ser
 import type { Badge } from '../services/db';
 import { broadcastStudentStatus, broadcastFatigueAlert } from '../services/parentSync';
 import { usePostureContext } from '../contexts/PostureContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import { voiceService } from '../services/voiceService';
 import OliverPet from './OliverPet';
 import type { PetState } from './OliverPet';
@@ -25,6 +26,7 @@ export const StudentView: React.FC = () => {
     isManualWritingMode,
     setIsManualWritingMode
   } = usePostureContext();
+  const { t } = useLanguage();
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [showCamera, setShowCamera] = useState<boolean>(true);
@@ -247,12 +249,12 @@ export const StudentView: React.FC = () => {
           <div className="w-24 h-24 bg-purple-500/20 rounded-full flex items-center justify-center text-purple-400 mb-6">
             <Trophy size={48} />
           </div>
-          <h2 className="text-5xl font-black mb-4 tracking-tight">Chào mừng đến với MediEdu</h2>
+          <h2 className="text-5xl font-black mb-4 tracking-tight">{t('student.welcomeTitle')}</h2>
           <p className="text-gray-300 text-xl mb-10 max-w-lg leading-relaxed">
-            Hệ thống sẽ theo dõi tư thế của bạn thông qua camera để bảo vệ cột sống và mắt. Dữ liệu hình ảnh chỉ xử lý trực tiếp trên máy của bạn, tuyệt đối bảo mật.
+            {t('student.welcomeDesc')}
           </p>
           <button onClick={handleFinishOnboarding} className="btn-primary text-lg px-10 py-4 shadow-[0_8px_32px_rgba(168,85,247,0.4)]">
-            Tôi Đã Hiểu & Bắt Đầu
+            {t('student.startBtn')}
           </button>
         </div>
       );
@@ -260,9 +262,9 @@ export const StudentView: React.FC = () => {
 
     return (
       <div className="calibration-container">
-        <div className="premium-card calibration-card">
-          <h2 className="calibration-title">Bắt đầu phiên học</h2>
-          <p className="calibration-desc">Hệ thống AI sẽ hiệu chỉnh để nhận diện tư thế chuẩn của bạn.</p>
+        <div className="premium-card calibration-card dark:bg-slate-800">
+          <h2 className="calibration-title dark:text-white">{t('student.startSessionTitle')}</h2>
+          <p className="calibration-desc dark:text-gray-300">{t('student.startSessionDesc')}</p>
           <div className="calibration-video-wrapper relative">
             <video ref={videoRef} className="calibration-video" autoPlay playsInline muted />
             {error ? (
@@ -273,7 +275,7 @@ export const StudentView: React.FC = () => {
             ) : isLoading ? (
               <div className="calibration-loading">
                 <div className="spinner" />
-                <span>Đang tải AI Engine...</span>
+                <span>{t('student.loadingAI')}</span>
               </div>
             ) : null}
           </div>
@@ -298,45 +300,45 @@ export const StudentView: React.FC = () => {
             <button onClick={() => setShowTips(false)} className="absolute top-4 right-4 p-2 bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 rounded-full transition-colors">
               <X size={20} className="text-gray-600 dark:text-gray-300" />
             </button>
-            <h3 className="text-2xl font-black text-gray-800 dark:text-white mb-6">Mẹo từ AI 🤖</h3>
+            <h3 className="text-2xl font-black text-gray-800 dark:text-white mb-6">{t('student.tipsTitle')}</h3>
             <div className="space-y-4">
               {metrics && metrics.slouchAngle > 10 ? (
                 <div className="p-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-100 dark:border-orange-800 rounded-xl">
-                  <div className="font-bold text-orange-800 dark:text-orange-300 mb-1">Cảnh báo: Hơi còng lưng</div>
-                  <div className="text-orange-600 dark:text-orange-400 text-sm">Góc lưng hiện tại là {Math.round(metrics.slouchAngle)}°. Hãy rướn người lên và mở rộng lồng ngực.</div>
+                  <div className="font-bold text-orange-800 dark:text-orange-300 mb-1">{t('student.warnSlouch')}</div>
+                  <div className="text-orange-600 dark:text-orange-400 text-sm">Góc lưng hiện tại là {Math.round(metrics.slouchAngle)}°. {t('student.warnSlouchDesc')}</div>
                 </div>
               ) : (
                 <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-800 rounded-xl">
-                  <div className="font-bold text-green-800 dark:text-green-300 mb-1">Tuyệt vời: Lưng rất thẳng!</div>
-                  <div className="text-green-600 dark:text-green-400 text-sm">Hãy tiếp tục duy trì tư thế này nhé.</div>
+                  <div className="font-bold text-green-800 dark:text-green-300 mb-1">{t('student.goodSlouch')}</div>
+                  <div className="text-green-600 dark:text-green-400 text-sm">{t('student.goodSlouchDesc')}</div>
                 </div>
               )}
 
               {metrics && metrics.eyeDistanceCm < 50 ? (
                 <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800 rounded-xl">
-                  <div className="font-bold text-red-800 dark:text-red-300 mb-1">Cảnh báo: Mắt quá gần</div>
-                  <div className="text-red-600 dark:text-red-400 text-sm">Khoảng cách hiện tại: {metrics.eyeDistanceCm}cm. Hãy lùi ra xa màn hình ít nhất 50cm.</div>
+                  <div className="font-bold text-red-800 dark:text-red-300 mb-1">{t('student.warnEye')}</div>
+                  <div className="text-red-600 dark:text-red-400 text-sm">Khoảng cách hiện tại: {metrics.eyeDistanceCm}cm. {t('student.warnEyeDesc')}</div>
                 </div>
               ) : (
                 <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-xl">
-                  <div className="font-bold text-blue-800 dark:text-blue-300 mb-1">Tốt: Khoảng cách an toàn</div>
-                  <div className="text-blue-600 dark:text-blue-400 text-sm">Mắt bạn đang ở khoảng cách lý tưởng.</div>
+                  <div className="font-bold text-blue-800 dark:text-blue-300 mb-1">{t('student.goodEye')}</div>
+                  <div className="text-blue-600 dark:text-blue-400 text-sm">{t('student.goodEyeDesc')}</div>
                 </div>
               )}
             </div>
-            <button onClick={() => setShowTips(false)} className="w-full btn-primary py-3 mt-6">Đã hiểu</button>
+            <button onClick={() => setShowTips(false)} className="w-full btn-primary py-3 mt-6">{t('student.gotIt')}</button>
           </div>
         </div>
       )}
 
       {!hasStarted && (
         <div className="fixed inset-0 z-[60] bg-gray-900/95 backdrop-blur-3xl flex flex-col items-center justify-center text-white text-center p-8">
-          <h2 className="text-5xl font-black mb-4 tracking-tight">Sẵn Sàng Học Tập!</h2>
+          <h2 className="text-5xl font-black mb-4 tracking-tight">{t('student.readyTitle')}</h2>
           <p className="text-gray-300 text-xl mb-10 max-w-lg leading-relaxed">
-            Hệ thống AI sẽ theo dõi tư thế của bạn để bảo vệ cột sống và mắt. Vui lòng bấm Bắt Đầu để cấp quyền âm thanh cảnh báo.
+            {t('student.readyDesc')}
           </p>
           <button onClick={() => { startSession(); setSessionStartTime(Date.now()); }} className="btn-primary text-lg px-10 py-4 shadow-[0_8px_32px_rgba(74,222,128,0.4)]">
-            Bắt Đầu Học
+            {t('student.startLearn')}
           </button>
         </div>
       )}
@@ -346,12 +348,12 @@ export const StudentView: React.FC = () => {
           <div className="w-24 h-24 bg-green-500/20 rounded-full flex items-center justify-center text-green-400 mb-6 animate-pulse">
             <BookOpen size={48} />
           </div>
-          <h2 className="text-5xl font-black mb-4 tracking-tight">Đã Học 45 Phút!</h2>
+          <h2 className="text-5xl font-black mb-4 tracking-tight">{t('student.breakTitle')}</h2>
           <p className="text-gray-300 text-xl mb-10 max-w-lg leading-relaxed">
-            Cơ thể của bạn cần nghỉ ngơi. Hãy đứng dậy vươn vai, đi uống nước hoặc vận động nhẹ trong 1–2 phút nhé!
+            {t('student.breakDesc')}
           </p>
           <button onClick={() => resetBreak()} className="btn-secondary text-lg px-10 py-4 shadow-[0_8px_32px_rgba(74,222,128,0.4)]">
-            Tôi đã vận động xong
+            {t('student.breakBtn')}
           </button>
         </div>
       )}
@@ -360,12 +362,12 @@ export const StudentView: React.FC = () => {
         <div className="fixed inset-0 z-50 bg-red-900/60 flex items-center justify-center p-4">
           <div className="premium-card bg-red-950 border-2 border-red-500 p-10 max-w-lg shadow-[0_0_80px_rgba(255,94,94,0.3)] subtle-pulse relative">
             <AlertTriangle size={72} className="text-red-500 mx-auto mb-6 drop-shadow-[0_0_15px_rgba(255,94,94,0.5)]" />
-            <h2 className="text-4xl font-black text-white text-center mb-4">TƯ THẾ SAI NGHIÊM TRỌNG</h2>
+            <h2 className="text-4xl font-black text-white text-center mb-4">{t('student.dangerTitle')}</h2>
             <p className="text-red-100 text-center text-lg mb-8 leading-relaxed font-medium">
-              Bạn đã ngồi sai tư thế liên tục hơn 2 phút! Hãy điều chỉnh lại khoảng cách và thẳng lưng ngay để bảo vệ cột sống và thị lực.
+              {t('student.dangerDesc')}
             </p>
             <button onClick={() => resetBreak()} className="btn-primary w-full bg-red-500 hover:bg-red-600 text-white border-none py-4 text-lg font-bold">
-              Tôi Đã Sửa Tư Thế
+              {t('student.fixedBtn')}
             </button>
           </div>
         </div>
@@ -387,16 +389,16 @@ export const StudentView: React.FC = () => {
           <div className="sv-actions">
             <button 
               onClick={() => setIsManualWritingMode(!isManualWritingMode)} 
-              className={`px-4 py-2 hidden sm:block rounded-xl font-bold text-sm transition-colors ${isManualWritingMode ? 'bg-indigo-100 text-indigo-700 border-2 border-indigo-500' : 'bg-white text-gray-600 border border-gray-200'}`}
-              title="Kích hoạt khi viết bài trên mặt bàn để tránh cảnh báo sai"
+              className={`px-4 py-2 hidden sm:block rounded-xl font-bold text-sm transition-colors ${isManualWritingMode ? 'bg-indigo-100 text-indigo-700 border-2 border-indigo-500' : 'bg-white dark:bg-slate-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700'}`}
+              title={t('student.writingMode')}
             >
-              ✍️ Đang viết bài
+              {t('student.writingModeOn')}
             </button>
-            <button onClick={() => setIsAudioEnabled(!isAudioEnabled)} className="sv-audio-btn">
+            <button onClick={() => setIsAudioEnabled(!isAudioEnabled)} className="sv-audio-btn dark:bg-slate-800 dark:text-gray-300 dark:border-gray-700 border">
               {isAudioEnabled ? <Volume2 size={20} /> : <VolumeX size={20} />}
             </button>
             <button onClick={() => setCalibration(null)} className="pill-tag pill-primary">
-              <RefreshCw size={16} /> <span>Hiệu chỉnh lại</span>
+              <RefreshCw size={14} className="mr-1" /> {t('student.recalibrate')}
             </button>
           </div>
         </div>
@@ -405,24 +407,24 @@ export const StudentView: React.FC = () => {
         <div className="hero-banner">
           <div className="hero-content">
             <div className="hero-text">
-              <h1>Chỉ còn một chút nữa thôi!</h1>
-              <p>Chỉ còn vài XP nữa là bạn đạt cấp độ tiếp theo. Hãy duy trì tư thế thẳng lưng và tập trung học tập để bứt phá bảng xếp hạng.</p>
-              <button className="btn-primary" onClick={handleEndSession}>Lưu Phiên Học</button>
+              <h1>{t('student.heroTitle')}</h1>
+              <p>{t('student.heroDesc')}</p>
+              <button className="btn-primary" onClick={handleEndSession}>{t('student.saveSession')}</button>
             </div>
             
             <div className="hero-stats">
               <div className="hero-stat-card">
                 <div className="hero-stat-icon" style={{ background: '#facc15', color: '#713f12' }}>🔥</div>
                 <div>
-                  <div className="hero-stat-val">{userStats.streak} Ngày Chuỗi</div>
-                  <div className="hero-stat-lbl">Học Tập Chăm Chỉ</div>
+                  <div className="hero-stat-val">{userStats.streak} {t('student.streakDays')}</div>
+                  <div className="hero-stat-lbl">{t('student.hardwork')}</div>
                 </div>
               </div>
               <div className="hero-stat-card">
                 <div className="hero-stat-icon" style={{ background: '#60a5fa', color: '#1e3a8a' }}>⭐</div>
                 <div>
-                  <div className="hero-stat-val">Cấp {userStats.level}</div>
-                  <div className="hero-stat-lbl">Hạng Hiện Tại</div>
+                  <div className="hero-stat-val">{t('student.level')} {userStats.level}</div>
+                  <div className="hero-stat-lbl">{t('student.currentRank')}</div>
                 </div>
               </div>
             </div>
@@ -435,13 +437,13 @@ export const StudentView: React.FC = () => {
           {/* Column 1: Progress & Pet */}
           <div className="sv-col sv-col-progress">
             
-            <div className="premium-card xp-card">
-              <div className="card-title"><Trophy size={18} className="text-purple-500" /> Cấp Độ & Kinh Nghiệm</div>
+            <div className="premium-card xp-card dark:bg-slate-800">
+              <div className="card-title dark:text-white"><Trophy size={18} className="text-purple-500" /> {t('student.levelXp')}</div>
               <div className="flex items-center gap-5 mt-4">
-                 <div className="text-5xl font-black text-gray-800">{userStats.level}</div>
+                 <div className="text-5xl font-black text-gray-800 dark:text-white">{userStats.level}</div>
                  <div className="flex-1">
                    <div className="flex justify-between text-sm font-bold mb-2">
-                     <span className="text-gray-400">Tiến trình</span>
+                     <span className="text-gray-400 dark:text-gray-300">{t('student.progress')}</span>
                      <span className="text-purple-600">{userStats.xp} / {userStats.level * 1000} XP</span>
                    </div>
                    <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
@@ -451,19 +453,19 @@ export const StudentView: React.FC = () => {
               </div>
             </div>
 
-            <div className="premium-card pet-card">
+            <div className="premium-card pet-card dark:bg-slate-800">
                <div className="pet-circle">
                  <div className="pet-model">
-                    <OliverPet state={getPetState()} size={64} equippedItems={userStats.equippedItems} customText={latestParentMessage || undefined} hideBubble={true} hideBadge={true} />
+                    <OliverPet state={getPetState()} size={64} petLevel={userStats.petLevel} equippedItems={userStats.equippedItems} customText={latestParentMessage || undefined} hideBubble={true} hideBadge={true} />
                  </div>
                </div>
-               <h3>Thú Cưng Oliver</h3>
-               <p>Theo dõi bạn học tập thời gian thực</p>
-               <div className="pill-tag pill-secondary">Trạng thái: {getPetState() === 'good' ? 'Vui vẻ' : getPetState() === 'slouch' ? 'Buồn bã' : 'Đang nhắc nhở'}</div>
+               <h3 className="dark:text-white">{t('student.petName')}</h3>
+               <p className="dark:text-gray-300">{t('student.petDesc')}</p>
+               <div className="pill-tag pill-secondary mt-2">{t('student.status')}: {getPetState() === 'good' ? t('student.stateHappy') : getPetState() === 'slouch' ? t('student.stateSad') : t('student.stateWarning')}</div>
             </div>
 
-            <div className="premium-card timer-card">
-              <div className="card-title">Bộ đếm thời gian</div>
+            <div className="premium-card timer-card dark:bg-slate-800">
+              <div className="card-title dark:text-white">{t('student.timer')}</div>
               <div className="timer-display">
                  <div className="timer-digit">{hh[0]}</div>
                  <div className="timer-digit">{hh[1]}</div>
@@ -474,11 +476,11 @@ export const StudentView: React.FC = () => {
                  <div className="timer-digit">{ss[0]}</div>
                  <div className="timer-digit">{ss[1]}</div>
               </div>
-              <div className="timer-labels">
-                <span>Giờ</span><span>Phút</span><span>Giây</span>
+              <div className="timer-labels dark:text-gray-300">
+                <span>{t('student.hr')}</span><span>{t('student.min')}</span><span>{t('student.sec')}</span>
               </div>
               <button className="btn-secondary w-full" onClick={() => resetBreak()}>
-                Bắt đầu phiên học mới
+                {t('student.newSession')}
               </button>
             </div>
 
@@ -487,8 +489,8 @@ export const StudentView: React.FC = () => {
           {/* Column 2: Central Ring & Camera */}
           <div className="sv-col sv-col-camera">
             
-            <div className="premium-card ring-card">
-              <div className="card-title">Mục Tiêu Sức Khoẻ</div>
+            <div className="premium-card ring-card dark:bg-slate-800">
+              <div className="card-title dark:text-white">{t('student.healthGoal')}</div>
               
               <div className={`score-ring-wrapper ${healthScore >= 80 ? 'score-ring-good' : ''}`}>
                 <svg className="score-ring-svg" viewBox="0 0 100 100">
@@ -513,16 +515,16 @@ export const StudentView: React.FC = () => {
                 </div>
               </div>
               
-              <div className="score-footer">
-                 Duy trì màu xanh để bảo vệ sức khỏe
+              <div className="score-footer dark:text-gray-300">
+                 {t('student.keepGreen')}
               </div>
             </div>
 
-            <div className="premium-card camera-card">
+            <div className="premium-card camera-card dark:bg-slate-800">
                <div className="camera-header">
-                 <div className="card-title">Camera AI</div>
+                 <div className="card-title dark:text-white">{t('student.cameraAi')}</div>
                  <button onClick={() => setShowCamera(!showCamera)} className={`pill-tag ${showCamera ? 'camera-off-pill' : 'camera-on-pill'}`}>
-                   {showCamera ? 'Tắt' : 'Bật'}
+                   {showCamera ? t('student.off') : t('student.on')}
                  </button>
                </div>
                <div className="camera-wrapper relative">
@@ -557,29 +559,29 @@ export const StudentView: React.FC = () => {
           {/* Column 3: Leaderboard / Live Stats Table */}
           <div className="sv-col sv-col-stats">
             
-            <div className="premium-card leaderboard-card">
+            <div className="premium-card leaderboard-card dark:bg-slate-800">
                <div className="leaderboard-header">
-                  <div className="card-title m-0">Bảng Trạng Thái</div>
-                  <div className="pill-tag pill-realtime">TRỰC TIẾP</div>
+                  <div className="card-title m-0 dark:text-white">{t('student.statusTable')}</div>
+                  <div className="pill-tag pill-realtime">{t('student.live')}</div>
                </div>
                
                <details className="mobile-stats-details" open>
-                 <summary className="mobile-stats-summary hidden">Chạm để xem chỉ số trực tiếp</summary>
+                 <summary className="mobile-stats-summary hidden">{t('student.tapToView')}</summary>
 
                <div className="table-wrapper">
                  <table className="sv-table">
                    <thead>
                      <tr>
-                       <th className="th-left">Chỉ số</th>
-                       <th className="th-center">Mục tiêu</th>
-                       <th className="th-right">Trạng thái</th>
+                       <th className="th-left dark:text-gray-300">{t('student.metric')}</th>
+                       <th className="th-center dark:text-gray-300">{t('student.goal')}</th>
+                       <th className="th-right dark:text-gray-300">{t('student.state')}</th>
                      </tr>
                    </thead>
                    <tbody>
                      <tr>
-                       <td className="td-metric">
+                       <td className="td-metric dark:text-white">
                          <div className="metric-icon" style={{ background: '#dbeafe', color: '#2563eb' }}>🏃</div>
-                         Khoảng cách
+                         {t('student.distance')}
                        </td>
                        <td className="td-goal">&gt; 50 cm</td>
                        <td className="td-status">
@@ -589,9 +591,9 @@ export const StudentView: React.FC = () => {
                        </td>
                      </tr>
                      <tr>
-                       <td className="td-metric">
+                       <td className="td-metric dark:text-white">
                          <div className="metric-icon" style={{ background: '#f3e8ff', color: '#9333ea' }}>🧍</div>
-                         Lưng (Slouch)
+                         {t('student.backSlouch')}
                        </td>
                        <td className="td-goal">&lt; 15°</td>
                        <td className="td-status">
@@ -601,9 +603,9 @@ export const StudentView: React.FC = () => {
                        </td>
                      </tr>
                      <tr>
-                       <td className="td-metric">
+                       <td className="td-metric dark:text-white">
                          <div className="metric-icon" style={{ background: '#ffedd5', color: '#ea580c' }}>🧘</div>
-                         Cúi cổ (Neck)
+                         {t('student.neckTilt')}
                        </td>
                        <td className="td-goal">&lt; 20°</td>
                        <td className="td-status">
@@ -618,19 +620,19 @@ export const StudentView: React.FC = () => {
                </details>
              </div>
 
-            <div className="premium-card tips-card">
-              <div className="card-title"><Info size={18} className="text-blue-500" /> Trợ giúp AI</div>
+            <div className="premium-card tips-card dark:bg-slate-800">
+              <div className="card-title dark:text-white"><Info size={18} className="text-blue-500" /> {t('student.aiHelp')}</div>
               <div className="tips-banner">
                 <div className="tips-avatars">
                    {['bg-red-200','bg-green-200','bg-blue-200'].map((c,i)=><div key={i} className={`tip-avatar ${c}`} />)}
                 </div>
                 <div className="tips-text">
-                  3 Mẹo từ AI
-                  <div className="tips-subtext">để cải thiện tư thế của bạn</div>
+                  {t('student.aiTipsCount')}
+                  <div className="tips-subtext">{t('student.aiTipsDesc')}</div>
                 </div>
               </div>
               <button className="btn-secondary w-full" style={{ background: '#00d285' }} onClick={() => setShowTips(true)}>
-                Xem Mẹo &rarr;
+                <span dangerouslySetInnerHTML={{ __html: t('student.viewTips') }}></span>
               </button>
             </div>
 

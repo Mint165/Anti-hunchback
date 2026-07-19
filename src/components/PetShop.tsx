@@ -13,7 +13,9 @@ export const SHOP_ITEMS = [
   { id: 'eyes_glasses', name: 'Kính Trí Thức', slot: 'eyes', cost: 30, icon: '👓' },
   { id: 'eyes_sunglasses', name: 'Kính Râm Ngầu', slot: 'eyes', cost: 100, icon: '🕶️' },
   { id: 'body_cape', name: 'Áo choàng Đỏ', slot: 'body', cost: 200, icon: '🦸' },
-  { id: 'bg_aura', name: 'Hào Quang', slot: 'background', cost: 300, icon: '✨' },
+  { id: 'aura_fire', name: 'Hào Quang Lửa', slot: 'aura', cost: 300, icon: '🔥' },
+  { id: 'aura_ice', name: 'Hào Quang Băng', slot: 'aura', cost: 300, icon: '❄️' },
+  { id: 'aura_electric', name: 'Hào Quang Điện', slot: 'aura', cost: 300, icon: '⚡' },
 ];
 
 const renderItemIcon = (itemId: string) => {
@@ -66,9 +68,17 @@ const renderItemIcon = (itemId: string) => {
           <path d="M 30 30 Q 10 90 30 95 Q 50 100 70 95 Q 90 90 70 30 Z" fill="#EF4444" opacity="0.9" />
         </svg>
       );
-    case 'bg_aura':
+    case 'aura_fire':
       return (
-        <div className="w-10 h-10 mx-auto rounded-full shadow-[0_0_20px_rgba(78,173,99,0.8)] animate-pulse" style={{ backgroundColor: '#4EAD6330' }} />
+        <div className="w-10 h-10 mx-auto rounded-full shadow-[0_0_20px_rgba(239,68,68,0.8)] animate-pulse" style={{ backgroundColor: '#EF444450' }} />
+      );
+    case 'aura_ice':
+      return (
+        <div className="w-10 h-10 mx-auto rounded-full shadow-[0_0_20px_rgba(96,165,250,0.8)] animate-pulse" style={{ backgroundColor: '#60A5FA50' }} />
+      );
+    case 'aura_electric':
+      return (
+        <div className="w-10 h-10 mx-auto rounded-full shadow-[0_0_20px_rgba(252,211,77,0.8)] animate-pulse" style={{ backgroundColor: '#FCD34D50' }} />
       );
     default:
       return null;
