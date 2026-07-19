@@ -92,8 +92,13 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
         });
         
         if (signInError) {
-          setError(signInError.message);
-          toast.error('Đăng nhập thất bại: ' + signInError.message);
+          let friendlyMessage = signInError.message;
+          if (signInError.message.includes('Failed to fetch')) {
+            friendlyMessage = 'Không thể kết nối đến máy chủ Supabase. Vui lòng kiểm tra mạng, hoặc tắt Trình chặn quảng cáo (Adblocker / Brave Shield) và thử lại!';
+          }
+          setError(friendlyMessage);
+          toast.error(friendlyMessage);
+          console.error('Supabase Login Error:', signInError);
           return;
         }
         
@@ -156,8 +161,13 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
         });
         
         if (signUpError) {
-          setError(signUpError.message);
-          toast.error(t('auth.loginFailed') + signUpError.message);
+          let friendlyMessage = signUpError.message;
+          if (signUpError.message.includes('Failed to fetch')) {
+            friendlyMessage = 'Không thể kết nối đến máy chủ Supabase. Vui lòng kiểm tra mạng, hoặc tắt Trình chặn quảng cáo (Adblocker / Brave Shield) và thử lại!';
+          }
+          setError(friendlyMessage);
+          toast.error(friendlyMessage);
+          console.error('Supabase Register Error:', signUpError);
           return;
         }
         
