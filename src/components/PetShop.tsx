@@ -5,6 +5,8 @@ import OliverPet from './OliverPet';
 import { ShoppingBag, Star, Lock } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { toast } from 'react-hot-toast';
+import TiltCard from './ui/TiltCard';
+import { motion } from 'framer-motion';
 
 export const SHOP_ITEMS = [
   { id: 'hat_scholar', name: 'Mũ Cử Nhân', slot: 'head', cost: 50, icon: '🎓' },
@@ -165,67 +167,77 @@ export const PetShop: React.FC = () => {
   };
 
   return (
-    <div className="premium-card bg-white p-6">
-      <div className="flex items-center justify-between mb-6 border-b border-gray-100 pb-4">
-        <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-          <ShoppingBag size={24} className="text-orange-500" /> Cửa hàng Oliver
+    <TiltCard className="p-6 md:p-8" glowColor="var(--accent-light)">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 pb-6" style={{ borderBottom: '2px solid rgba(124,58,237,0.1)' }}>
+        <h3 className="text-2xl font-black flex items-center gap-3 mb-4 sm:mb-0" style={{ color: 'var(--text-main)' }}>
+          <ShoppingBag size={28} style={{ color: 'var(--accent)' }} /> Cửa hàng Oliver
         </h3>
-        <div className="flex items-center gap-2 bg-orange-50 px-4 py-2 rounded-full border border-orange-100">
-          <Star size={18} className="text-orange-500 fill-orange-500" />
-          <span className="font-black text-orange-600">{stats.coins} Xu</span>
-        </div>
+        <motion.div 
+          className="flex items-center gap-3 px-5 py-2.5 rounded-2xl" 
+          style={{ background: 'var(--accent-light)', border: '2px solid rgba(245,158,11,0.2)' }}
+          whileHover={{ scale: 1.05 }}
+        >
+          <Star size={20} style={{ color: 'var(--accent)', fill: 'var(--accent)' }} />
+          <span className="font-black text-lg" style={{ color: 'var(--accent)' }}>{stats.coins} Xu</span>
+        </motion.div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
         {/* Preview Panel */}
-        <div className="md:col-span-1 flex flex-col items-center justify-center p-4 bg-gray-50 rounded-2xl border border-gray-200">
-          <div className="relative mb-4 w-48 h-48 flex items-center justify-center">
-             <OliverPet state="good" size={200} equippedItems={previewItems} />
+        <div className="lg:col-span-1 flex flex-col items-center justify-center p-6 rounded-3xl" style={{ background: 'var(--bg-page)', border: '2px solid rgba(124,58,237,0.1)' }}>
+          <div className="relative mb-6 w-56 h-56 flex items-center justify-center">
+             <OliverPet state="good" size={240} equippedItems={previewItems} />
           </div>
-          <p className="text-sm font-semibold text-gray-500">Phòng Thử Đồ</p>
+          <p className="text-sm font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Phòng Thử Đồ</p>
         </div>
 
         {/* Shop Grid */}
-        <div className="md:col-span-2 grid grid-cols-2 lg:grid-cols-3 gap-4 max-h-[400px] overflow-y-auto pr-2">
-          {SHOP_ITEMS.map(item => {
+        <div className="lg:col-span-2 grid grid-cols-2 sm:grid-cols-3 gap-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+          {SHOP_ITEMS.map((item, index) => {
             const isUnlocked = stats.unlockedItems?.includes(item.id);
             const isEquipped = stats.equippedItems?.[item.slot] === item.id;
             const isPreviewing = previewItems[item.slot] === item.id;
 
             return (
-              <div 
+              <motion.div 
                 key={item.id} 
-                className={`flex flex-col p-3 rounded-xl border-2 transition-all cursor-pointer ${
-                  isEquipped ? 'border-orange-500 bg-orange-50' : 
-                  isPreviewing ? 'border-blue-400 bg-blue-50' : 'border-gray-100 hover:border-gray-300 bg-white'
-                }`}
+                className="flex flex-col p-4 rounded-3xl transition-all cursor-pointer relative overflow-hidden"
+                style={{ 
+                  background: isEquipped ? 'var(--accent-light)' : isPreviewing ? 'var(--primary-light)' : 'var(--bg-card)',
+                  border: isEquipped ? '2px solid rgba(245,158,11,0.3)' : isPreviewing ? '2px solid rgba(124,58,237,0.3)' : '2px solid rgba(124,58,237,0.1)'
+                }}
                 onClick={() => isUnlocked ? handleEquipToggle(item.slot, item.id) : handlePreview(item.slot, item.id)}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: index * 0.05 }}
+                whileHover={{ y: -5, boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}
+                whileTap={{ scale: 0.95 }}
               >
-                <div className="flex items-center justify-center mb-3 h-12">{renderItemIcon(item.id)}</div>
-                <h4 className="text-xs font-bold text-gray-800 text-center mb-1">{item.name}</h4>
+                <div className="flex items-center justify-center mb-4 h-16 transform transition-transform hover:scale-110">{renderItemIcon(item.id)}</div>
+                <h4 className="text-sm font-bold text-center mb-3" style={{ color: 'var(--text-main)' }}>{item.name}</h4>
                 
                 <div className="mt-auto pt-2 flex items-center justify-center">
                   {!isUnlocked ? (
                     <button 
                       onClick={(e) => { e.stopPropagation(); handleBuy(item.id, item.cost); }}
-                      className="flex items-center gap-1 bg-gray-800 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-gray-700 w-full justify-center"
+                      className="btn-3d btn-3d-secondary w-full flex items-center justify-center gap-2 py-2 px-0 text-xs"
                     >
-                      <Lock size={12} /> {item.cost} Xu
+                      <Lock size={14} /> {item.cost} Xu
                     </button>
                   ) : isEquipped ? (
-                    <span className="text-xs font-bold text-orange-600 bg-orange-100 px-3 py-1 rounded-lg w-full text-center">Đang mặc</span>
+                    <span className="text-xs font-black py-2 rounded-xl w-full text-center uppercase tracking-wider" style={{ background: 'var(--accent)', color: 'white' }}>Đang mặc</span>
                   ) : (
-                    <span className="text-xs font-bold text-gray-500 bg-gray-100 px-3 py-1 rounded-lg w-full text-center">Đã sở hữu</span>
+                    <span className="text-xs font-bold py-2 rounded-xl w-full text-center" style={{ background: 'var(--bg-page)', color: 'var(--text-secondary)' }}>Đã sở hữu</span>
                   )}
                 </div>
-              </div>
+              </motion.div>
             );
           })}
         </div>
         
       </div>
-    </div>
+    </TiltCard>
   );
 };
 
