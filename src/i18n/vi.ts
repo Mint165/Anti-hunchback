@@ -119,25 +119,6 @@ export const vi: Record<string, string> = {
   'auth.loginSuccess': 'Đăng nhập thành công! 🎉',
   'auth.registerSuccess': 'Đăng ký thành công! 🎉',
   
-  // Profile
-  'profile.title': 'Hồ sơ người dùng',
-  'profile.roleStudent': 'Học Sinh',
-  'profile.roleParent': 'Phụ Huynh',
-  'profile.linkCodeDesc': 'Đây là mã liên kết của bạn. Hãy gửi mã này cho phụ huynh để họ có thể theo dõi tiến trình học tập của bạn.',
-  'profile.linkCodeLabel': 'Mã liên kết của bạn:',
-  'profile.parentLinkDesc': 'Nhập mã liên kết của học sinh để theo dõi.',
-  'profile.parentLinkLabel': 'Mã liên kết học sinh:',
-  'profile.saveBtn': 'Lưu',
-  'profile.logout': 'Đăng xuất',
-  'profile.saved': 'Đã lưu mã liên kết!',
-  
-  // Settings
-  'settings.title': 'Cài Đặt Hệ Thống',
-  'settings.language': 'Ngôn ngữ',
-  'settings.darkMode': 'Chế độ tối',
-  'settings.notifications': 'Thông báo',
-  'settings.save': 'Lưu cài đặt',
-  
   // Parent
   'parent.dashboard': 'Phụ Huynh Dashboard',
   'parent.title': 'Giám sát Từ xa 🏠',
@@ -170,4 +151,60 @@ export const vi: Record<string, string> = {
   'parent.history': 'Lịch sử Phiên học',
   'parent.sendMsg': 'Gửi tin nhắn cho con...',
   'parent.sendBtn': 'Gửi',
+
+  // Settings
+  'settings.title': 'Cấu hình Hệ thống ⚙️',
+  'settings.aiThreshold': 'Ngưỡng Đo Lường AI',
+  'settings.slouchTolerance': 'Độ gù cho phép (Slouch)',
+  'settings.neckTolerance': 'Cúi cổ cho phép',
+  'settings.alertCycle': 'Chu kỳ Cảnh báo & Âm thanh',
+  'settings.timeToAlert': 'Thời gian chờ trước khi cảnh báo',
+  'settings.warningSound': 'Âm thanh cảnh báo (Beep)',
+  'settings.voiceGuidance': 'Trợ lý giọng nói AI',
+  'settings.interface': 'Giao Diện & Hệ Thống',
+  'settings.language': 'Ngôn ngữ giao diện',
+  'settings.darkMode': 'Giao diện tối (Dark Mode)',
+  'settings.syncData': 'Đồng bộ Dữ liệu Lên Mây',
+  'settings.syncNow': 'Đồng bộ ngay',
+  'settings.save': 'Lưu Cấu Hình',
+
+  // Profile
+  'profile.title': 'Hồ Sơ Của Bạn',
+  'profile.stats': 'Thống kê tổng quan',
+  'profile.totalSessions': 'Số phiên học',
+  'profile.bestStreak': 'Chuỗi dài nhất',
+  'profile.linkedParent': 'Phụ huynh đã liên kết',
+  'profile.connectParent': 'Kết nối Phụ Huynh',
+  'profile.enterCode': 'Nhập mã gồm 6 chữ số',
+  'profile.connect': 'Kết nối',
+  'profile.shareCode': 'Mã kết nối của bạn',
+  'profile.shareDesc': 'Gửi mã này cho phụ huynh để họ có thể theo dõi tư thế của bạn',
+  'profile.resetDefault': 'Khôi phục mặc định',
+  'profile.logout': 'Đăng xuất',
+
+  // Pet Profile
+  'pet.profileTitle': 'Hồ Sơ Oliver',
+  'pet.profileDesc': 'Người bạn đồng hành bảo vệ tư thế của bé',
+  'pet.message': 'Tớ luôn sẵn sàng đồng hành cùng bạn!',
+  'pet.petXp': 'XP Thú cưng',
+  'pet.keepPosture': 'Giữ tư thế chuẩn liên tục để tăng XP cho Oliver nhé!',
+  'pet.overallStats': 'Chỉ Số Tổng Quan',
+  'pet.backHealth': 'Sức khỏe lưng',
+  'pet.eyeHealth': 'Sức khỏe mắt',
+  'pet.posture': 'Tư thế',
+  'pet.myBadges': 'Huy Hiệu Của Bạn',
+  'pet.goToShop': 'Vào Cửa Hàng 🛒',
+
+  // Pet Shop
+  'shop.title': 'Cửa hàng Oliver',
+  'shop.desc': 'Dùng Xu để mua vật phẩm trang trí cho thú cưng!',
+  'shop.yourCoins': 'Xu của bạn',
+  'shop.category.hat': 'Mũ & Tóc',
+  'shop.category.accessory': 'Phụ kiện',
+  'shop.category.background': 'Hào quang',
+  'shop.equip': 'Đang dùng',
+  'shop.buy': 'Mua',
+  'shop.fittingRoom': 'Phòng Thử Đồ',
+  'shop.equipped': 'Đang mặc',
+  'shop.owned': 'Đã sở hữu'
 };

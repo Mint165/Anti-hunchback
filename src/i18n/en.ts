@@ -120,25 +120,16 @@ export const en: Record<string, string> = {
   'auth.registerSuccess': 'Registration successful! 🎉',
   
   // Profile
-  'profile.title': 'User Profile',
   'profile.roleStudent': 'Student',
   'profile.roleParent': 'Parent',
-  'profile.linkCodeDesc': 'This is your link code. Give it to your parent so they can monitor your progress.',
-  'profile.linkCodeLabel': 'Your Link Code:',
-  'profile.parentLinkDesc': 'Enter the student\'s link code to monitor them.',
-  'profile.parentLinkLabel': 'Student Link Code:',
+  'profile.linkCodeDesc': 'This is your link code. Send this to your parents so they can monitor your progress.',
+  'profile.linkCodeLabel': 'Your link code:',
+  'profile.parentLinkDesc': 'Enter student link code to monitor.',
+  'profile.parentLinkLabel': 'Student link code:',
   'profile.saveBtn': 'Save',
-  'profile.logout': 'Logout',
   'profile.saved': 'Link code saved!',
-  
-  // Settings
-  'settings.title': 'System Settings',
-  'settings.language': 'Language',
-  'settings.darkMode': 'Dark Mode',
-  'settings.notifications': 'Notifications',
-  'settings.save': 'Save Settings',
 
-  // Parent
+  // Feedbackrent
   'parent.dashboard': 'Parent Dashboard',
   'parent.title': 'Remote Monitoring 🏠',
   'parent.desc': 'Monitor posture, screen distance, and fatigue status of your child.',
@@ -170,4 +161,60 @@ export const en: Record<string, string> = {
   'parent.history': 'Session History',
   'parent.sendMsg': 'Send a message to your child...',
   'parent.sendBtn': 'Send',
+
+  // Settings
+  'settings.title': 'System Configuration ⚙️',
+  'settings.aiThreshold': 'AI Measurement Thresholds',
+  'settings.slouchTolerance': 'Slouch Tolerance',
+  'settings.neckTolerance': 'Neck Tilt Tolerance',
+  'settings.alertCycle': 'Alert Cycle & Sounds',
+  'settings.timeToAlert': 'Wait time before alerting',
+  'settings.warningSound': 'Warning Sound (Beep)',
+  'settings.voiceGuidance': 'AI Voice Assistant',
+  'settings.interface': 'Interface & System',
+  'settings.language': 'App Language',
+  'settings.darkMode': 'Dark Mode',
+  'settings.syncData': 'Cloud Data Sync',
+  'settings.syncNow': 'Sync Now',
+  'settings.save': 'Save Configuration',
+
+  // Profile
+  'profile.title': 'Your Profile',
+  'profile.stats': 'Overall Statistics',
+  'profile.totalSessions': 'Total Sessions',
+  'profile.bestStreak': 'Best Streak',
+  'profile.linkedParent': 'Linked Parent',
+  'profile.connectParent': 'Connect to Parent',
+  'profile.enterCode': 'Enter 6-digit code',
+  'profile.connect': 'Connect',
+  'profile.shareCode': 'Your Connection Code',
+  'profile.shareDesc': 'Share this code with your parents so they can track your posture',
+  'profile.resetDefault': 'Restore Defaults',
+  'profile.logout': 'Logout',
+
+  // Pet Profile
+  'pet.profileTitle': 'Oliver Profile',
+  'pet.profileDesc': 'Your posture protecting companion',
+  'pet.message': 'I am always ready to accompany you!',
+  'pet.petXp': 'Pet XP',
+  'pet.keepPosture': 'Maintain a good posture to increase XP for Oliver!',
+  'pet.overallStats': 'Overall Stats',
+  'pet.backHealth': 'Back Health',
+  'pet.eyeHealth': 'Eye Health',
+  'pet.posture': 'Posture',
+  'pet.myBadges': 'Your Badges',
+  'pet.goToShop': 'Go To Shop 🛒',
+
+  // Pet Shop
+  'shop.title': 'Oliver Shop',
+  'shop.desc': 'Use Coins to buy accessories for your pet!',
+  'shop.yourCoins': 'Your Coins',
+  'shop.category.hat': 'Hats',
+  'shop.category.accessory': 'Accessories',
+  'shop.category.background': 'Auras',
+  'shop.equip': 'Equipped',
+  'shop.buy': 'Buy',
+  'shop.fittingRoom': 'Fitting Room',
+  'shop.equipped': 'Equipped',
+  'shop.owned': 'Owned'
 };

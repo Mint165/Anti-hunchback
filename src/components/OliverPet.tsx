@@ -111,6 +111,38 @@ const PandaModel = ({ state, petLevel, equippedItems }: any) => {
         <Sphere args={[0.1, 16, 16]} position={[0, 0.7, 0.72]} scale={[1.3, 0.8, 1]} castShadow>
           <meshStandardMaterial color="#111827" />
         </Sphere>
+
+        {/* Emotions (Mouth & Eyebrows) */}
+        {(state === 'good' || state === 'success') && (
+          <mesh position={[0, 0.55, 0.75]} rotation={[0, 0, Math.PI]}>
+            <torusGeometry args={[0.08, 0.02, 16, 32, Math.PI]} />
+            <meshStandardMaterial color="#111827" />
+          </mesh>
+        )}
+        {(state === 'tired' || state === 'sleep') && (
+          <mesh position={[0, 0.55, 0.75]} rotation={[0, 0, 0]}>
+            <torusGeometry args={[0.08, 0.02, 16, 32, Math.PI]} />
+            <meshStandardMaterial color="#111827" />
+          </mesh>
+        )}
+        {(state === 'slouch' || state === 'close') && (
+          <group position={[0, 0.58, 0.75]}>
+            {/* Angry mouth */}
+            <mesh>
+              <boxGeometry args={[0.1, 0.02, 0.02]} />
+              <meshStandardMaterial color="#111827" />
+            </mesh>
+            {/* Angry eyebrows */}
+            <mesh position={[-0.25, 0.45, 0.02]} rotation={[0, 0, -0.3]}>
+              <boxGeometry args={[0.15, 0.03, 0.02]} />
+              <meshStandardMaterial color="#ef4444" />
+            </mesh>
+            <mesh position={[0.25, 0.45, 0.02]} rotation={[0, 0, 0.3]}>
+              <boxGeometry args={[0.15, 0.03, 0.02]} />
+              <meshStandardMaterial color="#ef4444" />
+            </mesh>
+          </group>
+        )}
         
         {/* Arms */}
         <Sphere args={[0.2, 16, 16]} position={[-0.7, -0.1, 0.3]} scale={[0.8, 2.2, 0.8]} rotation={[0, 0, -0.5]} castShadow>
@@ -199,15 +231,7 @@ const PandaModel = ({ state, petLevel, equippedItems }: any) => {
              <meshStandardMaterial color="#ef4444" side={THREE.DoubleSide} />
            </mesh>
         )}
-
-        {/* Mouth (Emotions) */}
-        {(state === 'good' || state === 'success') && (
-          <mesh position={[0, 0.55, 0.73]} rotation={[0.2, 0, 0]}>
-            <torusGeometry args={[0.08, 0.02, 16, 32, Math.PI]} />
-            <meshStandardMaterial color="#111827" />
-          </mesh>
-        )}
-        {(state === 'tired' || state === 'slouch' || state === 'close') && (
+        {(state === 'tired' || state === 'sleep') && (
           <mesh position={[0, 0.55, 0.75]} rotation={[0, 0, Math.PI]}>
             <torusGeometry args={[0.08, 0.02, 16, 32, Math.PI]} />
             <meshStandardMaterial color="#111827" />
@@ -234,16 +258,17 @@ const PandaModel = ({ state, petLevel, equippedItems }: any) => {
           <Sparkles count={50} scale={4} size={3} color="#7E5BEF" speed={1} opacity={0.8} />
         )}
 
-        {/* Auras from Shop */}
+        {/* Aura Effects (Lửa, Băng, Điện) */}
         {equippedItems?.aura === 'aura_fire' && (
-          <Sparkles count={60} scale={3.5} size={5} color="#ef4444" speed={2} opacity={0.8} noise={1} />
+          <Sparkles count={150} scale={3} size={4} speed={0.4} opacity={0.6} color="#f97316" position={[0, 0.5, 0]} />
         )}
         {equippedItems?.aura === 'aura_ice' && (
-          <Sparkles count={50} scale={4} size={3} color="#60a5fa" speed={0.5} opacity={0.6} noise={0.5} />
+          <Sparkles count={100} scale={4} size={2} speed={0.2} opacity={0.8} color="#38bdf8" position={[0, 0.5, 0]} />
         )}
         {equippedItems?.aura === 'aura_electric' && (
-          <Sparkles count={40} scale={3.5} size={2.5} color="#fcd34d" speed={4} opacity={0.9} noise={2} />
+          <Sparkles count={80} scale={3.5} size={3} speed={1} opacity={0.9} color="#eab308" position={[0, 0.5, 0]} noise={1} />
         )}
+
       </Float>
     </group>
   );

@@ -9,7 +9,7 @@ import TiltCard from './ui/TiltCard';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export const Settings: React.FC = () => {
-  const { lang, setLang } = useLanguage();
+  const { t, lang, setLang } = useLanguage();
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [isSaved, setIsSaved] = useState<boolean>(false);
   const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
@@ -52,39 +52,38 @@ export const Settings: React.FC = () => {
     if (window.confirm('CẢNH BÁO: Hành động này sẽ xóa toàn bộ lịch sử buổi học và điểm kinh nghiệm XP. Bạn có chắc chắn muốn thực hiện?')) {
       localStorage.clear();
       alert('Đã xóa toàn bộ lịch sử. Trang web sẽ tải lại.');
+      alert(t('settings.clearSuccess'));
       window.location.reload();
     }
   };
 
   return (
     <motion.div 
-      className="min-h-full p-4 md:p-8"
+      className="max-w-2xl mx-auto p-4 md:p-8 min-h-screen"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
     >
       
-      {/* Page Header */}
       <div className="mb-10">
         <div className="flex items-center gap-2 mb-3">
-          <span className="text-xs font-black uppercase tracking-widest px-4 py-1.5 rounded-full" style={{ background: 'var(--accent-light)', color: 'var(--accent)' }}>Cài đặt</span>
+          <span className="text-xs font-black uppercase tracking-widest px-4 py-1.5 rounded-full" style={{ background: 'var(--accent-light)', color: 'var(--accent)' }}>{t('settings.title')}</span>
         </div>
-        <h1 className="text-3xl font-black mb-2" style={{ color: 'var(--text-main)' }}>Cấu hình Hệ thống ⚙️</h1>
-        <p className="text-sm font-medium mt-0.5" style={{ color: 'var(--text-muted)' }}>Điều chỉnh các ngưỡng cảnh báo và khoảng thời gian cho AI đo lường.</p>
+        <h1 className="text-3xl font-black mb-2" style={{ color: 'var(--text-main)' }}>{t('settings.header')}</h1>
+        <p className="text-sm font-medium mt-0.5" style={{ color: 'var(--text-muted)' }}>{t('settings.subheader')}</p>
       </div>
 
-      <TiltCard className="max-w-2xl p-6 md:p-8" glowColor="var(--primary-light)">
+      <TiltCard className="p-6 md:p-8" glowColor="var(--primary-light)">
         
-        {/* Theme Section */}
         <h3 className="text-xl font-black mb-6 border-b pb-4 flex items-center gap-3" style={{ color: 'var(--text-main)', borderColor: 'rgba(124,58,237,0.1)' }}>
-          Giao Diện
+          {t('settings.interface')}
         </h3>
         
         <div className="flex flex-col gap-5 mb-10">
           <div className="flex items-center justify-between p-5 rounded-2xl" style={{ background: 'var(--bg-page)', border: '2px solid rgba(124,58,237,0.1)' }}>
             <div>
-              <div className="font-bold text-lg" style={{ color: 'var(--text-main)' }}>Chế độ tối (Dark Mode)</div>
-              <div className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Giảm mỏi mắt khi học vào ban đêm</div>
+              <div className="font-bold text-lg" style={{ color: 'var(--text-main)' }}>{t('settings.darkMode')}</div>
+              <div className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>{t('settings.darkModeDesc')}</div>
             </div>
             <button 
               onClick={() => {
@@ -107,8 +106,8 @@ export const Settings: React.FC = () => {
 
           <div className="flex items-center justify-between p-5 rounded-2xl" style={{ background: 'var(--bg-page)', border: '2px solid rgba(124,58,237,0.1)' }}>
             <div>
-              <div className="font-bold text-lg" style={{ color: 'var(--text-main)' }}>Ngôn ngữ / Language</div>
-              <div className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Thay đổi ngôn ngữ giao diện</div>
+              <div className="font-bold text-lg" style={{ color: 'var(--text-main)' }}>{t('settings.language')}</div>
+              <div className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>{t('settings.languageDesc')}</div>
             </div>
             <select
               value={lang}
@@ -122,17 +121,15 @@ export const Settings: React.FC = () => {
           </div>
         </div>
 
-        {/* Posture Thresholds Section */}
         <h3 className="text-xl font-black mb-6 border-b pb-4 flex items-center gap-3" style={{ color: 'var(--text-main)', borderColor: 'rgba(124,58,237,0.1)' }}>
-          <Shield size={24} style={{ color: 'var(--primary)' }} /> Ngưỡng Đo Lường AI
+          <Shield size={24} style={{ color: 'var(--primary)' }} /> {t('settings.aiThreshold')}
         </h3>
         
         <div className="flex flex-col gap-6 mb-10">
           
-          {/* Eye Distance */}
           <div>
             <div className="flex justify-between items-center mb-3">
-              <label className="text-sm font-bold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Khoảng cách mắt (cm)</label>
+              <label className="text-sm font-bold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>{t('settings.eyeDistance')}</label>
               <span className="text-sm font-black px-3 py-1 rounded-xl" style={{ background: 'var(--primary-light)', color: 'var(--primary)' }}>{settings.screenDistanceThreshold} cm</span>
             </div>
             <input 
@@ -141,13 +138,12 @@ export const Settings: React.FC = () => {
               onChange={(e) => handleChange('screenDistanceThreshold', parseInt(e.target.value))}
               className="w-full h-3 rounded-full appearance-none cursor-pointer bg-gray-200 accent-emerald-500"
             />
-            <p className="text-xs font-medium mt-2" style={{ color: 'var(--text-muted)' }}>Dưới khoảng cách này hệ thống sẽ cảnh báo mắt nhìn quá sát.</p>
+            <p className="text-xs font-medium mt-2" style={{ color: 'var(--text-muted)' }}>{t('settings.eyeDistanceDesc')}</p>
           </div>
 
-          {/* Neck Tilt */}
           <div>
             <div className="flex justify-between items-center mb-3">
-              <label className="text-sm font-bold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Góc nghiêng cổ (Độ)</label>
+              <label className="text-sm font-bold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>{t('settings.neckTilt')}</label>
               <span className="text-sm font-black px-3 py-1 rounded-xl" style={{ background: 'var(--primary-light)', color: 'var(--primary)' }}>{settings.neckTiltThreshold}°</span>
             </div>
             <input 
@@ -158,10 +154,9 @@ export const Settings: React.FC = () => {
             />
           </div>
 
-          {/* Shoulder Tilt */}
           <div>
             <div className="flex justify-between items-center mb-3">
-              <label className="text-sm font-bold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Độ lệch vai (Độ)</label>
+              <label className="text-sm font-bold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>{t('settings.shoulderTilt')}</label>
               <span className="text-sm font-black px-3 py-1 rounded-xl" style={{ background: 'var(--primary-light)', color: 'var(--primary)' }}>{settings.shoulderTiltThreshold}°</span>
             </div>
             <input 
@@ -172,10 +167,9 @@ export const Settings: React.FC = () => {
             />
           </div>
 
-          {/* Slouch threshold */}
           <div>
             <div className="flex justify-between items-center mb-3">
-              <label className="text-sm font-bold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>Độ cong lưng (Độ)</label>
+              <label className="text-sm font-bold uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>{t('settings.slouch')}</label>
               <span className="text-sm font-black px-3 py-1 rounded-xl" style={{ background: 'var(--primary-light)', color: 'var(--primary)' }}>{settings.slouchThreshold}°</span>
             </div>
             <input 

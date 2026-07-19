@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { loadUserStats, getBadgesStatus } from '../services/db';
 import OliverPet from './OliverPet';
 import PetShop from './PetShop';
-import { Award, Heart, Eye, Activity, Info, X } from 'lucide-react';
+import { Award, Heart, Eye, Activity, Info, X, Trophy } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import TiltCard from './ui/TiltCard';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -53,8 +53,8 @@ export const PetProfile: React.FC = () => {
       transition={{ duration: 0.5 }}
     >
       <div className="text-center mb-10">
-        <h1 className="text-4xl font-black mb-2" style={{ color: 'var(--text-main)' }}>Hồ Sơ Oliver</h1>
-        <p style={{ color: 'var(--text-muted)' }} className="font-medium">Người bạn đồng hành bảo vệ tư thế của bé</p>
+        <h1 className="text-4xl font-black mb-2" style={{ color: 'var(--text-main)' }}>{_t('pet.profileTitle')}</h1>
+        <p style={{ color: 'var(--text-muted)' }} className="font-medium">{_t('pet.profileDesc')}</p>
       </div>
 
       <div className="sv-grid mb-10">
@@ -79,13 +79,13 @@ export const PetProfile: React.FC = () => {
               animate={{ scale: 1 }}
               transition={{ type: 'spring', delay: 0.2 }}
             >
-              Tớ luôn sẵn sàng đồng hành cùng bạn!
+              {_t('pet.message')}
               <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 rotate-45" style={{ background: 'var(--secondary-light)', borderRight: '2px solid rgba(16,185,129,0.2)', borderBottom: '2px solid rgba(16,185,129,0.2)' }} />
             </motion.div>
             
-            <div className="w-64 h-64 rounded-full flex items-center justify-center mb-8 relative" style={{ background: 'var(--bg-page)', border: '4px solid var(--secondary-light)', boxShadow: 'inset 0 10px 30px rgba(0,0,0,0.05)' }}>
-               <div className="scale-100 absolute -bottom-6">
-                 <OliverPet state="good" size={320} petLevel={stats.petLevel} equippedItems={stats.equippedItems} hideBubble={true} hideBadge={true} />
+            <div className="w-64 h-64 rounded-full flex items-center justify-center mb-8 relative overflow-hidden" style={{ background: 'var(--bg-page)', border: '4px solid var(--secondary-light)', boxShadow: 'inset 0 10px 30px rgba(0,0,0,0.05)' }}>
+               <div className="w-full h-full flex items-center justify-center pt-8">
+                 <OliverPet state="good" size={260} petLevel={stats.petLevel} equippedItems={stats.equippedItems} hideBubble={true} hideBadge={true} />
                </div>
             </div>
             
@@ -94,11 +94,11 @@ export const PetProfile: React.FC = () => {
 
             <div className="w-full max-w-md">
               <div className="flex justify-between text-sm font-black mb-3" style={{ color: 'var(--text-secondary)' }}>
-                 <span>XP Thú cưng</span>
+                 <span>{_t('pet.petXp')}</span>
                  <span style={{ color: 'var(--primary)' }}>{stats.petLevel >= 5 ? 'MAX' : `${stats.petXp} / ${getXpThreshold(stats.petLevel)}`}</span>
               </div>
               <div className="w-full h-5 rounded-full overflow-hidden" style={{ background: 'var(--primary-light)' }}>
-                 <motion.div 
+                  <motion.div 
                    className="h-full rounded-full" 
                    style={{ background: 'linear-gradient(90deg, var(--secondary), var(--primary))' }}
                    initial={{ width: 0 }}
@@ -106,7 +106,7 @@ export const PetProfile: React.FC = () => {
                    transition={{ duration: 1.5, ease: "easeOut" }}
                  />
               </div>
-              <p className="text-xs text-center mt-4 font-bold" style={{ color: 'var(--text-muted)' }}>Giữ tư thế chuẩn liên tục để tăng XP cho Oliver nhé!</p>
+              <p className="text-xs text-center mt-4 font-bold" style={{ color: 'var(--text-muted)' }}>{_t('pet.keepPosture')}</p>
             </div>
           </TiltCard>
         </div>
@@ -117,13 +117,13 @@ export const PetProfile: React.FC = () => {
           {/* Health Stats */}
           <TiltCard className="p-6">
             <h3 className="text-xl font-black mb-6 flex items-center gap-3" style={{ color: 'var(--text-main)' }}>
-              <Activity size={24} style={{ color: 'var(--primary)' }} /> Chỉ Số Tổng Quan
+              <Activity size={24} style={{ color: 'var(--primary)' }} /> {_t('pet.overallStats')}
             </h3>
             <div className="space-y-5">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <div className="p-3 rounded-xl" style={{ background: 'var(--danger-light)', color: 'var(--danger)' }}><Heart size={20} /></div>
-                  <span className="font-bold" style={{ color: 'var(--text-secondary)' }}>Sức khỏe lưng</span>
+                  <span className="font-bold" style={{ color: 'var(--text-secondary)' }}>{_t('pet.backHealth')}</span>
                 </div>
                 <span className="font-black text-xl" style={{ color: 'var(--text-main)' }}>90%</span>
               </div>
@@ -131,7 +131,7 @@ export const PetProfile: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <div className="p-3 rounded-xl" style={{ background: 'rgba(59, 130, 246, 0.15)', color: '#3B82F6' }}><Eye size={20} /></div>
-                  <span className="font-bold" style={{ color: 'var(--text-secondary)' }}>Sức khỏe mắt</span>
+                  <span className="font-bold" style={{ color: 'var(--text-secondary)' }}>{_t('pet.eyeHealth')}</span>
                 </div>
                 <span className="font-black text-xl" style={{ color: 'var(--text-main)' }}>88%</span>
               </div>
@@ -139,7 +139,7 @@ export const PetProfile: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <div className="p-3 rounded-xl" style={{ background: 'var(--secondary-light)', color: 'var(--secondary)' }}><Award size={20} /></div>
-                  <span className="font-bold" style={{ color: 'var(--text-secondary)' }}>Tư thế</span>
+                  <span className="font-bold" style={{ color: 'var(--text-secondary)' }}>{_t('pet.posture')}</span>
                 </div>
                 <span className="font-black text-xl" style={{ color: 'var(--text-main)' }}>95%</span>
               </div>
@@ -149,7 +149,7 @@ export const PetProfile: React.FC = () => {
           {/* Badges */}
           <TiltCard className="p-6 flex-1">
             <h3 className="text-xl font-black mb-6 flex items-center gap-3" style={{ color: 'var(--text-main)' }}>
-              <Award size={24} style={{ color: 'var(--accent)' }} /> Huy Hiệu Đạt Được
+              <Trophy size={24} style={{ color: '#F59E0B' }} /> {_t('pet.myBadges')}
             </h3>
             <div className="grid grid-cols-3 gap-4">
               {badges.map((badge, i) => (

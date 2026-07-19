@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { loadUserStats, buyItem, equipItem } from '../services/db';
 import type { UserStats } from '../services/db';
-import OliverPet from './OliverPet';
-import { ShoppingBag, Star, Lock } from 'lucide-react';
+import { ShoppingBag, Lock, Coins } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { toast } from 'react-hot-toast';
-import TiltCard from './ui/TiltCard';
+import { useLanguage } from '../contexts/LanguageContext';
+import OliverPet from './OliverPet';
 import { motion } from 'framer-motion';
 
 export const SHOP_ITEMS = [
@@ -90,7 +90,9 @@ const renderItemIcon = (itemId: string) => {
 
 export const PetShop: React.FC = () => {
   const [stats, setStats] = useState<UserStats>(() => loadUserStats());
+  const [category, setCategory] = useState<string>('all');
   const [previewItems, setPreviewItems] = useState<Record<string, string>>(stats.equippedItems || {});
+  const { t: _t } = useLanguage();
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -167,19 +169,40 @@ export const PetShop: React.FC = () => {
   };
 
   return (
-    <TiltCard className="p-6 md:p-8" glowColor="var(--accent-light)">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 pb-6" style={{ borderBottom: '2px solid rgba(124,58,237,0.1)' }}>
-        <h3 className="text-2xl font-black flex items-center gap-3 mb-4 sm:mb-0" style={{ color: 'var(--text-main)' }}>
-          <ShoppingBag size={28} style={{ color: 'var(--accent)' }} /> Cửa hàng Oliver
-        </h3>
-        <motion.div 
-          className="flex items-center gap-3 px-5 py-2.5 rounded-2xl" 
-          style={{ background: 'var(--accent-light)', border: '2px solid rgba(245,158,11,0.2)' }}
-          whileHover={{ scale: 1.05 }}
-        >
-          <Star size={20} style={{ color: 'var(--accent)', fill: 'var(--accent)' }} />
-          <span className="font-black text-lg" style={{ color: 'var(--accent)' }}>{stats.coins} Xu</span>
-        </motion.div>
+    <div className="p-4 md:p-8 max-w-6xl mx-auto min-h-screen">
+      <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-10">
+        <div>
+          <h1 className="text-4xl font-black mb-2 flex items-center gap-3" style={{ color: 'var(--text-main)' }}>
+            <ShoppingBag size={32} style={{ color: 'var(--accent)' }} /> {_t('shop.title')}
+          </h1>
+          <p style={{ color: 'var(--text-muted)' }} className="font-medium text-lg">{_t('shop.desc')}</p>
+        </div>
+        
+        <div className="flex items-center gap-4 bg-yellow-50 dark:bg-yellow-900/20 px-6 py-4 rounded-2xl border-2 border-yellow-200 dark:border-yellow-700/50 shadow-inner">
+          <div className="flex flex-col">
+            <span className="text-sm font-bold text-yellow-600 dark:text-yellow-500 uppercase tracking-wider">{_t('shop.yourCoins')}</span>
+            <span className="text-3xl font-black text-yellow-500 flex items-center gap-2">
+              <Coins size={28} /> {stats.coins}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Category Tabs */}
+      <div className="flex gap-4 mb-8 overflow-x-auto pb-4 scrollbar-hide">
+        {['all', 'head', 'eyes', 'body', 'aura'].map((cat) => (
+          <button 
+            key={cat}
+            onClick={() => setCategory(cat as any)}
+            className={`px-6 py-3 rounded-xl font-bold whitespace-nowrap transition-all ${
+              category === cat 
+                ? 'bg-accent text-white shadow-lg shadow-accent/30 scale-105' 
+                : 'bg-gray-100 dark:bg-gray-800 text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700'
+            }`}
+          >
+            {cat === 'all' ? 'Tất cả' : _t(`shop.category.${cat}`)}
+          </button>
+        ))}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -189,7 +212,7 @@ export const PetShop: React.FC = () => {
           <div className="relative mb-6 w-56 h-56 flex items-center justify-center">
              <OliverPet state="good" size={240} equippedItems={previewItems} />
           </div>
-          <p className="text-sm font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Phòng Thử Đồ</p>
+          <p className="text-sm font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>{_t('shop.fittingRoom')}</p>
         </div>
 
         {/* Shop Grid */}
@@ -226,9 +249,9 @@ export const PetShop: React.FC = () => {
                       <Lock size={14} /> {item.cost} Xu
                     </button>
                   ) : isEquipped ? (
-                    <span className="text-xs font-black py-2 rounded-xl w-full text-center uppercase tracking-wider" style={{ background: 'var(--accent)', color: 'white' }}>Đang mặc</span>
+                    <span className="text-xs font-black py-2 rounded-xl w-full text-center uppercase tracking-wider" style={{ background: 'var(--accent)', color: 'white' }}>{_t('shop.equipped')}</span>
                   ) : (
-                    <span className="text-xs font-bold py-2 rounded-xl w-full text-center" style={{ background: 'var(--bg-page)', color: 'var(--text-secondary)' }}>Đã sở hữu</span>
+                    <span className="text-xs font-bold py-2 rounded-xl w-full text-center" style={{ background: 'var(--bg-page)', color: 'var(--text-secondary)' }}>{_t('shop.owned')}</span>
                   )}
                 </div>
               </motion.div>
@@ -237,7 +260,7 @@ export const PetShop: React.FC = () => {
         </div>
         
       </div>
-    </TiltCard>
+    </div>
   );
 };
 
