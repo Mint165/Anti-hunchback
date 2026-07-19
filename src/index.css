@@ -16,8 +16,8 @@
   --secondary-light: #e6fbf4;
   --secondary-gradient: linear-gradient(135deg, #4ade80 0%, #00d285 100%);
   
-  --bg-page: #f4f5fa; /* Light lavender-blue background */
-  --bg-sidebar: #ffffff;
+  --bg-page: linear-gradient(135deg, #f3e8ff 0%, #e0e7ff 50%, #fce7f3 100%); /* Premium gradient bg */
+  --bg-sidebar: rgba(255, 255, 255, 0.85);
   
   --text-main: #1f2937;
   --text-muted: #8b92a5;
@@ -135,6 +135,8 @@ body {
   flex-direction: column;
   padding: 32px 24px;
   z-index: 100;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
 }
 
 .sidebar-brand {
@@ -221,12 +223,14 @@ body {
    CARDS & BANNERS
    ======================== */
 .premium-card {
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border-radius: var(--border-radius-xl);
   padding: 24px;
-  box-shadow: var(--shadow-card);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05);
   transition: box-shadow 0.3s ease, transform 0.3s ease;
-  border: 1px solid rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.8);
 }
 
 .premium-card:hover {

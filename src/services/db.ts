@@ -489,6 +489,54 @@ export function getBadgesStatus(): Badge[] {
   const stats = loadUserStats();
   return BADGES.map(badge => ({
     ...badge,
-    unlocked: stats.badges.includes(badge.id),
-  }));
+}
+
+// --- Realtime Subscriptions ---
+export function subscribeToSupabaseChanges(onSettingsChange: (settings: AppSettings) => void) {
+  if (!isSupabaseConfigured || !supabase) return () => {};
+
+  const getUserIdSync = async () => {
+    const { data } = await supabase.auth.getSession();
+    return data.session?.user.id;
+  };
+
+  let subscription: any;
+
+  getUserIdSync().then((userId) => {
+    if (!userId) return;
+
+    subscription = supabase
+      .channel('public:settings')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'settings',
+          filter: `user_id=eq.${userId}`,
+        },
+        (payload) => {
+          console.log('Realtime settings update received:', payload);
+          const s = payload.new as any;
+          const newSettings: AppSettings = {
+            screenDistanceThreshold: s.screen_distance_threshold,
+            neckTiltThreshold: s.neck_tilt_threshold,
+            shoulderTiltThreshold: s.shoulder_tilt_threshold,
+            slouchThreshold: s.slouch_threshold,
+            minBlinkRate: s.min_blink_rate,
+            maxBlinkRate: s.max_blink_rate,
+            sessionBreakInterval: s.session_break_interval,
+            eyeExerciseInterval: s.eye_exercise_interval,
+            soundAlertEnabled: s.sound_alert_enabled,
+          };
+          localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(newSettings));
+          onSettingsChange(newSettings);
+        }
+      )
+      .subscribe();
+  });
+
+  return () => {
+    if (subscription) supabase.removeChannel(subscription);
+  };
 }
