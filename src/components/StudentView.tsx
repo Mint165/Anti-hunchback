@@ -1,7 +1,8 @@
-// Student Workspace Component - Premium Dashboard
+// Student Workspace Component — Gamified Bento Grid
 
 import React, { useState, useEffect, useRef } from 'react';
 import { AlertTriangle, RefreshCw, Trophy, BookOpen, Volume2, VolumeX, CameraOff, Play, Info, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import type { CalibrationData } from '../services/postureAI';
 import { loadUserStats, saveSessionRecord, addXP, getBadgesStatus } from '../services/db';
 import type { Badge } from '../services/db';
@@ -13,6 +14,7 @@ import OliverPet from './OliverPet';
 import type { PetState } from './OliverPet';
 import Calibration from './Calibration';
 import BackboneVisualizer from './BackboneVisualizer';
+import TiltCard from './ui/TiltCard';
 import toast from 'react-hot-toast';
 import confetti from 'canvas-confetti';
 
@@ -245,18 +247,50 @@ export const StudentView: React.FC = () => {
   if (!calibration) {
     if (showOnboarding) {
       return (
-        <div className="fixed inset-0 z-[100] bg-gray-900/95 backdrop-blur-3xl flex flex-col items-center justify-center text-white text-center p-8">
-          <div className="w-24 h-24 bg-purple-500/20 rounded-full flex items-center justify-center text-purple-400 mb-6">
-            <Trophy size={48} />
-          </div>
-          <h2 className="text-5xl font-black mb-4 tracking-tight">{t('student.welcomeTitle')}</h2>
-          <p className="text-gray-300 text-xl mb-10 max-w-lg leading-relaxed">
+        <motion.div
+          className="fixed inset-0 z-[100] flex flex-col items-center justify-center text-white text-center p-8"
+          style={{ background: 'linear-gradient(135deg, #1E1B4B 0%, #0F0D1A 50%, #1E1B4B 100%)' }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5 }}
+        >
+          <motion.div
+            className="w-24 h-24 rounded-full flex items-center justify-center mb-6"
+            style={{ background: 'rgba(124, 58, 237, 0.2)' }}
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 20, delay: 0.2 }}
+          >
+            <Trophy size={48} className="text-purple-400" />
+          </motion.div>
+          <motion.h2
+            className="text-5xl font-black mb-4 tracking-tight"
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.3 }}
+          >
+            {t('student.welcomeTitle')}
+          </motion.h2>
+          <motion.p
+            className="text-gray-300 text-xl mb-10 max-w-lg leading-relaxed"
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.4 }}
+          >
             {t('student.welcomeDesc')}
-          </p>
-          <button onClick={handleFinishOnboarding} className="btn-primary text-lg px-10 py-4 shadow-[0_8px_32px_rgba(168,85,247,0.4)]">
+          </motion.p>
+          <motion.button
+            onClick={handleFinishOnboarding}
+            className="btn-3d btn-3d-primary text-lg px-10 py-4"
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.5 }}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
             {t('student.startBtn')}
-          </button>
-        </div>
+          </motion.button>
+        </motion.div>
       );
     }
 
@@ -331,17 +365,45 @@ export const StudentView: React.FC = () => {
         </div>
       )}
 
+      <AnimatePresence>
       {!hasStarted && (
-        <div className="fixed inset-0 z-[60] bg-gray-900/95 backdrop-blur-3xl flex flex-col items-center justify-center text-white text-center p-8">
-          <h2 className="text-5xl font-black mb-4 tracking-tight">{t('student.readyTitle')}</h2>
-          <p className="text-gray-300 text-xl mb-10 max-w-lg leading-relaxed">
+        <motion.div
+          className="fixed inset-0 z-[60] flex flex-col items-center justify-center text-white text-center p-8"
+          style={{ background: 'linear-gradient(135deg, #1E1B4B 0%, #0F0D1A 50%, #1E1B4B 100%)' }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+        >
+          <motion.h2
+            className="text-5xl font-black mb-4 tracking-tight"
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: 'spring', stiffness: 300 }}
+          >
+            {t('student.readyTitle')}
+          </motion.h2>
+          <motion.p
+            className="text-gray-300 text-xl mb-10 max-w-lg leading-relaxed"
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.15 }}
+          >
             {t('student.readyDesc')}
-          </p>
-          <button onClick={() => { startSession(); setSessionStartTime(Date.now()); }} className="btn-primary text-lg px-10 py-4 shadow-[0_8px_32px_rgba(74,222,128,0.4)]">
+          </motion.p>
+          <motion.button
+            onClick={() => { startSession(); setSessionStartTime(Date.now()); }}
+            className="btn-3d btn-3d-secondary text-lg px-10 py-4"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.25 }}
+          >
             {t('student.startLearn')}
-          </button>
-        </div>
+          </motion.button>
+        </motion.div>
       )}
+      </AnimatePresence>
 
       {alertLevel === 'BREAK_TIME' && (
         <div className="fixed inset-0 z-50 bg-gray-900/95 backdrop-blur-3xl flex flex-col items-center justify-center text-white text-center p-8">
@@ -437,35 +499,41 @@ export const StudentView: React.FC = () => {
           {/* Column 1: Progress & Pet */}
           <div className="sv-col sv-col-progress">
             
-            <div className="premium-card xp-card dark:bg-slate-800">
-              <div className="card-title dark:text-white"><Trophy size={18} className="text-purple-500" /> {t('student.levelXp')}</div>
+            <TiltCard className="xp-card">
+              <div className="card-title"><Trophy size={18} style={{ color: 'var(--primary)' }} /> {t('student.levelXp')}</div>
               <div className="flex items-center gap-5 mt-4">
-                 <div className="text-5xl font-black text-gray-800 dark:text-white">{userStats.level}</div>
+                 <div className="text-5xl font-black" style={{ color: 'var(--primary)' }}>{userStats.level}</div>
                  <div className="flex-1">
                    <div className="flex justify-between text-sm font-bold mb-2">
-                     <span className="text-gray-400 dark:text-gray-300">{t('student.progress')}</span>
-                     <span className="text-purple-600">{userStats.xp} / {userStats.level * 1000} XP</span>
+                     <span style={{ color: 'var(--text-muted)' }}>{t('student.progress')}</span>
+                     <span style={{ color: 'var(--primary)' }}>{userStats.xp} / {userStats.level * 1000} XP</span>
                    </div>
-                   <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
-                     <div className="h-full bg-gradient-to-r from-purple-400 to-purple-600 rounded-full transition-all duration-1000" style={{ width: `${Math.min(100, (userStats.xp / (userStats.level * 1000)) * 100)}%` }} />
+                   <div className="w-full h-3 rounded-full overflow-hidden" style={{ background: 'var(--primary-light)' }}>
+                     <motion.div
+                       className="h-full rounded-full"
+                       style={{ background: 'linear-gradient(90deg, var(--primary), #A855F7)' }}
+                       initial={{ width: 0 }}
+                       animate={{ width: `${Math.min(100, (userStats.xp / (userStats.level * 1000)) * 100)}%` }}
+                       transition={{ duration: 1.2, ease: 'easeOut' }}
+                     />
                    </div>
                  </div>
               </div>
-            </div>
+            </TiltCard>
 
-            <div className="premium-card pet-card dark:bg-slate-800">
+            <TiltCard className="pet-card">
                <div className="pet-circle">
                  <div className="pet-model">
                     <OliverPet state={getPetState()} size={64} petLevel={userStats.petLevel} equippedItems={userStats.equippedItems} customText={latestParentMessage || undefined} hideBubble={true} hideBadge={true} />
                  </div>
                </div>
-               <h3 className="dark:text-white">{t('student.petName')}</h3>
-               <p className="dark:text-gray-300">{t('student.petDesc')}</p>
+               <h3>{t('student.petName')}</h3>
+               <p>{t('student.petDesc')}</p>
                <div className="pill-tag pill-secondary mt-2">{t('student.status')}: {getPetState() === 'good' ? t('student.stateHappy') : getPetState() === 'slouch' ? t('student.stateSad') : t('student.stateWarning')}</div>
-            </div>
+            </TiltCard>
 
-            <div className="premium-card timer-card dark:bg-slate-800">
-              <div className="card-title dark:text-white">{t('student.timer')}</div>
+            <TiltCard className="timer-card">
+              <div className="card-title">{t('student.timer')}</div>
               <div className="timer-display">
                  <div className="timer-digit">{hh[0]}</div>
                  <div className="timer-digit">{hh[1]}</div>
@@ -476,25 +544,25 @@ export const StudentView: React.FC = () => {
                  <div className="timer-digit">{ss[0]}</div>
                  <div className="timer-digit">{ss[1]}</div>
               </div>
-              <div className="timer-labels dark:text-gray-300">
+              <div className="timer-labels">
                 <span>{t('student.hr')}</span><span>{t('student.min')}</span><span>{t('student.sec')}</span>
               </div>
               <button className="btn-secondary w-full" onClick={() => resetBreak()}>
                 {t('student.newSession')}
               </button>
-            </div>
+            </TiltCard>
 
           </div>
 
           {/* Column 2: Central Ring & Camera */}
           <div className="sv-col sv-col-camera">
             
-            <div className="premium-card ring-card dark:bg-slate-800">
-              <div className="card-title dark:text-white">{t('student.healthGoal')}</div>
+            <TiltCard className="ring-card" glowColor={scoreColor}>
+              <div className="card-title">{t('student.healthGoal')}</div>
               
               <div className={`score-ring-wrapper ${healthScore >= 80 ? 'score-ring-good' : ''}`}>
                 <svg className="score-ring-svg" viewBox="0 0 100 100">
-                  <circle cx="50" cy="50" r="44" fill="none" stroke="#F3F4F6" strokeWidth="6" />
+                  <circle cx="50" cy="50" r="44" fill="none" stroke="var(--primary-light)" strokeWidth="6" />
                   <circle
                     cx="50" cy="50" r="44" fill="none"
                     stroke={scoreColor}
@@ -510,26 +578,34 @@ export const StudentView: React.FC = () => {
                   <span className="score-ring-val">{healthScore}</span>
                 </div>
                 
-                <div className="score-play-btn">
+                <motion.div
+                  className="score-play-btn"
+                  whileHover={{ scale: 1.15 }}
+                  whileTap={{ scale: 0.9 }}
+                >
                    <Play size={20} fill="currentColor" />
-                </div>
+                </motion.div>
               </div>
               
-              <div className="score-footer dark:text-gray-300">
+              <div className="score-footer">
                  {t('student.keepGreen')}
               </div>
-            </div>
+            </TiltCard>
 
-            <div className="premium-card camera-card dark:bg-slate-800">
+            <TiltCard className="camera-card" intensity={3}>
                <div className="camera-header">
-                 <div className="card-title dark:text-white">{t('student.cameraAi')}</div>
-                 <button onClick={() => setShowCamera(!showCamera)} className={`pill-tag ${showCamera ? 'camera-off-pill' : 'camera-on-pill'}`}>
+                 <div className="card-title">{t('student.cameraAi')}</div>
+                 <motion.button
+                   onClick={() => setShowCamera(!showCamera)}
+                   className={`pill-tag ${showCamera ? 'camera-off-pill' : 'camera-on-pill'}`}
+                   whileTap={{ scale: 0.9 }}
+                 >
                    {showCamera ? t('student.off') : t('student.on')}
-                 </button>
+                 </motion.button>
                </div>
                <div className="camera-wrapper relative">
                  {error && showCamera ? (
-                   <div className="absolute inset-0 bg-red-950/85 backdrop-blur-md flex flex-col items-center justify-center text-center p-4 rounded-3xl z-20">
+                   <div className="absolute inset-0 bg-red-950/85 backdrop-blur-md flex flex-col items-center justify-center text-center p-4 z-20" style={{ borderRadius: 'var(--radius-lg)' }}>
                      <AlertTriangle size={32} className="text-red-500 mb-1" />
                      <span className="font-semibold text-red-200 text-xs">{error}</span>
                    </div>
@@ -552,17 +628,23 @@ export const StudentView: React.FC = () => {
                    />
                  )}
                </div>
-            </div>
+            </TiltCard>
 
           </div>
 
           {/* Column 3: Leaderboard / Live Stats Table */}
           <div className="sv-col sv-col-stats">
             
-            <div className="premium-card leaderboard-card dark:bg-slate-800">
+            <TiltCard className="leaderboard-card">
                <div className="leaderboard-header">
-                  <div className="card-title m-0 dark:text-white">{t('student.statusTable')}</div>
-                  <div className="pill-tag pill-realtime">{t('student.live')}</div>
+                  <div className="card-title m-0">{t('student.statusTable')}</div>
+                  <motion.div
+                    className="pill-tag pill-realtime"
+                    animate={{ opacity: [1, 0.5, 1] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                  >
+                    {t('student.live')}
+                  </motion.div>
                </div>
                
                <details className="mobile-stats-details" open>
@@ -572,15 +654,15 @@ export const StudentView: React.FC = () => {
                  <table className="sv-table">
                    <thead>
                      <tr>
-                       <th className="th-left dark:text-gray-300">{t('student.metric')}</th>
-                       <th className="th-center dark:text-gray-300">{t('student.goal')}</th>
-                       <th className="th-right dark:text-gray-300">{t('student.state')}</th>
+                       <th className="th-left">{t('student.metric')}</th>
+                       <th className="th-center">{t('student.goal')}</th>
+                       <th className="th-right">{t('student.state')}</th>
                      </tr>
                    </thead>
                    <tbody>
                      <tr>
-                       <td className="td-metric dark:text-white">
-                         <div className="metric-icon" style={{ background: '#dbeafe', color: '#2563eb' }}>🏃</div>
+                       <td className="td-metric">
+                         <div className="metric-icon" style={{ background: 'var(--primary-light)', color: 'var(--primary)' }}>🏃</div>
                          {t('student.distance')}
                        </td>
                        <td className="td-goal">&gt; 50 cm</td>
@@ -591,8 +673,8 @@ export const StudentView: React.FC = () => {
                        </td>
                      </tr>
                      <tr>
-                       <td className="td-metric dark:text-white">
-                         <div className="metric-icon" style={{ background: '#f3e8ff', color: '#9333ea' }}>🧍</div>
+                       <td className="td-metric">
+                         <div className="metric-icon" style={{ background: 'var(--secondary-light)', color: 'var(--secondary)' }}>🧍</div>
                          {t('student.backSlouch')}
                        </td>
                        <td className="td-goal">&lt; 15°</td>
@@ -603,8 +685,8 @@ export const StudentView: React.FC = () => {
                        </td>
                      </tr>
                      <tr>
-                       <td className="td-metric dark:text-white">
-                         <div className="metric-icon" style={{ background: '#ffedd5', color: '#ea580c' }}>🧘</div>
+                       <td className="td-metric">
+                         <div className="metric-icon" style={{ background: 'var(--accent-light)', color: 'var(--accent)' }}>🧘</div>
                          {t('student.neckTilt')}
                        </td>
                        <td className="td-goal">&lt; 20°</td>
@@ -618,10 +700,10 @@ export const StudentView: React.FC = () => {
                  </table>
                </div>
                </details>
-             </div>
+             </TiltCard>
 
-            <div className="premium-card tips-card dark:bg-slate-800">
-              <div className="card-title dark:text-white"><Info size={18} className="text-blue-500" /> {t('student.aiHelp')}</div>
+            <TiltCard className="tips-card">
+              <div className="card-title"><Info size={18} style={{ color: 'var(--primary)' }} /> {t('student.aiHelp')}</div>
               <div className="tips-banner">
                 <div className="tips-avatars">
                    {['bg-red-200','bg-green-200','bg-blue-200'].map((c,i)=><div key={i} className={`tip-avatar ${c}`} />)}
@@ -631,10 +713,15 @@ export const StudentView: React.FC = () => {
                   <div className="tips-subtext">{t('student.aiTipsDesc')}</div>
                 </div>
               </div>
-              <button className="btn-secondary w-full" style={{ background: '#00d285' }} onClick={() => setShowTips(true)}>
+              <motion.button
+                className="btn-3d btn-3d-secondary w-full"
+                onClick={() => setShowTips(true)}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.97 }}
+              >
                 <span dangerouslySetInnerHTML={{ __html: t('student.viewTips') }}></span>
-              </button>
-            </div>
+              </motion.button>
+            </TiltCard>
 
           </div>
 
