@@ -1,7 +1,10 @@
 -- Supabase Database Schema for Anti-Hunchback (Multi-tenant)
 -- Copy and paste this into the SQL Editor of your Supabase project (https://supabase.com)
+-- Safe to re-run: idempotent (drops existing tables/policies before recreating).
 
--- 0. Clean old tables to ensure fresh setup
+BEGIN;
+
+-- 0. Clean old tables to ensure fresh setup (also drops dependent policies/indexes)
 DROP TABLE IF EXISTS calibration, settings, user_stats, sessions CASCADE;
 
 -- 1. Create Calibration Table
@@ -12,7 +15,7 @@ CREATE TABLE calibration (
     base_shoulder_y_diff INT NOT NULL,
     base_torso_height INT NOT NULL,
     base_ear FLOAT NOT NULL,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+    updated_at TIMESTAMPTZ DEFAULT now() NOT NULL
 );
 
 -- 2. Create Settings Table
@@ -27,7 +30,7 @@ CREATE TABLE settings (
     session_break_interval INT NOT NULL,
     eye_exercise_interval INT NOT NULL,
     sound_alert_enabled BOOLEAN NOT NULL,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+    updated_at TIMESTAMPTZ DEFAULT now() NOT NULL
 );
 
 -- 3. Create User Stats Table
@@ -42,7 +45,7 @@ CREATE TABLE user_stats (
     coins INT NOT NULL DEFAULT 0,
     unlocked_items TEXT[] NOT NULL DEFAULT '{}',
     equipped_items JSONB NOT NULL DEFAULT '{}'::jsonb,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+    updated_at TIMESTAMPTZ DEFAULT now() NOT NULL
 );
 
 -- 4. Create Sessions Table
@@ -60,7 +63,7 @@ CREATE TABLE sessions (
     fidget_flags_count INT NOT NULL,
     completed_eye_exercises INT NOT NULL,
     streak_added BOOLEAN NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+    created_at TIMESTAMPTZ DEFAULT now() NOT NULL
 );
 
 -- Create Index on Sessions Date and user_id to optimize queries
@@ -73,23 +76,36 @@ ALTER TABLE user_stats ENABLE ROW LEVEL SECURITY;
 ALTER TABLE sessions ENABLE ROW LEVEL SECURITY;
 
 -- Create RLS Policies for Calibration
-CREATE POLICY "Users can manage their own calibration data" 
-ON calibration FOR ALL 
-USING (auth.uid() = user_id);
+CREATE POLICY "Users can manage their own calibration data"
+ON calibration FOR ALL
+TO authenticated
+USING (auth.uid() = user_id)
+WITH CHECK (auth.uid() = user_id);
 
 -- Create RLS Policies for Settings
-CREATE POLICY "Users can manage their own settings data" 
-ON settings FOR ALL 
-USING (auth.uid() = user_id);
+CREATE POLICY "Users can manage their own settings data"
+ON settings FOR ALL
+TO authenticated
+USING (auth.uid() = user_id)
+WITH CHECK (auth.uid() = user_id);
 
 -- Create RLS Policies for User Stats
-CREATE POLICY "Users can manage their own user_stats data" 
-ON user_stats FOR ALL 
-USING (auth.uid() = user_id);
+CREATE POLICY "Users can manage their own user_stats data"
+ON user_stats FOR ALL
+TO authenticated
+USING (auth.uid() = user_id)
+WITH CHECK (auth.uid() = user_id);
 
 -- Create RLS Policies for Sessions
-CREATE POLICY "Users can manage their own sessions data" 
-ON sessions FOR ALL 
-USING (auth.uid() = user_id);
+CREATE POLICY "Users can manage their own sessions data"
+ON sessions FOR ALL
+TO authenticated
+USING (auth.uid() = user_id)
+WITH CHECK (auth.uid() = user_id);
+
+-- Enable Realtime for settings (used by parentSync realtime subscription)
+ALTER PUBLICATION supabase_realtime ADD TABLE settings;
+
+COMMIT;
 
 -- Note: The frontend will automatically handle inserting initial default rows using "upsert" on first login/save.
