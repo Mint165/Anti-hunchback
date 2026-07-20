@@ -56,7 +56,7 @@ body {
     radial-gradient(at 80% 20%, hsl(150 100% 88%) 0px, transparent 50%),
     radial-gradient(at 60% 80%, hsl(45 100% 92%) 0px, transparent 50%),
     radial-gradient(at 30% 70%, hsl(260 100% 92%) 0px, transparent 50%);
-  animation: mesh-drift 22s ease-in-out infinite alternate;
+  /* animation: mesh-drift 22s ease-in-out infinite alternate; */
   will-change: transform;
   filter: blur(8px);
 }

@@ -51,16 +51,14 @@
 .brand {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 0;
   margin-bottom: 28px;
   padding-left: 2px;
   white-space: nowrap;
   width: 100%;
-  justify-content: center;
-  transition: justify-content 0.2s ease;
 }
 .rail:hover .brand,
-.railParent .brand { justify-content: flex-start; }
+.railParent .brand { gap: 12px; }
 
 .brandLogo {
   width: 40px;
@@ -84,11 +82,13 @@
   line-height: 1;
   letter-spacing: -0.01em;
   opacity: 0;
-  transition: opacity 0.2s ease 0.1s;
+  max-width: 0;
+  overflow: hidden;
+  transition: opacity 0.2s ease 0.1s, max-width 0.2s ease;
 }
 
 .rail:hover .brandName,
-.railParent .brandName { opacity: 1; }
+.railParent .brandName { opacity: 1; max-width: 200px; }
 
 /* Section label */
 .sectionLabel {
@@ -118,8 +118,8 @@
 .item {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 12px 14px;
+  gap: 0;
+  padding: 12px;
   border-radius: var(--radius-lg);
   font-size: 15px;
   font-weight: 700;
@@ -145,12 +145,16 @@
 
 .itemLabel {
   opacity: 0;
-  transition: opacity 0.2s ease 0.1s;
+  max-width: 0;
+  overflow: hidden;
+  transition: opacity 0.2s ease 0.1s, max-width 0.2s ease;
   flex: 1;
 }
 
 .rail:hover .itemLabel,
-.railParent .itemLabel { opacity: 1; }
+.railParent .itemLabel { opacity: 1; max-width: 200px; }
+.rail:hover .item,
+.railParent .item { gap: 14px; }
 
 .item:hover {
   background: var(--primary-light);
@@ -249,17 +253,16 @@
   border-top: 1px solid rgba(124, 58, 237, 0.1);
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 8px 0;
+  gap: 0;
+  padding: 12px 2px 0;
   cursor: pointer;
   white-space: nowrap;
-  transition: opacity 0.2s ease, justify-content 0.2s ease;
+  transition: opacity 0.2s ease;
   width: 100%;
-  justify-content: center;
 }
 .footer:hover { opacity: 0.8; }
 .rail:hover .footer,
-.railParent .footer { justify-content: flex-start; }
+.railParent .footer { gap: 12px; }
 
 .avatar {
   width: 40px;
@@ -283,10 +286,12 @@
 
 .userInfoHidden {
   opacity: 0;
-  transition: opacity 0.2s ease;
+  max-width: 0;
+  overflow: hidden;
+  transition: opacity 0.2s ease 0.1s, max-width 0.2s ease;
 }
 .rail:hover .userInfoHidden,
-.railParent .userInfoHidden { opacity: 1; }
+.railParent .userInfoHidden { opacity: 1; max-width: 200px; }
 
 /* ── Main content ──────────────────────────────────────────────── */
 .main {
