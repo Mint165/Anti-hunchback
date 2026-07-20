@@ -63,7 +63,7 @@ export const FloatingPet: React.FC = () => {
         whileTap={{ scale: 0.95 }}
       >
         <div className={styles.petInner}>
-          <OliverPet state={state} size={150} petLevel={stats.petLevel} equippedItems={stats.equippedItems} hideBubble={true} hideBadge={true} lowDetail />
+          <OliverPet state={state} size={64} petLevel={stats.petLevel} equippedItems={stats.equippedItems} hideBubble={true} hideBadge={true} lowDetail />
         </div>
         {isDanger && (
           <div className={styles.dangerBadge}>!</div>
@@ -104,7 +104,7 @@ export const FloatingPet: React.FC = () => {
             className={styles.scaledPet}
             style={{ cursor: 'grab' }}
           >
-            <OliverPet state={state} size={180} petLevel={stats.petLevel} equippedItems={stats.equippedItems} lowDetail />
+            <OliverPet state={state} size={135} petLevel={stats.petLevel} equippedItems={stats.equippedItems} lowDetail />
           </div>
         </div>
       </motion.div>

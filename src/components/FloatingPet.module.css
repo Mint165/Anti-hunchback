@@ -6,7 +6,8 @@
 }
 
 .minimized {
-  padding: 12px;
+  width: 64px;
+  height: 64px;
   border-radius: 999px;
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);
   border: 1px solid var(--border-soft, #e5e7eb);
@@ -16,6 +17,8 @@
   align-items: center;
   justify-content: center;
   transition: transform 0.25s ease, box-shadow 0.25s ease;
+  position: relative;
+  overflow: hidden;
 }
 
 .minimized:hover {
@@ -36,10 +39,14 @@
 }
 
 .petInner {
-  transform: scale(0.5);
-  transform-origin: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   pointer-events: none;
-  margin: -64px;
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  inset: 0;
 }
 
 .expandBtn {
@@ -109,8 +116,9 @@
 }
 
 .scaledPet {
-  transform: scale(0.75);
-  transform-origin: bottom right;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .alertBounce {
