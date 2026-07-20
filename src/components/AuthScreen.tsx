@@ -98,11 +98,27 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
           password,
         });
         if (signInError) {
-          let friendlyMessage = signInError.message;
           if (signInError.message.includes('Failed to fetch')) {
-            friendlyMessage =
-              'Không thể kết nối đến máy chủ Supabase. Vui lòng kiểm tra mạng, hoặc tắt Trình chặn quảng cáo (Adblocker / Brave Shield) và thử lại!';
+            console.warn('Supabase Login Error (Failed to fetch). Falling back to local auth.');
+            // Fallback to local storage
+            const users: Record<string, AuthUser & { password: string }> = getUsers();
+            if (users[email]) {
+              if (users[email].password === password) {
+                const { password: _, ...userWithoutPassword } = users[email];
+                toast.success('Đăng nhập thành công (Local Fallback)! 🎉');
+                onLogin(userWithoutPassword);
+              } else {
+                setError(t('auth.invalidCredentials'));
+                toast.error('Mật khẩu không đúng!');
+              }
+            } else {
+              setError(t('auth.invalidCredentials'));
+              toast.error('Tài khoản không tồn tại!');
+            }
+            return;
           }
+          
+          let friendlyMessage = signInError.message;
           setError(friendlyMessage);
           toast.error(friendlyMessage);
           console.error('Supabase Login Error:', signInError);
@@ -158,11 +174,42 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
           options: { data: { name, role, linkedCode } },
         });
         if (signUpError) {
-          let friendlyMessage = signUpError.message;
           if (signUpError.message.includes('Failed to fetch')) {
-            friendlyMessage =
-              'Không thể kết nối đến máy chủ Supabase. Vui lòng kiểm tra mạng, hoặc tắt Trình chặn quảng cáo (Adblocker / Brave Shield) và thử lại!';
+            console.warn('Supabase Register Error (Failed to fetch). Falling back to local auth.');
+            // Fallback to Mock Auth
+            const users: Record<string, AuthUser & { password: string }> = getUsers();
+            
+            if (users[email]) {
+              const errMsg = isEmailInput ? 'Email này đã được sử dụng!' : 'Tên đăng nhập này đã được sử dụng!';
+              setError(errMsg);
+              toast.error(errMsg);
+              return;
+            }
+
+            // Generate OTP Code (3 letters + 3 numbers)
+            const otp = generateVerificationCode();
+            setGeneratedOtp(otp);
+            setPendingEmail(email);
+            
+            const newUser: AuthUser & { password: string } = {
+              name,
+              role,
+              password,
+              linkedCode: role === 'student' ? generateLinkCode() : undefined
+            };
+            
+            setPendingUser(newUser);
+            setIsVerifying(true);
+            
+            // Simulate sending verification code
+            console.log(`[MOCK EMAIL SERVICE] Sent verification code ${otp} to ${email}`);
+            toast.success(`Mã xác nhận đã gửi đến email ${email}!`, { duration: 6000 });
+            
+            setShowMockEmailModal(true);
+            return;
           }
+          
+          let friendlyMessage = signUpError.message;
           setError(friendlyMessage);
           toast.error(friendlyMessage);
           console.error('Supabase Register Error:', signUpError);
