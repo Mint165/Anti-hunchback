@@ -1,0 +1,368 @@
+/* Layout.module.css — Sidebar rail + gradient background shell.
+   Student theme: icon-only rail that expands on hover.
+   Parent theme: full sidebar, warm professional. */
+
+.appShell {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  position: relative;
+}
+
+/* ── Sidebar Rail (Student) ────────────────────────────────────── */
+.rail {
+  width: var(--sidebar-rail-width);
+  height: calc(100vh - 24px);
+  background: var(--bg-sidebar);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(124, 58, 237, 0.1);
+  border-radius: var(--radius-2xl);
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px 10px;
+  z-index: 100;
+  box-shadow: var(--shadow-lg);
+  transition: width 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+
+.rail:hover {
+  width: var(--sidebar-width);
+  padding: 24px 16px;
+  align-items: stretch;
+}
+
+/* Parent sidebar — always expanded, warmer */
+.railParent {
+  width: var(--sidebar-width);
+  padding: 24px 18px;
+  align-items: stretch;
+  border-color: rgba(245, 158, 11, 0.14);
+}
+.railParent:hover { width: var(--sidebar-width); }
+
+/* Brand row */
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 28px;
+  padding-left: 2px;
+  white-space: nowrap;
+}
+
+.brandLogo {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, var(--primary), #A855F7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px var(--primary-glow);
+  color: white;
+  flex-shrink: 0;
+}
+
+.brandName {
+  font-family: var(--font-student-heading);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-main);
+  line-height: 1;
+  letter-spacing: -0.01em;
+  opacity: 0;
+  transition: opacity 0.2s ease 0.1s;
+}
+
+.rail:hover .brandName,
+.railParent .brandName { opacity: 1; }
+
+/* Section label */
+.sectionLabel {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 4px 0 10px 12px;
+  opacity: 0;
+  transition: opacity 0.2s ease 0.1s;
+  white-space: nowrap;
+}
+
+.rail:hover .sectionLabel,
+.railParent .sectionLabel { opacity: 1; }
+
+/* Menu */
+.menu {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  width: 100%;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+  border-radius: var(--radius-lg);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  width: 100%;
+  position: relative;
+  white-space: nowrap;
+}
+
+.itemIcon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.itemLabel {
+  opacity: 0;
+  transition: opacity 0.2s ease 0.1s;
+  flex: 1;
+}
+
+.rail:hover .itemLabel,
+.railParent .itemLabel { opacity: 1; }
+
+.item:hover {
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+.itemActive {
+  background: var(--primary);
+  color: white;
+  font-weight: 800;
+  box-shadow: var(--shadow-glow-primary);
+}
+
+.itemActive:hover { background: var(--primary); color: white; }
+
+/* Parent active uses warmer accent */
+.railParent .itemActive {
+  background: var(--par-accent);
+  color: white;
+  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.35);
+}
+.railParent .item:hover { color: var(--par-accent); background: rgba(245, 158, 11, 0.1); }
+
+.dark .item { color: var(--text-muted); }
+.dark .item:hover { background: rgba(124, 58, 237, 0.15); color: var(--primary); }
+.dark .itemActive { background: var(--primary); color: white; }
+
+/* Language toggle row */
+.langRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  border-radius: var(--radius-lg);
+  background: var(--primary-light);
+  white-space: nowrap;
+  opacity: 1;
+}
+
+.langButton {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-main);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.langTrack {
+  width: 32px;
+  height: 18px;
+  background: var(--primary);
+  border-radius: 9999px;
+  position: relative;
+  display: inline-block;
+}
+
+.langThumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: white;
+}
+
+.langLabelActive { color: var(--primary); font-weight: 900; }
+.langLabelInactive { color: var(--text-muted); font-weight: 600; }
+
+/* Footer user area */
+.footer {
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid rgba(124, 58, 237, 0.1);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 8px 0;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 0.2s ease;
+}
+.footer:hover { opacity: 0.8; }
+
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 900;
+  font-size: 15px;
+  box-shadow: var(--shadow-sm);
+  flex-shrink: 0;
+}
+
+.userInfo { flex: 1; min-width: 0; }
+.userName { font-size: 14px; font-weight: 800; color: var(--text-main); line-height: 1.2; overflow: hidden; text-overflow: ellipsis; }
+.userRole { font-size: 12px; color: var(--text-muted); font-weight: 600; }
+
+.userInfoHidden {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+.rail:hover .userInfoHidden,
+.railParent .userInfoHidden { opacity: 1; }
+
+/* ── Main content ──────────────────────────────────────────────── */
+.main {
+  flex: 1;
+  margin-left: calc(var(--sidebar-rail-width) + 24px);
+  padding: 28px 28px 28px 12px;
+  height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
+  z-index: 1;
+}
+
+.mainParent {
+  margin-left: calc(var(--sidebar-width) + 28px);
+}
+
+/* Mobile */
+.mobileLangRow {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
+}
+
+.mobileLangBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: var(--radius-full);
+  font-size: 12px;
+  font-weight: 700;
+  background: var(--primary-light);
+  color: var(--primary);
+  border: none;
+  cursor: pointer;
+}
+
+/* ── Mobile bottom nav ────────────────────────────────────────── */
+.bottomNav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 68px;
+  background: var(--bg-card);
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  border-top: 2px solid rgba(124, 58, 237, 0.08);
+  z-index: 100;
+  padding-bottom: env(safe-area-inset-bottom);
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.06);
+  backdrop-filter: blur(16px);
+}
+
+.dark .bottomNav {
+  background: rgba(22, 18, 42, 0.95);
+  border-top-color: rgba(124, 58, 237, 0.15);
+}
+
+.bottomNavItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 8px;
+  flex: 1;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.bottomNavItemActive { color: var(--primary); }
+
+.bottomNavItemActive::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--primary);
+  box-shadow: 0 0 8px var(--primary-glow);
+}
+
+.bottomNavIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s;
+}
+
+.bottomNavItemActive .bottomNavIcon { transform: scale(1.15); }
+
+/* ── Mobile: layout override ───────────────────────────────────── */
+.mobile .main {
+  margin-left: 0 !important;
+  padding: 16px 16px 80px 16px !important;
+}

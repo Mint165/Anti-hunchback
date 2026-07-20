@@ -1,15 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, useDragControls } from 'framer-motion';
 import { usePostureContext } from '../contexts/PostureContext';
 import OliverPet, { type PetState } from './OliverPet';
 import { loadUserStats } from '../services/db';
 import { Maximize2, Minimize2 } from 'lucide-react';
 import { useMediaQuery } from 'react-responsive';
+import styles from './FloatingPet.module.css';
 
 export const FloatingPet: React.FC = () => {
   const { metrics, hasStarted, alertLevel } = usePostureContext();
   const [isMinimized, setIsMinimized] = useState(false);
   const [stats, setStats] = useState(() => loadUserStats());
   const isMobile = useMediaQuery({ maxWidth: 768 });
+  const dragControls = useDragControls();
+  const constraintsRef = useRef<HTMLDivElement>(null);
 
   // Refresh stats only when tab becomes visible (instead of polling every 2s)
   useEffect(() => {
@@ -43,48 +47,68 @@ export const FloatingPet: React.FC = () => {
   };
 
   const state = getPetState();
+  const isDanger = state === 'slouch' || state === 'close' || state === 'tired';
+
+  // Mobile: keep simple fixed positioning (no drag — would conflict with page scroll)
   const bottomClass = isMobile ? 'bottom-24' : 'bottom-6';
   const rightClass = isMobile ? 'right-4' : 'right-6';
-  const isDanger = state === 'slouch' || state === 'close' || state === 'tired';
 
   if (isMinimized || isMobile) {
     return (
-      <div 
-        className={`fixed ${bottomClass} ${rightClass} z-50 p-3 rounded-full shadow-lg border cursor-pointer hover:shadow-xl transition-all hover:scale-110 flex items-center justify-center ${isDanger ? 'border-red-500 bg-red-50 shadow-[0_0_15px_rgba(239,68,68,0.7)] animate-pulse' : 'bg-white border-gray-200'}`}
+      <motion.div
+        className={`fixed ${bottomClass} ${rightClass} z-50 ${styles.minimized} ${isDanger ? styles.danger : ''}`}
         onClick={() => !isMobile && setIsMinimized(false)}
         style={{ width: '60px', height: '60px' }}
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.95 }}
       >
-        <div className="scale-50 origin-center -ml-16 -mt-16 pointer-events-none">
-          <OliverPet state={state} size={150} petLevel={stats.petLevel} equippedItems={stats.equippedItems} hideBubble={true} hideBadge={true} />
+        <div className={styles.petInner}>
+          <OliverPet state={state} size={150} petLevel={stats.petLevel} equippedItems={stats.equippedItems} hideBubble={true} hideBadge={true} lowDetail />
         </div>
         {isDanger && (
-          <div className="absolute -top-1 -left-1 bg-red-600 text-white font-bold rounded-full w-6 h-6 flex items-center justify-center text-sm shadow-md animate-bounce">
-            !
-          </div>
+          <div className={styles.dangerBadge}>!</div>
         )}
         {!isMobile && !isDanger && (
-          <div className="absolute top-0 right-0 bg-blue-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
+          <div className={styles.expandBtn}>
             <Maximize2 size={10} />
           </div>
         )}
-      </div>
+      </motion.div>
     );
   }
 
+  // Desktop expanded: draggable via framer-motion. Drag handle = the pet canvas
+  // so the user can still click the minimize button without initiating a drag.
   return (
-    <div className={`fixed ${bottomClass} ${rightClass} z-50 transition-transform duration-300 ${state === 'slouch' || state === 'close' ? 'animate-bounce' : ''}`}>
-      <div className="relative group">
-        <button 
-          onClick={() => setIsMinimized(true)}
-          className="absolute -top-2 -right-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-full p-1.5 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity z-10"
-        >
-          <Minimize2 size={14} />
-        </button>
-        <div className="transform scale-75 origin-bottom-right">
-          <OliverPet state={state} size={180} petLevel={stats.petLevel} equippedItems={stats.equippedItems} />
+    <>
+      <div ref={constraintsRef} style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: -1 }} />
+      <motion.div
+        className={`fixed ${bottomClass} ${rightClass} z-50 ${styles.expanded} ${isDanger ? styles.alertBounce : ''}`}
+        drag
+        dragControls={dragControls}
+        dragConstraints={constraintsRef}
+        dragElastic={0.4}
+        dragMomentum={false}
+        dragListener={false}
+      >
+        <div className="relative group">
+          <button
+            onClick={() => setIsMinimized(true)}
+            className={styles.minimizeBtn}
+            aria-label="Thu nhỏ thú cưng"
+          >
+            <Minimize2 size={14} />
+          </button>
+          <div
+            onPointerDown={(e) => dragControls.start(e)}
+            className={styles.scaledPet}
+            style={{ cursor: 'grab' }}
+          >
+            <OliverPet state={state} size={180} petLevel={stats.petLevel} equippedItems={stats.equippedItems} lowDetail />
+          </div>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </>
   );
 };
 

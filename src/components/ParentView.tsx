@@ -1,16 +1,18 @@
 // Parent Dashboard Component
 
-import React, { useState, useEffect } from 'react';
-import { Eye, Bell, Shield, ShieldAlert, Heart, AlertCircle, Send, MessageSquare, Download, Calendar } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Eye, Bell, Shield, ShieldAlert, Heart, AlertCircle, Send, MessageSquare, Download, Calendar, TrendingUp } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar } from 'recharts';
 import { getSessionRecords } from '../services/db';
 import type { SessionRecord } from '../services/db';
 import { subscribeToStudentSync, broadcastParentMessage } from '../services/parentSync';
 import { useLanguage } from '../contexts/LanguageContext';
-// @ts-ignore
-import html2pdf from 'html2pdf.js';
-import TiltCard from './ui/TiltCard';
+import AnimatedCounter from './ui/AnimatedCounter';
 import { motion } from 'framer-motion';
+import styles from './ParentView.module.css';
+
+type SortKey = 'date' | 'durationMinutes' | 'averageHealthScore' | 'goodPosturePercentage';
+type SortDir = 'asc' | 'desc';
 
 interface ChartDataPoint {
   name: string;
@@ -44,27 +46,59 @@ export const ParentView: React.FC = () => {
   // Time Filter State
   const [timeFilter, setTimeFilter] = useState<'7' | '30' | 'all'>('7');
 
-  const filteredSessions = React.useMemo(() => {
+  // Sort state for session table
+  const [sortKey, setSortKey] = useState<SortKey>('date');
+  const [sortDir, setSortDir] = useState<SortDir>('desc');
+
+  const filteredSessions = useMemo(() => {
     if (timeFilter === 'all') return sessions;
     const now = new Date().getTime();
     const daysMs = parseInt(timeFilter) * 24 * 60 * 60 * 1000;
     return sessions.filter(s => {
        const sessionTime = new Date(s.date).getTime();
        // if date parsing fails, fallback to include it
-       if (isNaN(sessionTime)) return true; 
+       if (isNaN(sessionTime)) return true;
        return now - sessionTime <= daysMs;
     });
   }, [sessions, timeFilter]);
 
+  // Sort table rows (with date parsing for stable sort)
+  const sortedTableData = useMemo(() => {
+    const arr = [...filteredSessions];
+    arr.sort((a, b) => {
+      let av: number | string = a[sortKey] as any;
+      let bv: number | string = b[sortKey] as any;
+      if (sortKey === 'date') {
+        av = new Date(a.date).getTime();
+        bv = new Date(b.date).getTime();
+        if (isNaN(av as number)) av = 0;
+        if (isNaN(bv as number)) bv = 0;
+      }
+      if (av < bv) return sortDir === 'asc' ? -1 : 1;
+      if (av > bv) return sortDir === 'asc' ? 1 : -1;
+      return 0;
+    });
+    return arr;
+  }, [filteredSessions, sortKey, sortDir]);
+
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir(d => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortKey(key);
+      setSortDir('desc');
+    }
+  };
+
   // Pagination for Session Table
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
-  const totalPages = Math.max(1, Math.ceil(filteredSessions.length / itemsPerPage));
-  const currentTableData = filteredSessions.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const totalPages = Math.max(1, Math.ceil(sortedTableData.length / itemsPerPage));
+  const currentTableData = sortedTableData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   // Push notifications queue
   const [fatigueAlerts, setFatigueAlerts] = useState<string[]>([]);
-  
+
   // Parent messaging state
   const [messageText, setMessageText] = useState('');
   const [isMessageSent, setIsMessageSent] = useState(false);
@@ -72,7 +106,7 @@ export const ParentView: React.FC = () => {
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
     if (!messageText.trim()) return;
-    
+
     broadcastParentMessage(messageText.trim());
     setMessageText('');
     setIsMessageSent(true);
@@ -136,11 +170,11 @@ export const ParentView: React.FC = () => {
   // 1. Posture ratio calculations for Pie Chart
   const getPieChartData = () => {
     if (filteredSessions.length === 0) return [];
-    
+
     // Average metrics over sessions
     let straight = 0;
     let slouched = 0;
-    
+
     filteredSessions.forEach(s => {
       straight += s.goodPosturePercentage;
       slouched += (100 - s.goodPosturePercentage);
@@ -208,7 +242,7 @@ export const ParentView: React.FC = () => {
         risks.push(`⚠️ Vai lệch trung bình ${avgTilt.toFixed(1)}° trong ${badShoulderSessions.length}/${sessionsWithAngles.length} phiên học gần nhất. Nguy cơ lệch cơ vai tăng 40% trong 3 tháng tới nếu tiếp tục duy trì tư thế này.`);
       }
 
-      // Neck angle analysis  
+      // Neck angle analysis
       const badNeckSessions = sessionsWithAngles.filter(s => (s.averageNeckAngle || 0) > 18);
       if (badNeckSessions.length / sessionsWithAngles.length > 0.6) {
         const avgNeck = badNeckSessions.reduce((sum, s) => sum + (s.averageNeckAngle || 0), 0) / badNeckSessions.length;
@@ -258,21 +292,33 @@ export const ParentView: React.FC = () => {
 
   const healthPrediction = getHealthPrediction();
 
-  // Export PDF Logic
-  const handleExportPDF = () => {
+  // Summary metrics for top row
+  const summaryMetrics = useMemo(() => {
+    const total = filteredSessions.length;
+    const totalMinutes = filteredSessions.reduce((s, r) => s + r.durationMinutes, 0);
+    const avgPhi = total ? Math.round(filteredSessions.reduce((s, r) => s + r.averageHealthScore, 0) / total) : 0;
+    const avgGood = total ? Math.round(filteredSessions.reduce((s, r) => s + r.goodPosturePercentage, 0) / total) : 0;
+    return { total, totalMinutes, avgPhi, avgGood };
+  }, [filteredSessions]);
+
+  // Export PDF Logic — html2pdf is dynamically imported to keep the main bundle lean.
+  const handleExportPDF = async () => {
     const element = document.getElementById('report-content');
     if (!element) return;
     element.classList.add('exporting-pdf');
-    const opt = {
-      margin: 0.5,
-      filename: `Bao_Cao_Tien_Trinh_${new Date().toLocaleDateString('vi-VN')}.pdf`,
-      image: { type: 'jpeg' as const, quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true },
-      jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' as const }
-    };
-    html2pdf().set(opt).from(element).save().then(() => {
-       element.classList.remove('exporting-pdf');
-    });
+    try {
+      const { default: html2pdf } = await import('html2pdf.js');
+      const opt = {
+        margin: 0.5,
+        filename: `Bao_Cao_Tien_Trinh_${new Date().toLocaleDateString('vi-VN')}.pdf`,
+        image: { type: 'jpeg' as const, quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' as const }
+      };
+      await html2pdf().set(opt).from(element).save();
+    } finally {
+      element.classList.remove('exporting-pdf');
+    }
   };
 
   // Render Heatmap (Last 28 days)
@@ -292,51 +338,69 @@ export const ParentView: React.FC = () => {
        studyMap[s.date] = (studyMap[s.date] || 0) + s.durationMinutes;
     });
 
+    const colorFor = (mins: number) => {
+      if (mins > 60) return '#16a34a';
+      if (mins > 30) return '#4ade80';
+      if (mins > 0) return '#bbf7d0';
+      return '#f1f5f9';
+    };
+
     return (
-      <div className="mt-6 pt-6 border-t border-gray-100">
-        <h4 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
-          <Calendar size={16} className="text-blue-500" /> Biểu Đồ Luyện Tập (28 Ngày)
+      <div className={styles.heatmap}>
+        <h4 className={styles.heatmapTitle}>
+          <Calendar size={16} style={{ color: '#3b82f6' }} /> Biểu Đồ Luyện Tập (28 Ngày)
         </h4>
-        <div className="flex gap-1.5 flex-wrap">
+        <div className={styles.heatmapGrid}>
           {days.map(d => {
             const mins = studyMap[d] || 0;
-            let bgClass = 'bg-gray-100';
-            if (mins > 60) bgClass = 'bg-green-600';
-            else if (mins > 30) bgClass = 'bg-green-400';
-            else if (mins > 0) bgClass = 'bg-green-200';
             return (
-              <div 
-                key={d} 
-                className={`w-5 h-5 rounded-sm ${bgClass} shadow-sm border border-black/5 hover:scale-110 transition-transform`} 
+              <div
+                key={d}
+                className={styles.heatmapCell}
+                style={{ backgroundColor: colorFor(mins) }}
                 title={`${d}: Học ${mins} phút`}
-              ></div>
+              />
             );
           })}
+        </div>
+        <div className={styles.heatmapLegend}>
+          <span>Ít</span>
+          <div className={styles.heatmapLegendSwatches}>
+            <span className={styles.heatmapLegendSwatch} style={{ background: '#f1f5f9' }} />
+            <span className={styles.heatmapLegendSwatch} style={{ background: '#bbf7d0' }} />
+            <span className={styles.heatmapLegendSwatch} style={{ background: '#4ade80' }} />
+            <span className={styles.heatmapLegendSwatch} style={{ background: '#16a34a' }} />
+          </div>
+          <span>Nhiều</span>
         </div>
       </div>
     );
   };
 
+  const statusColor = studentStatus === 'good' ? '#4EAD63' : studentStatus === 'warning' ? '#FFAA2C' : studentStatus === 'danger' ? '#FF5E5E' : '#9CA3AF';
+  const statusPingColor = studentStatus === 'good' ? '#4EAD63' : studentStatus === 'warning' ? '#FFAA2C' : studentStatus === 'danger' ? '#FF5E5E' : '#9CA3AF';
+  const statusOrbBg = studentStatus === 'good' ? 'linear-gradient(135deg, #4ade80, #00d285)' :
+                      studentStatus === 'warning' ? 'linear-gradient(135deg, #fbbd23, #f59e0b)' :
+                      studentStatus === 'danger' ? 'linear-gradient(135deg, #f87171, #ef4444)' :
+                      'linear-gradient(135deg, #9ca3af, #6b7280)';
+
   return (
-    <motion.div 
-      className="min-h-full p-4 md:p-8"
+    <motion.div
+      className={styles.parentView}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
     >
-      
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-10 gap-4">
+      <div className={styles.pageHeader}>
         <div>
-          <div className="flex items-center gap-2 mb-3">
-            <span className="text-xs font-black uppercase tracking-widest px-4 py-1.5 rounded-full" style={{ background: 'var(--accent-light)', color: 'var(--accent)' }}>{t('parent.dashboard')}</span>
-          </div>
-          <h1 className="text-3xl font-black mb-2" style={{ color: 'var(--text-main)' }}>{t('parent.title')}</h1>
-          <p className="text-sm font-medium mt-0.5" style={{ color: 'var(--text-muted)' }}>{t('parent.desc')}</p>
+          <span className={styles.tag}>{t('parent.dashboard')}</span>
+          <h1 className={styles.title}>{t('parent.title')}</h1>
+          <p className={styles.desc}>{t('parent.desc')}</p>
         </div>
-        <motion.button 
-          onClick={handleExportPDF} 
-          className="btn-3d btn-3d-secondary hide-on-pdf flex items-center gap-2 text-sm"
+        <motion.button
+          onClick={handleExportPDF}
+          className={`${styles.exportBtn} hide-on-pdf`}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
         >
@@ -344,148 +408,172 @@ export const ParentView: React.FC = () => {
         </motion.button>
       </div>
 
-      {/* Grid: Live monitoring vs Metrics Analytics */}
-      <div id="report-content" className="sv-grid">
-        
+      {/* Summary metrics row */}
+      <div className={styles.metricsRow}>
+        <div className={styles.metricCard}>
+          <div className={styles.metricLabel}>Phiên học</div>
+          <div className={styles.metricValue}><AnimatedCounter value={summaryMetrics.total} duration={800} /></div>
+          <div className={`${styles.metricTrend} ${styles.metricTrendUp}`}>
+            <TrendingUp size={12} /> Tổng số
+          </div>
+        </div>
+        <div className={styles.metricCard}>
+          <div className={styles.metricLabel}>Tổng thời gian</div>
+          <div className={styles.metricValue}>
+            <AnimatedCounter value={summaryMetrics.totalMinutes} duration={900} />
+            <span className={styles.metricUnit}>phút</span>
+          </div>
+          <div className={`${styles.metricTrend} ${styles.metricTrendUp}`}>
+            <TrendingUp size={12} /> Tích lũy
+          </div>
+        </div>
+        <div className={styles.metricCard}>
+          <div className={styles.metricLabel}>Điểm PHI TB</div>
+          <div className={styles.metricValue}>
+            <AnimatedCounter value={summaryMetrics.avgPhi} duration={900} />
+          </div>
+          <div className={styles.metricTrend} style={{ color: statusColor }}>
+            <span style={{ color: summaryMetrics.avgPhi >= 80 ? '#4EAD63' : summaryMetrics.avgPhi >= 60 ? '#FFAA2C' : '#FF5E5E' }}>
+              {summaryMetrics.avgPhi >= 80 ? 'Tốt' : summaryMetrics.avgPhi >= 60 ? 'Trung bình' : 'Cần cải thiện'}
+            </span>
+          </div>
+        </div>
+        <div className={styles.metricCard}>
+          <div className={styles.metricLabel}>Tư thế chuẩn TB</div>
+          <div className={styles.metricValue}>
+            <AnimatedCounter value={summaryMetrics.avgGood} duration={900} />
+            <span className={styles.metricUnit}>%</span>
+          </div>
+          <div className={styles.metricTrend} style={{ color: summaryMetrics.avgGood >= 80 ? '#4EAD63' : summaryMetrics.avgGood >= 60 ? '#FFAA2C' : '#FF5E5E' }}>
+            {summaryMetrics.avgGood >= 80 ? 'Xuất sắc' : summaryMetrics.avgGood >= 60 ? 'Khá' : 'Cần cải thiện'}
+          </div>
+        </div>
+      </div>
+
+      {/* Main grid */}
+      <div id="report-content" className={styles.mainGrid}>
+
         {/* Left Column: Real-time Connection status */}
-        <div className="md:col-span-4 flex flex-col gap-6">
-          
+        <div className={styles.leftCol}>
+
           {/* Real-time Status Card */}
-          <TiltCard className="p-6 flex flex-col items-center text-center relative overflow-hidden" glowColor="var(--primary-light)">
-            {/* Background glowing effect */}
-            <div className="absolute -top-20 -right-20 w-40 h-40 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-blob"></div>
-            <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-green-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-blob animation-delay-2000"></div>
-            
-            <h3 className="widget-label mb-8 relative z-10">{t('parent.liveStatus')}</h3>
-            
+          <div className={styles.statusCard}>
+            <div className={`${styles.statusBg} ${styles.statusBgTop}`} />
+            <div className={`${styles.statusBg} ${styles.statusBgBottom}`} />
+
+            <h3 className={styles.cardLabel}>{t('parent.liveStatus')}</h3>
+
             {/* Pulsing indicator */}
-            <div className="relative mb-8 flex justify-center w-full">
-              <div className="absolute inset-0 flex items-center justify-center">
-                 <div className="w-32 h-32 rounded-full animate-ping opacity-20" style={{
-                    backgroundColor: studentStatus === 'good' ? '#4EAD63' : studentStatus === 'warning' ? '#FFAA2C' : studentStatus === 'danger' ? '#FF5E5E' : '#9CA3AF',
-                 }}></div>
-              </div>
-              <div 
-                className={`relative z-10 w-32 h-32 rounded-full flex items-center justify-center border-4 border-white shadow-xl transition-all duration-700`}
-                style={{
-                  background: studentStatus === 'good' ? 'linear-gradient(135deg, #4ade80, #00d285)' :
-                              studentStatus === 'warning' ? 'linear-gradient(135deg, #fbbd23, #f59e0b)' :
-                              studentStatus === 'danger' ? 'linear-gradient(135deg, #f87171, #ef4444)' : 
-                              'linear-gradient(135deg, #9ca3af, #6b7280)'
-                }}
+            <div className={styles.statusOrbWrap}>
+              <div className={styles.statusPing} style={{ backgroundColor: statusPingColor }} />
+              <div
+                className={styles.statusOrb}
+                style={{ background: statusOrbBg }}
               >
-                {studentStatus === 'good' && <Shield size={48} className="text-white drop-shadow-md animate-pulse" />}
-                {studentStatus === 'warning' && <AlertCircle size={48} className="text-white drop-shadow-md" />}
-                {studentStatus === 'danger' && <ShieldAlert size={48} className="text-white drop-shadow-md animate-bounce" />}
-                {studentStatus === 'offline' && <Eye size={48} className="text-white drop-shadow-md" />}
+                {studentStatus === 'good' && <Shield size={48} color="#fff" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))' }} />}
+                {studentStatus === 'warning' && <AlertCircle size={48} color="#fff" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))' }} />}
+                {studentStatus === 'danger' && <ShieldAlert size={48} color="#fff" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))' }} />}
+                {studentStatus === 'offline' && <Eye size={48} color="#fff" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))' }} />}
               </div>
-              
+
               {/* Online pulse dot */}
-              {studentActive && (
-                <span className="absolute top-2 right-[25%] flex h-5 w-5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-5 w-5 bg-green-500 border-2 border-white shadow-sm"></span>
-                </span>
-              )}
+              {studentActive && <span className={styles.onlineDot} />}
             </div>
 
-            <h4 className="text-xl font-bold text-gray-800 dark:text-white relative z-10">
+            <h4 className={styles.statusText}>
               {studentStatus === 'good' && t('parent.goodPosture')}
               {studentStatus === 'warning' && t('parent.warningPosture')}
               {studentStatus === 'danger' && t('parent.dangerPosture')}
               {studentStatus === 'offline' && t('parent.offline')}
             </h4>
-            
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 mb-4 font-medium">
+
+            <p className={styles.syncHint}>
               {studentActive ? t('parent.syncLive') : t('parent.waitConnect')}
             </p>
 
             {/* Live Metrics details */}
             {studentActive && (
-              <div className="w-full grid grid-cols-2 gap-3 mt-4 text-left border-t border-gray-100/50 pt-5 relative z-10">
-                <div className="p-3 bg-white/40 dark:bg-slate-800/40 rounded-xl backdrop-blur-sm border border-white/40">
-                  <span className="text-[10px] text-gray-500 dark:text-gray-400 block uppercase font-bold">{t('parent.phiScore')}</span>
-                  <span className="text-lg font-black text-gray-800 dark:text-white">{studentDetails.healthScore}</span>
+              <div className={styles.liveMetrics}>
+                <div className={styles.liveMetric}>
+                  <span className={styles.liveMetricLabel}>{t('parent.phiScore')}</span>
+                  <span className={styles.liveMetricValue}>{studentDetails.healthScore}</span>
                 </div>
-                <div className="p-3 bg-white/40 dark:bg-slate-800/40 rounded-xl backdrop-blur-sm border border-white/40">
-                  <span className="text-[10px] text-gray-500 dark:text-gray-400 block uppercase font-bold">{t('parent.eyeDistance')}</span>
-                  <span className="text-lg font-black text-gray-800 dark:text-white">{studentDetails.eyeDistanceCm} cm</span>
+                <div className={styles.liveMetric}>
+                  <span className={styles.liveMetricLabel}>{t('parent.eyeDistance')}</span>
+                  <span className={styles.liveMetricValue}>{studentDetails.eyeDistanceCm} cm</span>
                 </div>
-                <div className="p-3 bg-white/40 dark:bg-slate-800/40 rounded-xl backdrop-blur-sm border border-white/40">
-                  <span className="text-[10px] text-gray-500 dark:text-gray-400 block uppercase font-bold">{t('parent.neckAngle')}</span>
-                  <span className="text-lg font-black text-gray-800 dark:text-white">{Math.round(studentDetails.neckAngle)}°</span>
+                <div className={styles.liveMetric}>
+                  <span className={styles.liveMetricLabel}>{t('parent.neckAngle')}</span>
+                  <span className={styles.liveMetricValue}>{Math.round(studentDetails.neckAngle)}°</span>
                 </div>
-                <div className="p-3 bg-white/40 dark:bg-slate-800/40 rounded-xl backdrop-blur-sm border border-white/40">
-                  <span className="text-[10px] text-gray-500 dark:text-gray-400 block uppercase font-bold">{t('parent.shoulderTilt')}</span>
-                  <span className="text-lg font-black text-gray-800 dark:text-white">{Math.round(studentDetails.shoulderTilt)}°</span>
+                <div className={styles.liveMetric}>
+                  <span className={styles.liveMetricLabel}>{t('parent.shoulderTilt')}</span>
+                  <span className={styles.liveMetricValue}>{Math.round(studentDetails.shoulderTilt)}°</span>
                 </div>
               </div>
             )}
-            
+
             {/* Privacy Guarantee Badge */}
-            <div className="mt-5 flex items-start gap-2.5 bg-green-50/80 dark:bg-green-900/20 text-green-800 dark:text-green-300 p-4 rounded-xl border border-green-100 dark:border-green-800 text-xs text-left leading-relaxed relative z-10 w-full shadow-sm backdrop-blur-sm">
-              <Shield size={20} className="flex-shrink-0 text-green-500 mt-0.5" />
+            <div className={styles.privacyBanner}>
+              <Shield size={20} style={{ flexShrink: 0, color: '#22c55e', marginTop: 2 }} />
               <span><strong>{t('parent.privacyGuarantee')}</strong> {t('parent.privacyDesc')}</span>
             </div>
-          </TiltCard>
+          </div>
 
           {/* Health Analysis Prediction */}
-          <TiltCard className="p-6" glowColor="var(--danger-light)">
-            <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-4 flex items-center gap-2 uppercase tracking-wider">
-              <Heart size={18} className="text-red-500" /> {t('parent.healthPrediction')}
+          <div className={styles.healthCard}>
+            <h3 className={styles.healthTitle}>
+              <Heart size={18} style={{ color: '#ef4444' }} /> {t('parent.healthPrediction')}
             </h3>
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-sm font-medium text-gray-600 dark:text-gray-400">{t('parent.riskLevel')}</span>
-              <span className="text-sm font-black px-3 py-1 rounded-full bg-white/50 border border-white/50 shadow-sm" style={{ color: healthPrediction.color }}>
+            <div className={styles.healthRow}>
+              <span className={styles.healthRiskLabel}>{t('parent.riskLevel')}</span>
+              <span className={styles.healthRiskBadge} style={{ color: healthPrediction.color }}>
                 {healthPrediction.status}
               </span>
             </div>
-            <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed bg-white/40 dark:bg-slate-800/40 p-4 rounded-xl border border-white/50 dark:border-slate-700 backdrop-blur-sm shadow-sm">
+            <p className={styles.healthDesc}>
               {healthPrediction.description}
             </p>
             {healthPrediction.risks && healthPrediction.risks.length > 1 && (
-              <div className="mt-3 space-y-2">
+              <div className={styles.healthRisks}>
                 {healthPrediction.risks.slice(1).map((risk, i) => (
-                  <p key={i} className="text-xs text-gray-500 leading-relaxed bg-orange-50 p-3 rounded-xl border border-orange-100">
-                    {risk}
-                  </p>
+                  <p key={i} className={styles.healthRiskItem}>{risk}</p>
                 ))}
               </div>
             )}
 
             {renderHeatmap()}
-          </TiltCard>
-
+          </div>
         </div>
 
         {/* Center / Right: Charts Reports & Logs alerts */}
-        <div className="md:col-span-8 flex flex-col gap-6">
+        <div className={styles.rightCol}>
           {sessions.length === 0 ? (
-            <TiltCard className="p-10 flex flex-col items-center justify-center text-center h-full min-h-[400px]">
-               <div className="w-20 h-20 bg-gray-50 dark:bg-slate-800 rounded-full flex items-center justify-center text-gray-400 dark:text-gray-500 mb-4 border border-gray-100 dark:border-slate-700">
-                 <Shield size={40} />
-               </div>
-                <h3 className="text-2xl font-black mb-2" style={{ color: 'var(--text-main)' }}>{t('parent.noData')}</h3>
-               <p className="font-medium" style={{ color: 'var(--text-muted)' }}>{t('parent.noDataDesc')}</p>
-            </TiltCard>
+            <div className={styles.emptyCard}>
+              <div className={styles.emptyIcon}>
+                <Shield size={40} />
+              </div>
+              <h3 className={styles.emptyTitle}>{t('parent.noData')}</h3>
+              <p className={styles.emptyDesc}>{t('parent.noDataDesc')}</p>
+            </div>
           ) : (
             <>
           {/* Filter Bar */}
-          <div className="flex justify-end mb-4">
-            <div className="flex items-center gap-1.5 bg-white/60 dark:bg-slate-800/60 backdrop-blur-md rounded-xl p-1.5 border border-white/50 dark:border-slate-700 shadow-sm">
-              <button onClick={() => { setTimeFilter('7'); setCurrentPage(1); }} className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${timeFilter === '7' ? 'bg-primary text-white shadow-md' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100/50 dark:hover:bg-slate-700/50'}`}>{t('parent.filter7Days')}</button>
-              <button onClick={() => { setTimeFilter('30'); setCurrentPage(1); }} className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${timeFilter === '30' ? 'bg-primary text-white shadow-md' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100/50 dark:hover:bg-slate-700/50'}`}>{t('parent.filter30Days')}</button>
-              <button onClick={() => { setTimeFilter('all'); setCurrentPage(1); }} className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${timeFilter === 'all' ? 'bg-primary text-white shadow-md' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100/50 dark:hover:bg-slate-700/50'}`}>{t('parent.filterAll')}</button>
+          <div className={styles.filterBar}>
+            <div className={styles.filterGroup}>
+              <button onClick={() => { setTimeFilter('7'); setCurrentPage(1); }} className={`${styles.filterBtn} ${timeFilter === '7' ? styles.filterBtnActive : ''}`}>{t('parent.filter7Days')}</button>
+              <button onClick={() => { setTimeFilter('30'); setCurrentPage(1); }} className={`${styles.filterBtn} ${timeFilter === '30' ? styles.filterBtnActive : ''}`}>{t('parent.filter30Days')}</button>
+              <button onClick={() => { setTimeFilter('all'); setCurrentPage(1); }} className={`${styles.filterBtn} ${timeFilter === 'all' ? styles.filterBtnActive : ''}`}>{t('parent.filterAll')}</button>
             </div>
           </div>
 
           {/* Grid of charts */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            
+          <div className={styles.chartsGrid}>
+
             {/* Posture Pie Distribution (Recharts) */}
-            <TiltCard className="p-6 flex flex-col justify-between">
-              <h3 className="widget-label mb-4 uppercase tracking-wider">{t('parent.postureRatio')}</h3>
-              <div className="h-44 flex items-center justify-center relative">
+            <div className={styles.chartCard}>
+              <h3 className={styles.chartLabel}>{t('parent.postureRatio')}</h3>
+              <div className={styles.chartBody} style={{ position: 'relative' }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
@@ -505,27 +593,27 @@ export const ParentView: React.FC = () => {
                   </PieChart>
                 </ResponsiveContainer>
                 {/* Center text overlay */}
-                <div className="absolute text-center mt-1">
-                  <span className="text-[10px] text-gray-400 font-bold block">{t('parent.best')}</span>
-                  <span className="text-2xl font-black text-green-600">
+                <div className={styles.pieCenter}>
+                  <span className={styles.pieCenterLabel}>{t('parent.best')}</span>
+                  <span className={styles.pieCenterValue}>
                     {pieData[0] ? `${pieData[0].value}%` : '80%'}
                   </span>
                 </div>
               </div>
-              <div className="flex justify-center gap-6 mt-4 text-xs font-semibold">
-                <span className="flex items-center gap-2 text-gray-600">
-                  <span className="w-3 h-3 rounded-full bg-green-500 shadow-sm" /> Ngồi đúng
+              <div className={styles.legendRow}>
+                <span className={styles.legendItem}>
+                  <span className={styles.legendDot} style={{ background: '#4EAD63' }} /> Ngồi đúng
                 </span>
-                <span className="flex items-center gap-2 text-gray-600">
-                  <span className="w-3 h-3 rounded-full bg-yellow-400 shadow-sm" /> Ngồi lệch
+                <span className={styles.legendItem}>
+                  <span className={styles.legendDot} style={{ background: '#FFAA2C' }} /> Ngồi lệch
                 </span>
               </div>
-            </TiltCard>
+            </div>
 
             {/* Trend Area Chart (Recharts) */}
-            <TiltCard className="p-6 flex flex-col justify-between">
-              <h3 className="widget-label mb-4 uppercase tracking-wider">{t('parent.trend')}</h3>
-              <div className="h-44 w-full">
+            <div className={styles.chartCard}>
+              <h3 className={styles.chartLabel}>{t('parent.trend')}</h3>
+              <div className={styles.chartBody}>
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={trendData}>
                     <defs>
@@ -542,21 +630,21 @@ export const ParentView: React.FC = () => {
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
-            </TiltCard>
+            </div>
 
             {/* Concentration Density (Bar Chart) */}
-            <TiltCard className="p-6 flex flex-col justify-between md:col-span-2">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="widget-label uppercase tracking-wider">{t('parent.concentration')}</h3>
-                <span className="text-[10px] text-blue-600 bg-blue-50 px-3 py-1 rounded-full font-bold uppercase shadow-sm">AI Analysis</span>
+            <div className={`${styles.chartCard} ${styles.chartCardWide}`}>
+              <div className={styles.chartHeader}>
+                <h3 className={styles.chartLabel}>{t('parent.concentration')}</h3>
+                <span className={styles.chartBadge}>AI Analysis</span>
               </div>
-              <div className="h-52 w-full">
+              <div className={`${styles.chartBody} ${styles.chartBodyTall}`}>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={concData} barSize={32}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F3F4F6" />
                     <XAxis dataKey="name" stroke="#9CA3AF" fontSize={11} tickLine={false} axisLine={false} dy={10} />
                     <YAxis domain={[0, 100]} stroke="#9CA3AF" fontSize={11} tickLine={false} axisLine={false} dx={-10} />
-                    <Tooltip 
+                    <Tooltip
                       cursor={{ fill: '#F3F4F6', opacity: 0.5 }}
                       contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 8px 16px rgba(0,0,0,0.1)' }}
                       formatter={(value) => [`${value}%`, 'Concentration']}
@@ -565,36 +653,43 @@ export const ParentView: React.FC = () => {
                   </BarChart>
                 </ResponsiveContainer>
               </div>
-            </TiltCard>
-
+            </div>
           </div>
 
-          {/* Session History Table with Pagination */}
-          <TiltCard className="p-6">
-            <h3 className="widget-label mb-6 uppercase tracking-wider">{t('parent.history')}</h3>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left">
-                <thead className="text-xs text-gray-500 dark:text-gray-400 bg-gray-50/50 dark:bg-slate-800/50 uppercase rounded-t-lg">
+          {/* Session History Table with Sort + Pagination */}
+          <div className={styles.tableCard}>
+            <h3 className={styles.chartLabel}>{t('parent.history')}</h3>
+            <div className={styles.tableWrap}>
+              <table className={styles.table}>
+                <thead className={styles.tableHead}>
                   <tr>
-                    <th className="px-4 py-3 rounded-tl-lg font-bold">Ngày</th>
-                    <th className="px-4 py-3 font-bold">Thời gian học</th>
-                    <th className="px-4 py-3 font-bold">Điểm PHI</th>
-                    <th className="px-4 py-3 rounded-tr-lg font-bold">Tư thế chuẩn</th>
+                    <th className={styles.thSortable} onClick={() => toggleSort('date')}>
+                      Ngày {sortKey === 'date' && <span className={styles.sortArrow}>{sortDir === 'asc' ? '▲' : '▼'}</span>}
+                    </th>
+                    <th className={styles.thSortable} onClick={() => toggleSort('durationMinutes')}>
+                      Thời gian học {sortKey === 'durationMinutes' && <span className={styles.sortArrow}>{sortDir === 'asc' ? '▲' : '▼'}</span>}
+                    </th>
+                    <th className={styles.thSortable} onClick={() => toggleSort('averageHealthScore')}>
+                      Điểm PHI {sortKey === 'averageHealthScore' && <span className={styles.sortArrow}>{sortDir === 'asc' ? '▲' : '▼'}</span>}
+                    </th>
+                    <th className={styles.thSortable} onClick={() => toggleSort('goodPosturePercentage')}>
+                      Tư thế chuẩn {sortKey === 'goodPosturePercentage' && <span className={styles.sortArrow}>{sortDir === 'asc' ? '▲' : '▼'}</span>}
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {currentTableData.length > 0 ? currentTableData.map((s, idx) => (
-                    <tr key={idx} className="border-b border-gray-100/50 dark:border-slate-700/50 last:border-0 hover:bg-gray-50/50 dark:hover:bg-slate-800/50 transition-colors">
-                      <td className="px-4 py-3 font-medium text-gray-700 dark:text-gray-300">{s.date}</td>
-                      <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{s.durationMinutes} phút</td>
-                      <td className="px-4 py-3 font-bold" style={{ color: s.averageHealthScore >= 80 ? '#4EAD63' : s.averageHealthScore >= 60 ? '#FFAA2C' : '#FF5E5E' }}>
+                    <tr key={idx} className={styles.tr}>
+                      <td className={styles.td}>{s.date}</td>
+                      <td className={styles.td}>{s.durationMinutes} phút</td>
+                      <td className={`${styles.td} ${styles.tdScore}`} style={{ color: s.averageHealthScore >= 80 ? '#4EAD63' : s.averageHealthScore >= 60 ? '#FFAA2C' : '#FF5E5E' }}>
                         {s.averageHealthScore}
                       </td>
-                      <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{s.goodPosturePercentage}%</td>
+                      <td className={styles.td}>{s.goodPosturePercentage}%</td>
                     </tr>
                   )) : (
                     <tr>
-                      <td colSpan={4} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400 font-medium">Không có dữ liệu trong khoảng thời gian này</td>
+                      <td colSpan={4} className={styles.tdEmpty}>Không có dữ liệu trong khoảng thời gian này</td>
                     </tr>
                   )}
                 </tbody>
@@ -602,98 +697,91 @@ export const ParentView: React.FC = () => {
             </div>
             {/* Pagination Controls */}
             {totalPages > 1 && (
-              <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
-                <span className="text-xs text-gray-500">Trang {currentPage} / {totalPages}</span>
-                <div className="flex gap-2">
-                  <button 
+              <div className={styles.pagination}>
+                <span className={styles.paginationInfo}>Trang {currentPage} / {totalPages}</span>
+                <div className={styles.paginationBtns}>
+                  <button
                     disabled={currentPage === 1}
                     onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                    className="px-3 py-1.5 text-xs font-semibold border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className={styles.paginationBtn}
                   >
                     Trước
                   </button>
-                  <button 
+                  <button
                     disabled={currentPage === totalPages}
                     onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                    className="px-3 py-1.5 text-xs font-semibold border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className={styles.paginationBtn}
                   >
                     Sau
                   </button>
                 </div>
               </div>
             )}
-          </TiltCard>
+          </div>
 
           {/* Interactive Notifications panel & Message Sender */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <TiltCard className="p-6 flex-1" glowColor="rgba(124,58,237,0.3)">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
-                  <Bell size={16} className="text-purple-500 animate-swing" /> Nhật ký cảnh báo
+          <div className={styles.bottomGrid}>
+            <div className={styles.panelCard}>
+              <div className={styles.panelHeader}>
+                <h3 className={styles.panelTitle}>
+                  <Bell size={16} style={{ color: '#7E5BEF', animation: 'swing 2s infinite ease-in-out' }} /> Nhật ký cảnh báo
                 </h3>
-                <span className="px-2 py-0.5 text-2xs font-bold bg-purple-100 text-purple-700 rounded-full">
-                  Thời gian thực
-                </span>
+                <span className={styles.panelBadge}>Thời gian thực</span>
               </div>
 
               {/* Warnings list logs */}
-              <div className="flex flex-col gap-3 max-h-56 overflow-y-auto pr-2">
+              <div className={styles.alertList}>
                 {alerts.length === 0 ? (
-                  <div className="text-center py-6 text-xs text-gray-400">
+                  <div className={styles.alertEmpty}>
                     Chưa có thông tin cảnh báo nào. Con đang học tập tốt!
                   </div>
                 ) : (
                   alerts.map((alert) => (
-                    <div key={alert.id} className="flex items-start justify-between gap-3 p-3 bg-white rounded-xl border border-gray-100 shadow-2xs hover:shadow-xs transition-all">
-                      <div className="flex gap-2.5">
-                        <span className="mt-0.5 text-xs text-purple-500">🔔</span>
-                        <div className="text-xs text-gray-600 leading-relaxed font-medium">
-                          {alert.message}
-                        </div>
+                    <div key={alert.id} className={styles.alertItem}>
+                      <div className={styles.alertLeft}>
+                        <span style={{ fontSize: 12, marginTop: 1 }}>🔔</span>
+                        <span>{alert.message}</span>
                       </div>
-                      <span className="text-[10px] text-gray-400 font-semibold flex-shrink-0">
+                      <span className={styles.alertTime}>
                         {alert.time}
                       </span>
                     </div>
                   ))
                 )}
               </div>
-            </TiltCard>
+            </div>
 
-            {/* Parent Message Sender */}
-            <TiltCard className="p-6 flex-1 flex flex-col" glowColor="var(--secondary-light)">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
-                  <MessageSquare size={16} className="text-blue-500" /> Nhắn Gửi Yêu Thương
+            {/* Parent Message Sender (chat-like UI) */}
+            <div className={styles.panelCard}>
+              <div className={styles.panelHeader}>
+                <h3 className={styles.panelTitle}>
+                  <MessageSquare size={16} style={{ color: '#3b82f6' }} /> Nhắn Gửi Yêu Thương
                 </h3>
               </div>
-              <p className="text-xs text-gray-500 mb-4 leading-relaxed">
+              <p className={styles.messageDesc}>
                 Nhập lời nhắn ngắn, chú gấu trúc Oliver trên màn hình của con sẽ đọc to câu nói này bằng giọng nói dễ thương để khích lệ con!
               </p>
-              
-              <form onSubmit={handleSendMessage} className="mt-auto flex flex-col gap-3">
-                <div className="relative">
+
+              <form onSubmit={handleSendMessage} className={styles.messageForm}>
+                <div className={styles.messageInputWrap}>
                   <textarea
                     value={messageText}
                     onChange={(e) => setMessageText(e.target.value)}
                     placeholder="VD: Cố lên con yêu, ngồi thẳng lưng nhé!"
-                    className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 resize-none h-24"
+                    className={styles.messageInput}
                     maxLength={100}
-                  ></textarea>
-                  <span className="absolute bottom-3 right-3 text-2xs text-gray-400 font-medium">
+                  />
+                  <span className={styles.messageCounter}>
                     {messageText.length}/100
                   </span>
                 </div>
-                
+
                 <button
                   type="submit"
                   disabled={!messageText.trim() || !studentActive}
-                  className={`w-full py-3 rounded-xl flex items-center justify-center gap-2 text-sm font-bold transition-all ${
-                    !messageText.trim() || !studentActive
-                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                      : isMessageSent 
-                        ? 'bg-green-500 text-white' 
-                        : 'bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg'
+                  className={`${styles.sendBtn} ${
+                    !messageText.trim() || !studentActive ? '' :
+                    isMessageSent ? styles.sendBtnSent : styles.sendBtnEnabled
                   }`}
                 >
                   {isMessageSent ? (
@@ -705,71 +793,39 @@ export const ParentView: React.FC = () => {
                   )}
                 </button>
                 {!studentActive && (
-                  <p className="text-2xs text-red-400 text-center mt-1">Con đang không mở màn hình học tập</p>
+                  <p className={styles.messageOfflineHint}>Con đang không mở màn hình học tập</p>
                 )}
               </form>
-            </TiltCard>
+            </div>
           </div>
-          </>
+            </>
           )}
         </div>
       </div>
 
       {/* Push Notification Simulation */}
       {fatigueAlerts.length > 0 && (
-        <div className="fixed bottom-8 right-8 z-[100]" style={{ animation: 'slideUp 0.5s ease-out forwards' }}>
-          <div className="bg-white rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.2)] border border-gray-100 p-4 max-w-sm flex gap-4 overflow-hidden relative cursor-pointer hover:scale-105 transition-transform" onClick={() => setFatigueAlerts(prev => prev.slice(1))}>
-            <div className="absolute top-0 left-0 w-1.5 h-full bg-gradient-to-b from-yellow-400 to-orange-500"></div>
-            <div className="w-12 h-12 rounded-full bg-yellow-50 flex items-center justify-center flex-shrink-0 border border-yellow-100">
-               <Bell className="text-yellow-600" size={24} style={{ animation: 'swing 2s infinite ease-in-out' }} />
+        <div className={styles.pushWrap}>
+          <div className={styles.pushCard} onClick={() => setFatigueAlerts(prev => prev.slice(1))}>
+            <div className={styles.pushAccent} />
+            <div className={styles.pushIcon}>
+               <Bell size={24} />
             </div>
-            <div>
-               <div className="flex justify-between items-center mb-1.5">
-                 <h4 className="text-sm font-bold text-gray-800">Cảnh báo thông minh</h4>
-                 <span className="text-[10px] text-gray-400 font-semibold bg-gray-50 px-2 py-0.5 rounded-full">Vừa xong</span>
+            <div className={styles.pushContent}>
+               <div className={styles.pushHeader}>
+                 <h4 className={styles.pushTitle}>Cảnh báo thông minh</h4>
+                 <span className={styles.pushTime}>Vừa xong</span>
                </div>
-               <p className="text-xs text-gray-600 leading-relaxed font-medium">
-                 {fatigueAlerts[0]} <span className="text-orange-600 font-semibold">Phụ huynh nên nhắc bé nghỉ ngơi hoặc điều chỉnh ánh sáng nhé!</span>
+               <p className={styles.pushBody}>
+                 {fatigueAlerts[0]} <span className={styles.pushBodyHighlight}>Phụ huynh nên nhắc bé nghỉ ngơi hoặc điều chỉnh ánh sáng nhé!</span>
                </p>
             </div>
-            {/* Close button hint */}
-            <button className="absolute top-2 right-2 text-gray-300 hover:text-gray-500" onClick={(e) => { e.stopPropagation(); setFatigueAlerts(prev => prev.slice(1)); }}>
-               <span className="sr-only">Close</span>
+            <button className={styles.pushClose} onClick={(e) => { e.stopPropagation(); setFatigueAlerts(prev => prev.slice(1)); }}>
                &times;
             </button>
           </div>
         </div>
       )}
-
-      {/* Injecting simple animations for Parent Dashboard */}
-      <style>{`
-        @keyframes slideUp {
-          from { transform: translateY(100px); opacity: 0; }
-          to { transform: translateY(0); opacity: 1; }
-        }
-        @keyframes swing {
-          20% { transform: rotate(15deg); }
-          40% { transform: rotate(-10deg); }
-          60% { transform: rotate(5deg); }
-          80% { transform: rotate(-5deg); }
-          100% { transform: rotate(0deg); }
-        }
-        @keyframes blob {
-          0% { transform: translate(0px, 0px) scale(1); }
-          33% { transform: translate(30px, -50px) scale(1.1); }
-          66% { transform: translate(-20px, 20px) scale(0.9); }
-          100% { transform: translate(0px, 0px) scale(1); }
-        }
-        .animate-blob {
-          animation: blob 7s infinite;
-        }
-        .animation-delay-2000 {
-          animation-delay: 2s;
-        }
-        .exporting-pdf .hide-on-pdf {
-          display: none !important;
-        }
-      `}</style>
     </motion.div>
   );
 };

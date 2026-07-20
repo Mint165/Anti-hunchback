@@ -39,6 +39,17 @@ function AppContent() {
     }
   }, []);
 
+  // Apply theme attribute based on user role (Student vs Parent)
+  useEffect(() => {
+    const root = document.documentElement;
+    if (user) {
+      root.setAttribute('data-theme', user.role === 'parent' ? 'parent' : 'student');
+    } else {
+      // Default to student theme on auth screen
+      root.setAttribute('data-theme', 'student');
+    }
+  }, [user]);
+
   useEffect(() => {
     if (user) {
       syncFromSupabase().then((success) => {

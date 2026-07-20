@@ -1,7 +1,21 @@
-// Student Workspace Component — Gamified Bento Grid
+// Student Workspace — Asymmetric adventure dashboard (redesigned).
+// All logic/lifecycle/overlay behaviour preserved from the previous
+// implementation; only layout + styling changed.
 
 import React, { useState, useEffect, useRef } from 'react';
-import { AlertTriangle, RefreshCw, Trophy, BookOpen, Volume2, VolumeX, CameraOff, Play, Info, X } from 'lucide-react';
+import {
+  AlertTriangle,
+  RefreshCw,
+  Trophy,
+  BookOpen,
+  Volume2,
+  VolumeX,
+  CameraOff,
+  Info,
+  X,
+  Play,
+  Pause,
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { CalibrationData } from '../services/postureAI';
 import { loadUserStats, saveSessionRecord, addXP, getBadgesStatus } from '../services/db';
@@ -15,18 +29,21 @@ import type { PetState } from './OliverPet';
 import Calibration from './Calibration';
 import BackboneVisualizer from './BackboneVisualizer';
 import TiltCard from './ui/TiltCard';
+import StatRing from './ui/StatRing';
+import AnimatedCounter from './ui/AnimatedCounter';
+import styles from './StudentView.module.css';
 import toast from 'react-hot-toast';
 import confetti from 'canvas-confetti';
 
 export const StudentView: React.FC = () => {
   const {
     metrics, healthScore, alertLevel, hasStarted, startSession, resetBreak,
-    isModelReady, isLoading, error, calibration, setCalibration, 
+    isModelReady, isLoading, error, calibration, setCalibration,
     poseLandmarks, faceLandmarks,
     sessionFatigueFlags, sessionAngleAccumulator,
     latestParentMessage,
     isManualWritingMode,
-    setIsManualWritingMode
+    setIsManualWritingMode,
   } = usePostureContext();
   const { t } = useLanguage();
 
@@ -52,23 +69,15 @@ export const StudentView: React.FC = () => {
   useEffect(() => {
     const globalVideo = document.getElementById('global-webcam') as HTMLVideoElement;
     if (!globalVideo) return;
-
     const syncStream = () => {
       if (videoRef.current && videoRef.current.srcObject !== globalVideo.srcObject) {
-         videoRef.current.srcObject = globalVideo.srcObject;
+        videoRef.current.srcObject = globalVideo.srcObject;
       }
     };
-
-    // Sync immediately
     syncStream();
-
-    // Also sync on loadedmetadata / play events when the stream starts
     globalVideo.addEventListener('loadedmetadata', syncStream);
     globalVideo.addEventListener('play', syncStream);
-
-    // Also set up an interval to ensure sync (in case events fire before we attach)
     const interval = setInterval(syncStream, 1000);
-
     return () => {
       globalVideo.removeEventListener('loadedmetadata', syncStream);
       globalVideo.removeEventListener('play', syncStream);
@@ -82,7 +91,6 @@ export const StudentView: React.FC = () => {
       const elapsed = Math.floor((Date.now() - sessionStartTime) / 1000);
       setSessionElapsedSeconds(elapsed);
     }, 1000);
-
     return () => clearInterval(interval);
   }, [sessionStartTime, hasStarted]);
 
@@ -94,27 +102,17 @@ export const StudentView: React.FC = () => {
     }
   }, [alertLevel, isAudioEnabled]);
 
-  // Throttle broadcast to once every 2 seconds
   const lastBroadcastRef = useRef<number>(0);
 
   useEffect(() => {
     if (!isModelReady || !calibration || !metrics) return;
-
     totalTicksRef.current += 1;
-    if (healthScore >= 80) {
-      goodPostureCountRef.current += 1;
-    }
-
-    if (metrics.isBlinking) {
-      blinkCountRef.current += 1;
-    }
-
+    if (healthScore >= 80) goodPostureCountRef.current += 1;
+    if (metrics.isBlinking) blinkCountRef.current += 1;
     if (metrics.fidgetFactor > 40 && totalTicksRef.current > 0 && totalTicksRef.current % 300 === 0) {
       fidgetCountRef.current += 1;
-      broadcastFatigueAlert("Bé bắt đầu nhấp nhổm nhiều, có dấu hiệu mất tập trung hoặc mỏi cơ.");
+      broadcastFatigueAlert('Bé bắt đầu nhấp nhổm nhiều, có dấu hiệu mất tập trung hoặc mỏi cơ.');
     }
-
-    // Throttle: only broadcast once every 2 seconds
     const now = Date.now();
     if (now - lastBroadcastRef.current >= 2000) {
       const overallStatus = healthScore >= 85 ? 'good' : healthScore >= 70 ? 'warning' : 'danger';
@@ -128,7 +126,6 @@ export const StudentView: React.FC = () => {
       });
       lastBroadcastRef.current = now;
     }
-
   }, [metrics, healthScore, isModelReady, calibration]);
 
   const playBeepSound = () => {
@@ -147,13 +144,12 @@ export const StudentView: React.FC = () => {
         osc.start(ctx.currentTime + start);
         osc.stop(ctx.currentTime + start + 1.5);
       };
-      playChime(0, 523.25); // C5
-      playChime(0.1, 659.25); // E5
-      playChime(0.2, 783.99); // G5
+      playChime(0, 523.25);
+      playChime(0.1, 659.25);
+      playChime(0.2, 783.99);
       setTimeout(() => ctx.close(), 2000);
-
       setTimeout(() => {
-        voiceService.speak("Chủ nhân ơi, ngồi thẳng lên nhé!");
+        voiceService.speak('Chủ nhân ơi, ngồi thẳng lên nhé!');
       }, 500);
     } catch {}
   };
@@ -162,7 +158,6 @@ export const StudentView: React.FC = () => {
     if (metrics?.isWritingMode) return 'writing';
     if (metrics && metrics.eyeDistanceCm < 50) return 'close';
     if (metrics && (metrics.slouchAngle > 15 || metrics.shoulderTilt > 7)) return 'slouch';
-    if (healthScore >= 80) return 'good';
     return 'good';
   };
 
@@ -173,7 +168,6 @@ export const StudentView: React.FC = () => {
 
   const handleEndSession = () => {
     if (totalTicksRef.current === 0) return;
-
     const goodPosturePercentage = Math.round((goodPostureCountRef.current / totalTicksRef.current) * 100);
     const sessionRecord = {
       id: Math.random().toString(36).substring(2, 9),
@@ -188,7 +182,6 @@ export const StudentView: React.FC = () => {
       fidgetFlagsCount: fidgetCountRef.current,
       completedEyeExercises: Math.floor(totalSessionMinutes / 20),
       streakAdded: true,
-      // Data Analytics fields
       averageShoulderTilt: sessionAngleAccumulator.tickCount > 0
         ? Math.round((sessionAngleAccumulator.shoulderTiltSum / sessionAngleAccumulator.tickCount) * 10) / 10
         : 0,
@@ -204,15 +197,13 @@ export const StudentView: React.FC = () => {
 
     if (goodPosturePercentage > 80 && totalSessionMinutes >= 5) {
       const { leveledUp } = addXP(500);
-      
       if (leveledUp) {
         confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, zIndex: 10000 });
         toast.success('Chúc mừng! Bạn đã thăng cấp!', { icon: '🎉', duration: 5000 });
       } else {
         confetti({ particleCount: 60, spread: 50, origin: { y: 0.6 }, zIndex: 10000 });
       }
-
-      const isNew = badges.find(b => b.id === 'warrior')?.unlocked === false;
+      const isNew = badges.find((b) => b.id === 'warrior')?.unlocked === false;
       if (isNew) {
         localStorage.setItem('oliver_unlocked_badge_warrior', 'true');
         addXP(1000);
@@ -244,6 +235,7 @@ export const StudentView: React.FC = () => {
     setShowOnboarding(false);
   };
 
+  // ── Onboarding overlay ────────────────────────────────────────────
   if (!calibration) {
     if (showOnboarding) {
       return (
@@ -320,14 +312,20 @@ export const StudentView: React.FC = () => {
   }
 
   const scoreColor = healthScore >= 80 ? '#00d285' : healthScore >= 60 ? '#FFAA2C' : '#FF5E5E';
-  const hh = Math.floor(totalSessionMinutes / 60).toString().padStart(2, '0');
   const mm = (totalSessionMinutes % 60).toString().padStart(2, '0');
   const ss = (sessionElapsedSeconds % 60).toString().padStart(2, '0');
 
+  // Stat bar helpers
+  const distanceValue = metrics ? metrics.eyeDistanceCm : 60;
+  const distancePass = distanceValue >= 50;
+  const slouchValue = metrics ? Math.round(metrics.slouchAngle) : 0;
+  const slouchPass = slouchValue <= 15;
+  const neckValue = metrics ? Math.round(metrics.neckAngle) : 0;
+  const neckPass = metrics ? (metrics.neckAngle <= 20 || metrics.isWritingMode) : true;
+
   return (
-    <div className={`min-h-full ${alertLevel === 'MILD_WARNING' ? 'screen-alert-glow' : ''}`}>
-      
-      {/* Overlays */}
+    <div className={`${styles.container} ${alertLevel === 'MILD_WARNING' ? 'screen-alert-glow' : ''}`}>
+      {/* ── Tips modal ──────────────────────────────────────────────── */}
       {showTips && (
         <div className="fixed inset-0 z-50 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-md p-8 shadow-2xl relative animate-slide-in-right">
@@ -347,7 +345,6 @@ export const StudentView: React.FC = () => {
                   <div className="text-green-600 dark:text-green-400 text-sm">{t('student.goodSlouchDesc')}</div>
                 </div>
               )}
-
               {metrics && metrics.eyeDistanceCm < 50 ? (
                 <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800 rounded-xl">
                   <div className="font-bold text-red-800 dark:text-red-300 mb-1">{t('student.warnEye')}</div>
@@ -365,69 +362,68 @@ export const StudentView: React.FC = () => {
         </div>
       )}
 
+      {/* ── "Ready" start overlay ───────────────────────────────────── */}
       <AnimatePresence>
-      {!hasStarted && (
-        <motion.div
-          className="fixed inset-0 z-[60] flex flex-col items-center justify-center text-white text-center p-8"
-          style={{ background: 'linear-gradient(135deg, #1E1B4B 0%, #0F0D1A 50%, #1E1B4B 100%)' }}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-        >
-          <motion.h2
-            className="text-5xl font-black mb-4 tracking-tight"
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ type: 'spring', stiffness: 300 }}
+        {!hasStarted && (
+          <motion.div
+            className="fixed inset-0 z-[60] flex flex-col items-center justify-center text-white text-center p-8"
+            style={{ background: 'linear-gradient(135deg, #1E1B4B 0%, #0F0D1A 50%, #1E1B4B 100%)' }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
           >
-            {t('student.readyTitle')}
-          </motion.h2>
-          <motion.p
-            className="text-gray-300 text-xl mb-10 max-w-lg leading-relaxed"
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.15 }}
-          >
-            {t('student.readyDesc')}
-          </motion.p>
-          <motion.button
-            onClick={() => { startSession(); setSessionStartTime(Date.now()); }}
-            className="btn-3d btn-3d-secondary text-lg px-10 py-4"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.25 }}
-          >
-            {t('student.startLearn')}
-          </motion.button>
-        </motion.div>
-      )}
+            <motion.h2
+              className="text-5xl font-black mb-4 tracking-tight"
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: 'spring', stiffness: 300 }}
+            >
+              {t('student.readyTitle')}
+            </motion.h2>
+            <motion.p
+              className="text-gray-300 text-xl mb-10 max-w-lg leading-relaxed"
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.15 }}
+            >
+              {t('student.readyDesc')}
+            </motion.p>
+            <motion.button
+              onClick={() => { startSession(); setSessionStartTime(Date.now()); }}
+              className="btn-3d btn-3d-secondary text-lg px-10 py-4"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.25 }}
+            >
+              {t('student.startLearn')}
+            </motion.button>
+          </motion.div>
+        )}
       </AnimatePresence>
 
+      {/* ── Break time overlay ─────────────────────────────────────── */}
       {alertLevel === 'BREAK_TIME' && (
         <div className="fixed inset-0 z-50 bg-gray-900/95 backdrop-blur-3xl flex flex-col items-center justify-center text-white text-center p-8">
           <div className="w-24 h-24 bg-green-500/20 rounded-full flex items-center justify-center text-green-400 mb-6 animate-pulse">
             <BookOpen size={48} />
           </div>
           <h2 className="text-5xl font-black mb-4 tracking-tight">{t('student.breakTitle')}</h2>
-          <p className="text-gray-300 text-xl mb-10 max-w-lg leading-relaxed">
-            {t('student.breakDesc')}
-          </p>
+          <p className="text-gray-300 text-xl mb-10 max-w-lg leading-relaxed">{t('student.breakDesc')}</p>
           <button onClick={() => resetBreak()} className="btn-secondary text-lg px-10 py-4 shadow-[0_8px_32px_rgba(74,222,128,0.4)]">
             {t('student.breakBtn')}
           </button>
         </div>
       )}
 
+      {/* ── Strong warning overlay ─────────────────────────────────── */}
       {alertLevel === 'STRONG_WARNING' && (
         <div className="fixed inset-0 z-50 bg-red-900/60 flex items-center justify-center p-4">
           <div className="premium-card bg-red-950 border-2 border-red-500 p-10 max-w-lg shadow-[0_0_80px_rgba(255,94,94,0.3)] subtle-pulse relative">
             <AlertTriangle size={72} className="text-red-500 mx-auto mb-6 drop-shadow-[0_0_15px_rgba(255,94,94,0.5)]" />
             <h2 className="text-4xl font-black text-white text-center mb-4">{t('student.dangerTitle')}</h2>
-            <p className="text-red-100 text-center text-lg mb-8 leading-relaxed font-medium">
-              {t('student.dangerDesc')}
-            </p>
+            <p className="text-red-100 text-center text-lg mb-8 leading-relaxed font-medium">{t('student.dangerDesc')}</p>
             <button onClick={() => resetBreak()} className="btn-primary w-full bg-red-500 hover:bg-red-600 text-white border-none py-4 text-lg font-bold">
               {t('student.fixedBtn')}
             </button>
@@ -435,296 +431,306 @@ export const StudentView: React.FC = () => {
         </div>
       )}
 
-      <div className="sv-container">
-        
-        {/* Header Controls */}
-        <div className="sv-header">
-          <div className="sv-search">
-             <div className="sv-search-icon">
-                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"/>
-                </svg>
-             </div>
-             <input type="text" className="sv-search-input" placeholder="Search features..." />
+      {/* ── Top action bar (no search bar per plan) ─────────────────── */}
+      <div className={styles.topbar}>
+        <button
+          onClick={() => setIsManualWritingMode(!isManualWritingMode)}
+          className={`${styles.actionBtn} ${isManualWritingMode ? styles.actionBtnActive : ''}`}
+          title={t('student.writingMode')}
+        >
+          {t('student.writingModeOn')}
+        </button>
+        <button onClick={() => setIsAudioEnabled(!isAudioEnabled)} className={styles.audioBtn}>
+          {isAudioEnabled ? <Volume2 size={20} /> : <VolumeX size={20} />}
+        </button>
+        <button onClick={() => setCalibration(null)} className={styles.recalBtn}>
+          <RefreshCw size={14} /> {t('student.recalibrate')}
+        </button>
+      </div>
+
+      {/* ── Hero: score ring + pet mini + streak ─────────────────────── */}
+      <div className={styles.hero}>
+        <div className={styles.heroInner}>
+          <div className={styles.heroScore}>
+            <StatRing
+              value={healthScore}
+              max={100}
+              size={150}
+              strokeWidth={12}
+              label="PHI"
+              suffix=""
+              trackColor="rgba(255,255,255,0.18)"
+              gradient={{ id: 'hero-score', from: scoreColor, to: scoreColor }}
+            />
           </div>
-          
-          <div className="sv-actions">
-            <button 
-              onClick={() => setIsManualWritingMode(!isManualWritingMode)} 
-              className={`px-4 py-2 hidden sm:block rounded-xl font-bold text-sm transition-colors ${isManualWritingMode ? 'bg-indigo-100 text-indigo-700 border-2 border-indigo-500' : 'bg-white dark:bg-slate-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700'}`}
-              title={t('student.writingMode')}
+          <div className={styles.heroCenter}>
+            <h1 className={styles.heroTitle}>{t('student.heroTitle')}</h1>
+            <p className={styles.heroDesc}>{t('student.heroDesc')}</p>
+            <button className={styles.heroSaveBtn} onClick={handleEndSession}>
+              {t('student.saveSession')}
+            </button>
+          </div>
+          <div className={styles.heroStats}>
+            <div className={styles.heroStatCard}>
+              <div className={styles.heroStatIcon} style={{ background: '#facc15', color: '#713f12' }}>🔥</div>
+              <div>
+                <div className={styles.heroStatVal}>
+                  <AnimatedCounter value={userStats.streak} suffix={` ${t('student.streakDays')}`} duration={700} />
+                </div>
+                <div className={styles.heroStatLbl}>{t('student.hardwork')}</div>
+              </div>
+            </div>
+            <div className={styles.heroStatCard}>
+              <div className={styles.heroStatIcon} style={{ background: '#60a5fa', color: '#1e3a8a' }}>⭐</div>
+              <div>
+                <div className={styles.heroStatVal}>
+                  {t('student.level')} <AnimatedCounter value={userStats.level} duration={700} />
+                </div>
+                <div className={styles.heroStatLbl}>{t('student.currentRank')}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Middle row: compact camera + live stat bars ──────────────── */}
+      <div className={styles.midRow}>
+        <TiltCard className={styles.cameraCard} intensity={3}>
+          <div className={styles.cameraHeader}>
+            <div className={styles.cameraTitle}>
+              <Play size={14} style={{ color: 'var(--primary)' }} /> {t('student.cameraAi')}
+            </div>
+            <motion.button
+              onClick={() => setShowCamera(!showCamera)}
+              className={`${styles.cameraToggle} ${showCamera ? styles.cameraToggleOff : styles.cameraToggleOn}`}
+              whileTap={{ scale: 0.9 }}
             >
-              {t('student.writingModeOn')}
-            </button>
-            <button onClick={() => setIsAudioEnabled(!isAudioEnabled)} className="sv-audio-btn dark:bg-slate-800 dark:text-gray-300 dark:border-gray-700 border">
-              {isAudioEnabled ? <Volume2 size={20} /> : <VolumeX size={20} />}
-            </button>
-            <button onClick={() => setCalibration(null)} className="pill-tag pill-primary">
-              <RefreshCw size={14} className="mr-1" /> {t('student.recalibrate')}
-            </button>
+              {showCamera ? t('student.off') : t('student.on')}
+            </motion.button>
+          </div>
+          <div className={styles.cameraWrapper}>
+            {error && showCamera ? (
+              <div className={styles.cameraError}>
+                <AlertTriangle size={28} className="mb-1" />
+                <span>{error}</span>
+              </div>
+            ) : null}
+            <video ref={videoRef} className={`${styles.cameraVideo} ${!showCamera ? 'hidden' : ''}`} autoPlay playsInline muted />
+            {!showCamera && (
+              <div className={styles.cameraPlaceholder}>
+                <CameraOff size={24} />
+              </div>
+            )}
+            {showCamera && metrics && !error && (
+              <BackboneVisualizer
+                neckAngle={metrics.neckAngle}
+                slouchAngle={metrics.slouchAngle}
+                healthScore={healthScore}
+              />
+            )}
+          </div>
+          <button
+            onClick={() => setIsManualWritingMode(!isManualWritingMode)}
+            className={`${styles.writingToggle} ${isManualWritingMode ? styles.writingToggleOn : ''}`}
+          >
+            {t('student.writingMode')}
+          </button>
+        </TiltCard>
+
+        <div className={styles.statsCard}>
+          <div className={styles.statsHeader}>
+            <div className={styles.statsTitle}>
+              <Trophy size={18} style={{ color: 'var(--primary)' }} /> {t('student.statusTable')}
+            </div>
+            <motion.div
+              className={styles.livePill}
+              animate={{ opacity: [1, 0.5, 1] }}
+              transition={{ duration: 2, repeat: Infinity }}
+            >
+              {t('student.live')}
+            </motion.div>
+          </div>
+
+          {/* Distance */}
+          <div className={styles.statRow}>
+            <div className={styles.statRowHead}>
+              <div className={styles.statLabel}>
+                <div className={styles.statIcon} style={{ background: 'var(--primary-light)', color: 'var(--primary)' }}>🏃</div>
+                {t('student.distance')}
+              </div>
+              <span className={styles.statGoal}>&gt; 50 cm</span>
+            </div>
+            <div className={styles.statBar}>
+              <motion.div
+                className={styles.statBarFill}
+                style={{ background: distancePass ? 'var(--secondary)' : 'var(--danger)' }}
+                initial={{ width: 0 }}
+                animate={{ width: `${Math.min(100, (distanceValue / 80) * 100)}%` }}
+                transition={{ duration: 0.6 }}
+              />
+            </div>
+            <div className={`${styles.statValue} ${distancePass ? styles.statValuePass : styles.statValueFail}`}>
+              {distanceValue} cm
+            </div>
+          </div>
+
+          {/* Slouch */}
+          <div className={styles.statRow}>
+            <div className={styles.statRowHead}>
+              <div className={styles.statLabel}>
+                <div className={styles.statIcon} style={{ background: 'var(--secondary-light)', color: 'var(--secondary)' }}>🧍</div>
+                {t('student.backSlouch')}
+              </div>
+              <span className={styles.statGoal}>&lt; 15°</span>
+            </div>
+            <div className={styles.statBar}>
+              <motion.div
+                className={styles.statBarFill}
+                style={{ background: slouchPass ? 'var(--secondary)' : 'var(--danger)' }}
+                initial={{ width: 0 }}
+                animate={{ width: `${Math.min(100, (slouchValue / 30) * 100)}%` }}
+                transition={{ duration: 0.6 }}
+              />
+            </div>
+            <div className={`${styles.statValue} ${slouchPass ? styles.statValuePass : styles.statValueFail}`}>
+              {slouchValue}°
+            </div>
+          </div>
+
+          {/* Neck tilt */}
+          <div className={styles.statRow}>
+            <div className={styles.statRowHead}>
+              <div className={styles.statLabel}>
+                <div className={styles.statIcon} style={{ background: 'var(--accent-light)', color: 'var(--accent)' }}>🧘</div>
+                {t('student.neckTilt')}
+              </div>
+              <span className={styles.statGoal}>&lt; 20°</span>
+            </div>
+            <div className={styles.statBar}>
+              <motion.div
+                className={styles.statBarFill}
+                style={{ background: neckPass ? 'var(--secondary)' : 'var(--danger)' }}
+                initial={{ width: 0 }}
+                animate={{ width: `${Math.min(100, (neckValue / 40) * 100)}%` }}
+                transition={{ duration: 0.6 }}
+              />
+            </div>
+            <div className={`${styles.statValue} ${neckPass ? styles.statValuePass : styles.statValueFail}`}>
+              {neckValue}°
+            </div>
+          </div>
+
+          {/* Tips inline */}
+          <motion.button
+            className={styles.tipsInline}
+            onClick={() => setShowTips(true)}
+            whileTap={{ scale: 0.98 }}
+          >
+            <Info size={18} style={{ color: 'var(--primary)' }} />
+            <div style={{ flex: 1 }}>
+              <div className={styles.tipsInlineText}>{t('student.aiTipsCount')}</div>
+              <div className={styles.tipsInlineSub}>{t('student.aiTipsDesc')}</div>
+            </div>
+            <span dangerouslySetInnerHTML={{ __html: t('student.viewTips') }} />
+          </motion.button>
+        </div>
+      </div>
+
+      {/* ── Bottom row: 4 floating island mini-cards ────────────────── */}
+      <div className={styles.miniRow}>
+        {/* Timer (circular) */}
+        <div className={styles.miniCard}>
+          <div className={styles.miniAccent} style={{ background: 'var(--accent)' }} />
+          <div className={styles.miniIcon} style={{ background: 'var(--accent-light)', color: 'var(--accent)' }}>
+            <Play size={18} />
+          </div>
+          <div className={styles.miniLabel}>{t('student.timer')}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div className={styles.timerRing}>
+              <StatRing
+                value={(sessionElapsedSeconds % 60)}
+                max={60}
+                size={64}
+                strokeWidth={6}
+                trackColor="rgba(124,58,237,0.1)"
+                progressColor="var(--accent)"
+                animateCount={false}
+              />
+              <div className={styles.timerRingText}>{ss}</div>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <span className={styles.miniValue}>{mm}:{ss}</span>
+              <span className={styles.miniSub}>
+                {Math.floor(totalSessionMinutes / 60).toString().padStart(2, '0')}h {mm}m
+              </span>
+            </div>
+          </div>
+          <button className={styles.timerResetBtn} onClick={() => resetBreak()}>
+            <Pause size={12} style={{ display: 'inline', marginRight: 4 }} />
+            {t('student.newSession')}
+          </button>
+        </div>
+
+        {/* XP / Level */}
+        <div className={styles.miniCard}>
+          <div className={styles.miniAccent} style={{ background: 'var(--primary)' }} />
+          <div className={styles.miniIcon} style={{ background: 'var(--primary-light)', color: 'var(--primary)' }}>
+            <Trophy size={18} />
+          </div>
+          <div className={styles.miniLabel}>{t('student.levelXp')}</div>
+          <span className={styles.miniValue}>
+            {t('student.level')} <AnimatedCounter value={userStats.level} duration={700} />
+          </span>
+          <div className={styles.xpBar}>
+            <motion.div
+              className={styles.xpBarFill}
+              initial={{ width: 0 }}
+              animate={{ width: `${Math.min(100, (userStats.xp / (userStats.level * 1000)) * 100)}%` }}
+              transition={{ duration: 1.2, ease: 'easeOut' }}
+            />
+          </div>
+          <span className={styles.miniSub}>{userStats.xp} / {userStats.level * 1000} XP</span>
+        </div>
+
+        {/* Pet mini */}
+        <div className={styles.miniCard}>
+          <div className={styles.miniAccent} style={{ background: '#60A5FA' }} />
+          <div className={styles.miniIcon} style={{ background: 'rgba(96, 165, 250, 0.15)', color: '#3B82F6' }}>
+            <Play size={18} />
+          </div>
+          <div className={styles.miniLabel}>{t('student.petName')}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div className={styles.petMiniWrap}>
+              <OliverPet
+                state={getPetState()}
+                size={48}
+                petLevel={userStats.petLevel}
+                equippedItems={userStats.equippedItems}
+                customText={latestParentMessage || undefined}
+                hideBubble={true}
+                hideBadge={true}
+              />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <span className={styles.miniValue}>Lv.{userStats.petLevel}</span>
+              <span className={styles.petStatusPill}>
+                {getPetState() === 'good' ? t('student.stateHappy') : getPetState() === 'slouch' ? t('student.stateSad') : t('student.stateWarning')}
+              </span>
+            </div>
           </div>
         </div>
 
-        {/* Hero Banner */}
-        <div className="hero-banner">
-          <div className="hero-content">
-            <div className="hero-text">
-              <h1>{t('student.heroTitle')}</h1>
-              <p>{t('student.heroDesc')}</p>
-              <button className="btn-primary" onClick={handleEndSession}>{t('student.saveSession')}</button>
-            </div>
-            
-            <div className="hero-stats">
-              <div className="hero-stat-card">
-                <div className="hero-stat-icon" style={{ background: '#facc15', color: '#713f12' }}>🔥</div>
-                <div>
-                  <div className="hero-stat-val">{userStats.streak} {t('student.streakDays')}</div>
-                  <div className="hero-stat-lbl">{t('student.hardwork')}</div>
-                </div>
-              </div>
-              <div className="hero-stat-card">
-                <div className="hero-stat-icon" style={{ background: '#60a5fa', color: '#1e3a8a' }}>⭐</div>
-                <div>
-                  <div className="hero-stat-val">{t('student.level')} {userStats.level}</div>
-                  <div className="hero-stat-lbl">{t('student.currentRank')}</div>
-                </div>
-              </div>
-            </div>
+        {/* Actions / quick info */}
+        <div className={styles.miniCard}>
+          <div className={styles.miniAccent} style={{ background: 'var(--secondary)' }} />
+          <div className={styles.miniIcon} style={{ background: 'var(--secondary-light)', color: 'var(--secondary)' }}>
+            <Trophy size={18} />
           </div>
-        </div>
-
-        {/* 3-Column Premium Grid */}
-        <div className="sv-grid">
-          
-          {/* Column 1: Progress & Pet */}
-          <div className="sv-col sv-col-progress">
-            
-            <TiltCard className="xp-card">
-              <div className="card-title"><Trophy size={18} style={{ color: 'var(--primary)' }} /> {t('student.levelXp')}</div>
-              <div className="flex items-center gap-5 mt-4">
-                 <div className="text-5xl font-black" style={{ color: 'var(--primary)' }}>{userStats.level}</div>
-                 <div className="flex-1">
-                   <div className="flex justify-between text-sm font-bold mb-2">
-                     <span style={{ color: 'var(--text-muted)' }}>{t('student.progress')}</span>
-                     <span style={{ color: 'var(--primary)' }}>{userStats.xp} / {userStats.level * 1000} XP</span>
-                   </div>
-                   <div className="w-full h-3 rounded-full overflow-hidden" style={{ background: 'var(--primary-light)' }}>
-                     <motion.div
-                       className="h-full rounded-full"
-                       style={{ background: 'linear-gradient(90deg, var(--primary), #A855F7)' }}
-                       initial={{ width: 0 }}
-                       animate={{ width: `${Math.min(100, (userStats.xp / (userStats.level * 1000)) * 100)}%` }}
-                       transition={{ duration: 1.2, ease: 'easeOut' }}
-                     />
-                   </div>
-                 </div>
-              </div>
-            </TiltCard>
-
-            <TiltCard className="pet-card">
-               <div className="pet-circle">
-                 <div className="pet-model">
-                    <OliverPet state={getPetState()} size={64} petLevel={userStats.petLevel} equippedItems={userStats.equippedItems} customText={latestParentMessage || undefined} hideBubble={true} hideBadge={true} />
-                 </div>
-               </div>
-               <h3>{t('student.petName')}</h3>
-               <p>{t('student.petDesc')}</p>
-               <div className="pill-tag pill-secondary mt-2">{t('student.status')}: {getPetState() === 'good' ? t('student.stateHappy') : getPetState() === 'slouch' ? t('student.stateSad') : t('student.stateWarning')}</div>
-            </TiltCard>
-
-            <TiltCard className="timer-card">
-              <div className="card-title">{t('student.timer')}</div>
-              <div className="timer-display">
-                 <div className="timer-digit">{hh[0]}</div>
-                 <div className="timer-digit">{hh[1]}</div>
-                 <div className="timer-colon">:</div>
-                 <div className="timer-digit">{mm[0]}</div>
-                 <div className="timer-digit">{mm[1]}</div>
-                 <div className="timer-colon">:</div>
-                 <div className="timer-digit">{ss[0]}</div>
-                 <div className="timer-digit">{ss[1]}</div>
-              </div>
-              <div className="timer-labels">
-                <span>{t('student.hr')}</span><span>{t('student.min')}</span><span>{t('student.sec')}</span>
-              </div>
-              <button className="btn-secondary w-full" onClick={() => resetBreak()}>
-                {t('student.newSession')}
-              </button>
-            </TiltCard>
-
-          </div>
-
-          {/* Column 2: Central Ring & Camera */}
-          <div className="sv-col sv-col-camera">
-            
-            <TiltCard className="ring-card" glowColor={scoreColor}>
-              <div className="card-title">{t('student.healthGoal')}</div>
-              
-              <div className={`score-ring-wrapper ${healthScore >= 80 ? 'score-ring-good' : ''}`}>
-                <svg className="score-ring-svg" viewBox="0 0 100 100">
-                  <circle cx="50" cy="50" r="44" fill="none" stroke="var(--primary-light)" strokeWidth="6" />
-                  <circle
-                    cx="50" cy="50" r="44" fill="none"
-                    stroke={scoreColor}
-                    strokeWidth="6"
-                    strokeDasharray="276"
-                    strokeDashoffset={276 - (276 * healthScore) / 100}
-                    strokeLinecap="round"
-                    className="score-ring-progress"
-                  />
-                </svg>
-                <div className="score-ring-text">
-                  <span className="score-ring-lbl">PHI SCORE</span>
-                  <span className="score-ring-val">{healthScore}</span>
-                </div>
-                
-                <motion.div
-                  className="score-play-btn"
-                  whileHover={{ scale: 1.15 }}
-                  whileTap={{ scale: 0.9 }}
-                >
-                   <Play size={20} fill="currentColor" />
-                </motion.div>
-              </div>
-              
-              <div className="score-footer">
-                 {t('student.keepGreen')}
-              </div>
-            </TiltCard>
-
-            <TiltCard className="camera-card" intensity={3}>
-               <div className="camera-header">
-                 <div className="card-title">{t('student.cameraAi')}</div>
-                 <motion.button
-                   onClick={() => setShowCamera(!showCamera)}
-                   className={`pill-tag ${showCamera ? 'camera-off-pill' : 'camera-on-pill'}`}
-                   whileTap={{ scale: 0.9 }}
-                 >
-                   {showCamera ? t('student.off') : t('student.on')}
-                 </motion.button>
-               </div>
-               <div className="camera-wrapper relative">
-                 {error && showCamera ? (
-                   <div className="absolute inset-0 bg-red-950/85 backdrop-blur-md flex flex-col items-center justify-center text-center p-4 z-20" style={{ borderRadius: 'var(--radius-lg)' }}>
-                     <AlertTriangle size={32} className="text-red-500 mb-1" />
-                     <span className="font-semibold text-red-200 text-xs">{error}</span>
-                   </div>
-                 ) : null}
-                 <video
-                    ref={videoRef}
-                    className={`camera-video ${!showCamera ? 'hidden' : ''}`}
-                    autoPlay playsInline muted
-                 />
-                 {!showCamera && (
-                    <div className="camera-placeholder">
-                      <CameraOff size={24} />
-                    </div>
-                 )}
-                 {showCamera && metrics && !error && (
-                   <BackboneVisualizer 
-                     neckAngle={metrics.neckAngle} 
-                     slouchAngle={metrics.slouchAngle} 
-                     healthScore={healthScore} 
-                   />
-                 )}
-               </div>
-            </TiltCard>
-
-          </div>
-
-          {/* Column 3: Leaderboard / Live Stats Table */}
-          <div className="sv-col sv-col-stats">
-            
-            <TiltCard className="leaderboard-card">
-               <div className="leaderboard-header">
-                  <div className="card-title m-0">{t('student.statusTable')}</div>
-                  <motion.div
-                    className="pill-tag pill-realtime"
-                    animate={{ opacity: [1, 0.5, 1] }}
-                    transition={{ duration: 2, repeat: Infinity }}
-                  >
-                    {t('student.live')}
-                  </motion.div>
-               </div>
-               
-               <details className="mobile-stats-details" open>
-                 <summary className="mobile-stats-summary hidden">{t('student.tapToView')}</summary>
-
-               <div className="table-wrapper">
-                 <table className="sv-table">
-                   <thead>
-                     <tr>
-                       <th className="th-left">{t('student.metric')}</th>
-                       <th className="th-center">{t('student.goal')}</th>
-                       <th className="th-right">{t('student.state')}</th>
-                     </tr>
-                   </thead>
-                   <tbody>
-                     <tr>
-                       <td className="td-metric">
-                         <div className="metric-icon" style={{ background: 'var(--primary-light)', color: 'var(--primary)' }}>🏃</div>
-                         {t('student.distance')}
-                       </td>
-                       <td className="td-goal">&gt; 50 cm</td>
-                       <td className="td-status">
-                         <span className={`pill-tag ${metrics && metrics.eyeDistanceCm < 50 ? 'pill-fail' : 'pill-pass'}`}>
-                            {metrics ? metrics.eyeDistanceCm : 60} cm
-                         </span>
-                       </td>
-                     </tr>
-                     <tr>
-                       <td className="td-metric">
-                         <div className="metric-icon" style={{ background: 'var(--secondary-light)', color: 'var(--secondary)' }}>🧍</div>
-                         {t('student.backSlouch')}
-                       </td>
-                       <td className="td-goal">&lt; 15°</td>
-                       <td className="td-status">
-                         <span className={`pill-tag ${metrics && metrics.slouchAngle > 15 ? 'pill-fail' : 'pill-pass'}`}>
-                            {metrics ? Math.round(metrics.slouchAngle) : 0}°
-                         </span>
-                       </td>
-                     </tr>
-                     <tr>
-                       <td className="td-metric">
-                         <div className="metric-icon" style={{ background: 'var(--accent-light)', color: 'var(--accent)' }}>🧘</div>
-                         {t('student.neckTilt')}
-                       </td>
-                       <td className="td-goal">&lt; 20°</td>
-                       <td className="td-status">
-                         <span className={`pill-tag ${metrics && metrics.neckAngle > 20 && !metrics.isWritingMode ? 'pill-fail' : 'pill-pass'}`}>
-                            {metrics ? Math.round(metrics.neckAngle) : 0}°
-                         </span>
-                       </td>
-                     </tr>
-                   </tbody>
-                 </table>
-               </div>
-               </details>
-             </TiltCard>
-
-            <TiltCard className="tips-card">
-              <div className="card-title"><Info size={18} style={{ color: 'var(--primary)' }} /> {t('student.aiHelp')}</div>
-              <div className="tips-banner">
-                <div className="tips-avatars">
-                   {['bg-red-200','bg-green-200','bg-blue-200'].map((c,i)=><div key={i} className={`tip-avatar ${c}`} />)}
-                </div>
-                <div className="tips-text">
-                  {t('student.aiTipsCount')}
-                  <div className="tips-subtext">{t('student.aiTipsDesc')}</div>
-                </div>
-              </div>
-              <motion.button
-                className="btn-3d btn-3d-secondary w-full"
-                onClick={() => setShowTips(true)}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.97 }}
-              >
-                <span dangerouslySetInnerHTML={{ __html: t('student.viewTips') }}></span>
-              </motion.button>
-            </TiltCard>
-
-          </div>
-
+          <div className={styles.miniLabel}>{t('student.aiHelp')}</div>
+          <span className={styles.miniValue}>
+            <AnimatedCounter value={goodPostureCountRef.current} duration={600} />
+          </span>
+          <span className={styles.miniSub}>{t('student.keepGreen')}</span>
         </div>
       </div>
     </div>

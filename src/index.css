@@ -1,102 +1,18 @@
+@import './styles/tokens.css';
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* ═══════════════════════════════════════════════
-   ANTI-HUNCHBACK — GAMIFIED DESIGN SYSTEM v2
-   Inspired by Duolingo, Anti-Slop principles
-   ═══════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════════
+   MediEdu Anti-Hunchback — Stylesheet
+   Design tokens (colors, spacing, radii, themes) live in
+   styles/tokens.css. As components are migrated to CSS Modules,
+   their styles are removed from here. This file holds shared base
+   styles + styles for not-yet-migrated components.
+   ═══════════════════════════════════════════════════════════════ */
 
-:root {
-  /* ── Brand Palette ── */
-  --primary: #7C3AED;          /* Vivid Purple */
-  --primary-light: #EDE9FE;
-  --primary-hover: #6D28D9;
-  --primary-dark: #5B21B6;
-  --primary-glow: rgba(124, 58, 237, 0.35);
-
-  --secondary: #10B981;        /* Emerald — success/XP */
-  --secondary-light: #D1FAE5;
-  --secondary-dark: #059669;
-
-  --accent: #F59E0B;           /* Amber — streak/fire */
-  --accent-light: #FEF3C7;
-
-  --danger: #EF4444;           /* Red — warnings */
-  --danger-light: #FEE2E2;
-  --danger-glow: rgba(239, 68, 68, 0.35);
-
-  --warning: #F59E0B;
-
-  /* ── Surface Colors ── */
-  --bg-page: #F5F3FF;          /* Subtle purple tint */
-  --bg-sidebar: rgba(255, 255, 255, 0.92);
-  --bg-card: #FFFFFF;
-  --bg-card-hover: #FAF5FF;
-
-  /* ── Text ── */
-  --text-main: #1E1B4B;        /* Indigo 950 */
-  --text-secondary: #6B7280;
-  --text-muted: #9CA3AF;
-  --text-light: #FFFFFF;
-
-  /* ── Spacing System (4px base) ── */
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-5: 20px;
-  --space-6: 24px;
-  --space-8: 32px;
-  --space-10: 40px;
-  --space-12: 48px;
-
-  /* ── Border Radius (consistent) ── */
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 20px;
-  --radius-2xl: 24px;
-  --radius-full: 9999px;
-
-  /* ── Shadows ── */
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
-  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.1);
-  --shadow-xl: 0 12px 40px rgba(0, 0, 0, 0.12);
-  --shadow-glow-primary: 0 4px 20px var(--primary-glow);
-  --shadow-glow-danger: 0 4px 20px var(--danger-glow);
-
-  /* ── Layout ── */
-  --sidebar-width: 260px;
-
-  /* ── Typography ── */
-  --font-sans: 'Nunito', -apple-system, BlinkMacSystemFont, sans-serif;
-}
-
-/* ═══════════════════════════════════════════════
-   DARK MODE
-   ═══════════════════════════════════════════════ */
-.dark {
-  --bg-page: #0F0D1A;
-  --bg-sidebar: rgba(22, 18, 42, 0.95);
-  --bg-card: #1E1B3A;
-  --bg-card-hover: #2A2650;
-  --text-main: #F1F0FF;
-  --text-secondary: #A5B4FC;
-  --text-muted: #818CF8;
-  --primary-light: rgba(124, 58, 237, 0.2);
-  --secondary-light: rgba(16, 185, 129, 0.2);
-  --accent-light: rgba(245, 158, 11, 0.2);
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
-}
-
-/* ═══════════════════════════════════════════════
-   RESET & BASE
-   ═══════════════════════════════════════════════ */
+/* ── Reset & Base ────────────────────────────────────────────── */
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
@@ -121,21 +37,112 @@ body {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 6px; }
 ::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+.dark ::-webkit-scrollbar-thumb { background: #475569; }
 
-/* ═══════════════════════════════════════════════
-   3D PARTICLE BACKGROUND
-   ═══════════════════════════════════════════════ */
-.particle-bg {
+/* ═══════════════════════════════════════════════════════════════
+   GRADIENT MESH — CSS-only background (replaces ParticleBackground)
+   ═══════════════════════════════════════════════════════════════ */
+.gradient-mesh {
   position: fixed;
-  inset: 0;
-  z-index: 0;
+  inset: -20%;
+  width: 140%;
+  height: 140%;
   pointer-events: none;
-  opacity: 0.5;
+  z-index: 0;
+  background:
+    radial-gradient(at 20% 30%, hsl(210 100% 88%) 0px, transparent 50%),
+    radial-gradient(at 80% 20%, hsl(150 100% 88%) 0px, transparent 50%),
+    radial-gradient(at 60% 80%, hsl(45 100% 92%) 0px, transparent 50%),
+    radial-gradient(at 30% 70%, hsl(260 100% 92%) 0px, transparent 50%);
+  animation: mesh-drift 22s ease-in-out infinite alternate;
+  will-change: transform;
+  filter: blur(8px);
 }
 
-/* ═══════════════════════════════════════════════
+.gradient-mesh--static { animation: none; }
+
+.dark .gradient-mesh {
+  background:
+    radial-gradient(at 20% 30%, hsla(210, 80%, 40%, 0.35) 0px, transparent 50%),
+    radial-gradient(at 80% 20%, hsla(150, 70%, 40%, 0.3) 0px, transparent 50%),
+    radial-gradient(at 60% 80%, hsla(45, 80%, 45%, 0.25) 0px, transparent 50%),
+    radial-gradient(at 30% 70%, hsla(260, 70%, 50%, 0.3) 0px, transparent 50%);
+  filter: blur(12px);
+}
+
+/* Parent theme: calmer, more professional mesh */
+[data-theme='parent'] .gradient-mesh {
+  background:
+    radial-gradient(at 20% 30%, hsl(210 40% 92%) 0px, transparent 55%),
+    radial-gradient(at 80% 20%, hsl(40 70% 90%) 0px, transparent 55%),
+    radial-gradient(at 60% 80%, hsl(140 35% 88%) 0px, transparent 55%);
+  animation-duration: 32s;
+  filter: blur(10px);
+}
+
+[data-theme='parent'].dark .gradient-mesh,
+.dark [data-theme='parent'] .gradient-mesh {
+  background:
+    radial-gradient(at 20% 30%, hsla(210, 30%, 30%, 0.4) 0px, transparent 55%),
+    radial-gradient(at 80% 20%, hsla(40, 50%, 35%, 0.3) 0px, transparent 55%),
+    radial-gradient(at 60% 80%, hsla(140, 25%, 30%, 0.3) 0px, transparent 55%);
+}
+
+@keyframes mesh-drift {
+  0%   { transform: translate3d(0, 0, 0) scale(1); }
+  33%  { transform: translate3d(-4%, 3%, 0) scale(1.08); }
+  66%  { transform: translate3d(3%, -2%, 0) scale(1.04); }
+  100% { transform: translate3d(-2%, -3%, 0) scale(1.06); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gradient-mesh { animation: none; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SKELETON LOADER — shimmer placeholder for loading states
+   ═══════════════════════════════════════════════════════════════ */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: var(--skeleton-base, rgba(124, 58, 237, 0.08));
+  border-radius: var(--radius-md);
+}
+
+.skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.55),
+    transparent
+  );
+  animation: skeleton-shimmer 1.6s ease-in-out infinite;
+}
+
+.dark .skeleton::after {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.08),
+    transparent
+  );
+}
+
+.skeleton-circle { border-radius: 50%; }
+.skeleton-text { height: 14px; margin-bottom: 8px; border-radius: var(--radius-sm); }
+.skeleton-text:last-child { margin-bottom: 0; width: 70%; }
+
+@keyframes skeleton-shimmer {
+  100% { transform: translateX(100%); }
+}
+
+/* ═══════════════════════════════════════════════════════════════
    LAYOUT — App Container
-   ═══════════════════════════════════════════════ */
+   ═══════════════════════════════════════════════════════════════ */
 .app-container {
   display: flex;
   height: 100vh;
@@ -144,9 +151,20 @@ body {
   position: relative;
 }
 
-/* ═══════════════════════════════════════════════
+.premium-main {
+  flex: 1;
+  margin-left: calc(var(--sidebar-width) + 32px);
+  padding: 32px 32px 32px 16px;
+  height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
+  z-index: 1;
+}
+
+/* ═══════════════════════════════════════════════════════════════
    FLOATING SIDEBAR (Desktop)
-   ═══════════════════════════════════════════════ */
+   ═══════════════════════════════════════════════════════════════ */
 .premium-sidebar {
   width: var(--sidebar-width);
   height: calc(100vh - 32px);
@@ -279,23 +297,9 @@ body {
 .user-name { font-size: 14px; font-weight: 800; color: var(--text-main); line-height: 1.2; }
 .user-plan { font-size: 12px; color: var(--text-muted); font-weight: 600; }
 
-/* ═══════════════════════════════════════════════
-   MAIN CONTENT AREA
-   ═══════════════════════════════════════════════ */
-.premium-main {
-  flex: 1;
-  margin-left: calc(var(--sidebar-width) + 32px);
-  padding: 32px 32px 32px 16px;
-  height: 100vh;
-  overflow-y: auto;
-  overflow-x: hidden;
-  position: relative;
-  z-index: 1;
-}
-
-/* ═══════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════════════
    TILT CARD (3D interactive cards)
-   ═══════════════════════════════════════════════ */
+   ═══════════════════════════════════════════════════════════════ */
 .tilt-card {
   background: var(--bg-card);
   border-radius: var(--radius-xl);
@@ -335,9 +339,9 @@ body {
   border-color: rgba(124, 58, 237, 0.15);
 }
 
-/* ═══════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════════════
    BUTTONS — Duolingo 3D Style
-   ═══════════════════════════════════════════════ */
+   ═══════════════════════════════════════════════════════════════ */
 .btn-3d {
   display: inline-flex;
   align-items: center;
@@ -432,9 +436,9 @@ body {
 
 .btn-secondary:active { transform: translateY(2px); border-bottom-width: 1px; }
 
-/* ═══════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════════════
    PILL TAGS
-   ═══════════════════════════════════════════════ */
+   ═══════════════════════════════════════════════════════════════ */
 .pill-tag {
   display: inline-flex;
   align-items: center;
@@ -454,9 +458,9 @@ body {
 .camera-on-pill { background: #f3f4f6; color: #4b5563; }
 .camera-off-pill { background: var(--danger-light); color: var(--danger); }
 
-/* ═══════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════════════
    CARD TITLE
-   ═══════════════════════════════════════════════ */
+   ═══════════════════════════════════════════════════════════════ */
 .card-title {
   font-size: 16px;
   font-weight: 800;
@@ -467,9 +471,9 @@ body {
   gap: 8px;
 }
 
-/* ═══════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════════════
    HERO BANNER
-   ═══════════════════════════════════════════════ */
+   ═══════════════════════════════════════════════════════════════ */
 .hero-banner {
   background: linear-gradient(135deg, var(--primary) 0%, #A855F7 60%, #6366F1 100%);
   border-radius: var(--radius-2xl);
@@ -546,9 +550,9 @@ body {
 .hero-stat-val { color: white; font-weight: 800; font-size: 17px; }
 .hero-stat-lbl { color: rgba(255,255,255,0.65); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; }
 
-/* ═══════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════════════
    STUDENT VIEW — Bento Grid
-   ═══════════════════════════════════════════════ */
+   ═══════════════════════════════════════════════════════════════ */
 .sv-container { max-width: 1400px; margin: 0 auto; }
 
 .sv-header {
@@ -883,9 +887,9 @@ body {
   background-clip: text;
 }
 
-/* ═══════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════════════
    ANIMATIONS
-   ═══════════════════════════════════════════════ */
+   ═══════════════════════════════════════════════════════════════ */
 .screen-alert-glow { animation: red-pulse 1.5s infinite alternate; }
 @keyframes red-pulse {
   0% { box-shadow: inset 0 0 15px rgba(239, 68, 68, 0.3); }
@@ -950,9 +954,9 @@ body {
 }
 .animate-slide-in-right { animation: animate-slide-in-right 0.3s ease-out; }
 
-/* ═══════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════════════
    MOBILE & RESPONSIVE
-   ═══════════════════════════════════════════════ */
+   ═══════════════════════════════════════════════════════════════ */
 .mobile-layout .premium-main {
   margin-left: 0 !important;
   padding: 16px 16px 80px 16px !important;

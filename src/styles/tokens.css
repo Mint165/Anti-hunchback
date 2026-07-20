@@ -1,0 +1,206 @@
+/* ═══════════════════════════════════════════════════════════════
+   DESIGN TOKENS — MediEdu Anti-Hunchback
+   Two separate themes: Student (adventure) & Parent (professional)
+   ═══════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ── Spacing System (4px base) ── */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  /* ── Border Radius ── */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-2xl: 24px;
+  --radius-full: 9999px;
+
+  /* ── Typography ── */
+  --font-sans: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-student-heading: 'Fredoka', var(--font-sans);
+  --font-parent-heading: 'Plus Jakarta Sans', var(--font-sans);
+  --font-data: 'Inter', -apple-system, sans-serif;
+
+  /* ── Layout ── */
+  --sidebar-width: 260px;
+  --sidebar-rail-width: 64px;
+
+  /* ═══════════════════════════════════════════════════════════════
+     STUDENT THEME — Adventure (Ocean Blue → Emerald → Sunny Yellow)
+     ═══════════════════════════════════════════════════════════════ */
+  --stu-primary: #2563EB;            /* Ocean Blue */
+  --stu-primary-light: #DBEAFE;
+  --stu-primary-dark: #1D4ED8;
+  --stu-primary-glow: rgba(37, 99, 235, 0.35);
+
+  --stu-secondary: #10B981;          /* Emerald */
+  --stu-secondary-light: #D1FAE5;
+  --stu-secondary-dark: #059669;
+
+  --stu-accent: #F59E0B;             /* Sunny Yellow */
+  --stu-accent-light: #FEF3C7;
+
+  --stu-danger: #EF4444;
+  --stu-danger-light: #FEE2E2;
+
+  --stu-bg-page: #EFF6FF;            /* Subtle blue tint */
+  --stu-bg-card: #FFFFFF;
+  --stu-bg-card-hover: #F0F9FF;
+  --stu-bg-sidebar: rgba(255, 255, 255, 0.92);
+
+  --stu-text-main: #1E3A8A;          /* Indigo 900 */
+  --stu-text-secondary: #475569;
+  --stu-text-muted: #94A3B8;
+
+  --stu-radius-card: 20px;           /* larger radii for kids */
+  --stu-shadow-card: 0 4px 16px rgba(37, 99, 235, 0.08);
+  --stu-shadow-card-hover: 0 12px 32px rgba(37, 99, 235, 0.12);
+
+  /* ═══════════════════════════════════════════════════════════════
+     PARENT THEME — Warm Professional (Slate + Amber + Sage)
+     ═══════════════════════════════════════════════════════════════ */
+  --par-primary: #334155;            /* Slate */
+  --par-primary-light: #F1F5F9;
+  --par-primary-dark: #1E293B;
+
+  --par-accent: #F59E0B;             /* Warm Amber */
+  --par-accent-light: #FEF3C7;
+  --par-accent-dark: #B45309;
+
+  --par-success: #4EAD63;            /* Sage Green */
+  --par-success-light: #DCFCE7;
+  --par-warning: #FFAA2C;
+  --par-danger: #FF5E5E;
+  --par-danger-light: #FEE2E2;
+
+  --par-bg-page: #F8FAFC;            /* Slate-50 */
+  --par-bg-card: #FFFFFF;
+  --par-bg-card-hover: #F8FAFC;
+  --par-bg-sidebar: rgba(255, 255, 255, 0.95);
+
+  --par-text-main: #0F172A;          /* Slate 900 */
+  --par-text-secondary: #475569;
+  --par-text-muted: #94A3B8;
+
+  --par-radius-card: 12px;            /* moderate radii for adults */
+  --par-shadow-card: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+  --par-shadow-card-hover: 0 4px 12px rgba(15, 23, 42, 0.08);
+
+  /* ── Legacy aliases (backward-compat with existing components) ── */
+  --primary: var(--stu-primary);
+  --primary-light: var(--stu-primary-light);
+  --primary-hover: var(--stu-primary-dark);
+  --primary-dark: var(--stu-primary-dark);
+  --primary-glow: var(--stu-primary-glow);
+
+  --secondary: var(--stu-secondary);
+  --secondary-light: var(--stu-secondary-light);
+  --secondary-dark: var(--stu-secondary-dark);
+
+  --accent: var(--stu-accent);
+  --accent-light: var(--stu-accent-light);
+
+  --danger: var(--stu-danger);
+  --danger-light: var(--stu-danger-light);
+  --danger-glow: rgba(239, 68, 68, 0.35);
+  --warning: var(--stu-accent);
+
+  --bg-page: var(--stu-bg-page);
+  --bg-sidebar: var(--stu-bg-sidebar);
+  --bg-card: var(--stu-bg-card);
+  --bg-card-hover: var(--stu-bg-card-hover);
+
+  --text-main: var(--stu-text-main);
+  --text-secondary: var(--stu-text-secondary);
+  --text-muted: var(--stu-text-muted);
+  --text-light: #FFFFFF;
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 12px 40px rgba(0, 0, 0, 0.12);
+  --shadow-glow-primary: 0 4px 20px var(--primary-glow);
+  --shadow-glow-danger: 0 4px 20px var(--danger-glow);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   THEME SWITCHING — data-theme attribute on <html>
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Default (student) — legacy variables already map to student theme */
+:root,
+[data-theme='student'] {
+  --primary: var(--stu-primary);
+  --primary-light: var(--stu-primary-light);
+  --primary-dark: var(--stu-primary-dark);
+  --primary-glow: var(--stu-primary-glow);
+  --bg-page: var(--stu-bg-page);
+  --bg-card: var(--stu-bg-card);
+  --bg-card-hover: var(--stu-bg-card-hover);
+  --text-main: var(--stu-text-main);
+  --text-secondary: var(--stu-text-secondary);
+  --text-muted: var(--stu-text-muted);
+}
+
+/* Parent theme — overrides legacy aliases */
+[data-theme='parent'] {
+  --primary: var(--par-primary);
+  --primary-light: var(--par-primary-light);
+  --primary-dark: var(--par-primary-dark);
+  --primary-glow: rgba(15, 23, 42, 0.15);
+  --secondary: var(--par-success);
+  --secondary-light: var(--par-success-light);
+  --secondary-dark: #3F8A4F;
+  --accent: var(--par-accent);
+  --accent-light: var(--par-accent-light);
+  --danger: var(--par-danger);
+  --danger-light: var(--par-danger-light);
+  --danger-glow: rgba(255, 94, 94, 0.25);
+  --bg-page: var(--par-bg-page);
+  --bg-card: var(--par-bg-card);
+  --bg-card-hover: var(--par-bg-card-hover);
+  --bg-sidebar: var(--par-bg-sidebar);
+  --text-main: var(--par-text-main);
+  --text-secondary: var(--par-text-secondary);
+  --text-muted: var(--par-text-muted);
+  --shadow-glow-primary: 0 4px 20px rgba(15, 23, 42, 0.12);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   DARK MODE — applies to both themes
+   ═══════════════════════════════════════════════════════════════ */
+.dark {
+  --stu-bg-page: #0B1220;
+  --stu-bg-card: #131E36;
+  --stu-bg-card-hover: #1B2942;
+  --stu-bg-sidebar: rgba(15, 23, 42, 0.95);
+  --stu-text-main: #F1F5FF;
+  --stu-text-secondary: #A5B4FC;
+  --stu-text-muted: #818CF8;
+  --stu-primary-light: rgba(37, 99, 235, 0.2);
+  --stu-secondary-light: rgba(16, 185, 129, 0.2);
+  --stu-accent-light: rgba(245, 158, 11, 0.2);
+
+  --par-bg-page: #0F172A;
+  --par-bg-card: #1E293B;
+  --par-bg-card-hover: #334155;
+  --par-bg-sidebar: rgba(15, 23, 42, 0.98);
+  --par-text-main: #F1F5F9;
+  --par-text-secondary: #CBD5E1;
+  --par-text-muted: #94A3B8;
+  --par-primary-light: rgba(51, 65, 85, 0.3);
+  --par-accent-light: rgba(245, 158, 11, 0.18);
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
+  --shadow-xl: 0 12px 40px rgba(0, 0, 0, 0.6);
+}
