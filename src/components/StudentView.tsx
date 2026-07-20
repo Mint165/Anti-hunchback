@@ -24,7 +24,6 @@ import { broadcastStudentStatus, broadcastFatigueAlert } from '../services/paren
 import { usePostureContext } from '../contexts/PostureContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { voiceService } from '../services/voiceService';
-import OliverPet from './OliverPet';
 import type { PetState } from './OliverPet';
 import Calibration from './Calibration';
 import BackboneVisualizer from './BackboneVisualizer';
@@ -35,13 +34,53 @@ import styles from './StudentView.module.css';
 import toast from 'react-hot-toast';
 import confetti from 'canvas-confetti';
 
+// Static SVG pet avatar — lightweight alternative to the 3D OliverPet
+// in the mini card. Avoids spawning a second WebGL context on the
+// Student dashboard (each context is expensive).
+const PetAvatarSVG: React.FC<{ state: PetState }> = ({ state }) => {
+  // Body color shifts slightly per state to convey mood.
+  const bodyColor =
+    state === 'good' ? '#60A5FA' :
+    state === 'slouch' ? '#94A3B8' :
+    state === 'close' ? '#F59E0B' :
+    state === 'writing' ? '#A78BFA' :
+    '#60A5FA';
+  const cheekColor = state === 'good' ? '#F472B6' : '#FCA5A5';
+  // Mouth changes with mood.
+  const mouthPath =
+    state === 'good' ? 'M 18 32 Q 24 38 30 32' :
+    state === 'slouch' ? 'M 18 34 Q 24 30 30 34' :
+    state === 'close' ? 'M 18 34 Q 24 32 30 34' :
+    'M 18 33 Q 24 36 30 33';
+  return (
+    <svg viewBox="0 0 48 48" width="44" height="44" aria-hidden>
+      {/* body */}
+      <circle cx="24" cy="24" r="16" fill={bodyColor} />
+      {/* ears */}
+      <circle cx="12" cy="14" r="5" fill={bodyColor} />
+      <circle cx="36" cy="14" r="5" fill={bodyColor} />
+      <circle cx="12" cy="14" r="2.5" fill="#3B82F6" opacity="0.6" />
+      <circle cx="36" cy="14" r="2.5" fill="#3B82F6" opacity="0.6" />
+      {/* eyes */}
+      <circle cx="18" cy="24" r="2.4" fill="#0F172A" />
+      <circle cx="30" cy="24" r="2.4" fill="#0F172A" />
+      <circle cx="18.8" cy="23.2" r="0.8" fill="#fff" />
+      <circle cx="30.8" cy="23.2" r="0.8" fill="#fff" />
+      {/* cheeks */}
+      <circle cx="13" cy="29" r="2.2" fill={cheekColor} opacity="0.7" />
+      <circle cx="35" cy="29" r="2.2" fill={cheekColor} opacity="0.7" />
+      {/* mouth */}
+      <path d={mouthPath} stroke="#0F172A" strokeWidth="1.4" fill="none" strokeLinecap="round" />
+    </svg>
+  );
+};
+
 export const StudentView: React.FC = () => {
   const {
     metrics, healthScore, alertLevel, hasStarted, startSession, resetBreak,
     isModelReady, isLoading, error, calibration, setCalibration,
     poseLandmarks, faceLandmarks,
     sessionFatigueFlags, sessionAngleAccumulator,
-    latestParentMessage,
     isManualWritingMode,
     setIsManualWritingMode,
   } = usePostureContext();
@@ -77,7 +116,9 @@ export const StudentView: React.FC = () => {
     syncStream();
     globalVideo.addEventListener('loadedmetadata', syncStream);
     globalVideo.addEventListener('play', syncStream);
-    const interval = setInterval(syncStream, 1000);
+    // Poll less aggressively — events above cover most cases; the
+    // 2s interval is a safety net for stream re-attachments.
+    const interval = setInterval(syncStream, 2000);
     return () => {
       globalVideo.removeEventListener('loadedmetadata', syncStream);
       globalVideo.removeEventListener('play', syncStream);
@@ -111,7 +152,7 @@ export const StudentView: React.FC = () => {
     if (metrics.isBlinking) blinkCountRef.current += 1;
     if (metrics.fidgetFactor > 40 && totalTicksRef.current > 0 && totalTicksRef.current % 300 === 0) {
       fidgetCountRef.current += 1;
-      broadcastFatigueAlert('Bé bắt đầu nhấp nhổm nhiều, có dấu hiệu mất tập trung hoặc mỏi cơ.');
+      broadcastFatigueAlert(t('student.fidgetAlert'));
     }
     const now = Date.now();
     if (now - lastBroadcastRef.current >= 2000) {
@@ -149,7 +190,7 @@ export const StudentView: React.FC = () => {
       playChime(0.2, 783.99);
       setTimeout(() => ctx.close(), 2000);
       setTimeout(() => {
-        voiceService.speak('Chủ nhân ơi, ngồi thẳng lên nhé!');
+        voiceService.speak(t('student.sitStraightVoice'));
       }, 500);
     } catch {}
   };
@@ -199,7 +240,7 @@ export const StudentView: React.FC = () => {
       const { leveledUp } = addXP(500);
       if (leveledUp) {
         confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, zIndex: 10000 });
-        toast.success('Chúc mừng! Bạn đã thăng cấp!', { icon: '🎉', duration: 5000 });
+        toast.success(t('student.leveledUp'), { icon: '🎉', duration: 5000 });
       } else {
         confetti({ particleCount: 60, spread: 50, origin: { y: 0.6 }, zIndex: 10000 });
       }
@@ -208,7 +249,7 @@ export const StudentView: React.FC = () => {
         localStorage.setItem('oliver_unlocked_badge_warrior', 'true');
         addXP(1000);
         setTimeout(() => {
-          toast.success('Đã mở khoá huy hiệu: Chiến binh Bền bỉ!', { icon: '🛡️', duration: 5000 });
+          toast.success(t('student.unlockedWarrior'), { icon: '🛡️', duration: 5000 });
         }, 1000);
       }
     }
@@ -222,7 +263,7 @@ export const StudentView: React.FC = () => {
     totalTicksRef.current = 0;
     setUserStats(loadUserStats());
     setBadges(getBadgesStatus());
-    toast.success('Buổi học đã hoàn thành! Dữ liệu đã được lưu trữ.', {
+    toast.success(t('student.sessionSaved'), {
       duration: 4000,
       position: 'top-center',
     });
@@ -545,7 +586,7 @@ export const StudentView: React.FC = () => {
             <motion.div
               className={styles.livePill}
               animate={{ opacity: [1, 0.5, 1] }}
-              transition={{ duration: 2, repeat: Infinity }}
+              transition={{ duration: 2, repeat: Infinity, repeatType: 'loop' }}
             >
               {t('student.live')}
             </motion.div>
@@ -701,15 +742,8 @@ export const StudentView: React.FC = () => {
           <div className={styles.miniLabel}>{t('student.petName')}</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div className={styles.petMiniWrap}>
-              <OliverPet
-                state={getPetState()}
-                size={48}
-                petLevel={userStats.petLevel}
-                equippedItems={userStats.equippedItems}
-                customText={latestParentMessage || undefined}
-                hideBubble={true}
-                hideBadge={true}
-              />
+              {/* Static SVG pet avatar — avoids extra WebGL context for performance */}
+              <PetAvatarSVG state={getPetState()} />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               <span className={styles.miniValue}>Lv.{userStats.petLevel}</span>

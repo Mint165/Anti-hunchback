@@ -106,8 +106,17 @@
   gap: 32px;
 }
 
-@media (min-width: 1024px) {
-  .shopGrid { grid-template-columns: 1fr 2fr; }
+/* Preview banner — horizontal banner below tabs */
+.previewBanner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 24px;
+  border-radius: 24px;
+  background: var(--bg-page);
+  border: 2px solid rgba(124, 58, 237, 0.1);
+  margin-bottom: 28px;
 }
 
 .preview {
@@ -119,22 +128,15 @@
   border-radius: 24px;
   background: var(--bg-page);
   border: 2px solid rgba(124, 58, 237, 0.1);
-  position: sticky;
-  top: 24px;
-  align-self: start;
-}
-
-@media (max-width: 1023px) {
-  .preview { position: static; }
 }
 
 .previewWrap {
-  width: 224px;
-  height: 224px;
+  width: 200px;
+  height: 200px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 24px;
+  margin-bottom: 12px;
 }
 
 .previewLabel {
@@ -188,6 +190,10 @@
   margin-bottom: 16px;
   height: 72px;
   transition: transform 0.2s ease;
+}
+
+.itemIconWrapLarge {
+  height: 120px;
 }
 
 .item:hover .itemIconWrap {

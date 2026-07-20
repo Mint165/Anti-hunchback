@@ -10,22 +10,23 @@ import { motion } from 'framer-motion';
 import styles from './PetShop.module.css';
 
 export const SHOP_ITEMS = [
-  { id: 'hat_scholar', name: 'Mũ Cử Nhân', slot: 'head', cost: 50, icon: '🎓' },
-  { id: 'hat_crown_silver', name: 'Vương miện Bạc', slot: 'head', cost: 150, icon: '👑' },
-  { id: 'hat_crown_gold', name: 'Vương miện Vàng', slot: 'head', cost: 500, icon: '👑' },
-  { id: 'eyes_glasses', name: 'Kính Trí Thức', slot: 'eyes', cost: 30, icon: '👓' },
-  { id: 'eyes_sunglasses', name: 'Kính Râm Ngầu', slot: 'eyes', cost: 100, icon: '🕶️' },
-  { id: 'body_cape', name: 'Áo choàng Đỏ', slot: 'body', cost: 200, icon: '🦸' },
-  { id: 'aura_fire', name: 'Hào Quang Lửa', slot: 'aura', cost: 300, icon: '🔥' },
-  { id: 'aura_ice', name: 'Hào Quang Băng', slot: 'aura', cost: 300, icon: '❄️' },
-  { id: 'aura_electric', name: 'Hào Quang Điện', slot: 'aura', cost: 300, icon: '⚡' },
+  { id: 'hat_scholar', nameKey: 'shop.item.hat_scholar', slot: 'head', cost: 50, icon: '🎓' },
+  { id: 'hat_crown_silver', nameKey: 'shop.item.hat_crown_silver', slot: 'head', cost: 150, icon: '👑' },
+  { id: 'hat_crown_gold', nameKey: 'shop.item.hat_crown_gold', slot: 'head', cost: 500, icon: '👑' },
+  { id: 'eyes_glasses', nameKey: 'shop.item.eyes_glasses', slot: 'eyes', cost: 30, icon: '👓' },
+  { id: 'eyes_sunglasses', nameKey: 'shop.item.eyes_sunglasses', slot: 'eyes', cost: 100, icon: '🕶️' },
+  { id: 'body_cape', nameKey: 'shop.item.body_cape', slot: 'body', cost: 200, icon: '🦸' },
+  { id: 'aura_fire', nameKey: 'shop.item.aura_fire', slot: 'aura', cost: 300, icon: '🔥' },
+  { id: 'aura_ice', nameKey: 'shop.item.aura_ice', slot: 'aura', cost: 300, icon: '❄️' },
+  { id: 'aura_electric', nameKey: 'shop.item.aura_electric', slot: 'aura', cost: 300, icon: '⚡' },
 ];
 
-const renderItemIcon = (itemId: string) => {
+const renderItemIcon = (itemId: string, large: boolean = false) => {
+  const sizeClass = large ? 'w-20 h-20' : 'w-12 h-12';
   switch (itemId) {
     case 'hat_scholar':
       return (
-        <svg viewBox="0 0 100 100" className="w-12 h-12 mx-auto overflow-visible">
+        <svg viewBox="0 0 100 100" className={`${sizeClass} mx-auto overflow-visible`}>
           <polygon points="10,55 50,30 90,55 50,80" fill="#1F2937" />
           <rect x="35" y="55" width="30" height="25" fill="#1F2937" />
           <path d="M 85 55 L 95 85" stroke="#FBBF24" strokeWidth="5" />
@@ -33,13 +34,13 @@ const renderItemIcon = (itemId: string) => {
       );
     case 'hat_crown_silver':
       return (
-        <svg viewBox="0 0 100 100" className="w-12 h-12 mx-auto overflow-visible">
+        <svg viewBox="0 0 100 100" className={`${sizeClass} mx-auto overflow-visible`}>
           <polygon points="10,80 30,20 50,60 70,20 90,80" fill="#E5E7EB" stroke="#9CA3AF" strokeWidth="6" strokeLinejoin="round" />
         </svg>
       );
     case 'hat_crown_gold':
       return (
-        <svg viewBox="0 0 100 100" className="w-12 h-12 mx-auto overflow-visible">
+        <svg viewBox="0 0 100 100" className={`${sizeClass} mx-auto overflow-visible`}>
           <polygon points="10,80 30,20 50,60 70,20 90,80" fill="#FBBF24" stroke="#D97706" strokeWidth="6" strokeLinejoin="round" />
           <circle cx="10" cy="80" r="8" fill="#EF4444" />
           <circle cx="30" cy="20" r="10" fill="#3B82F6" />
@@ -50,7 +51,7 @@ const renderItemIcon = (itemId: string) => {
       );
     case 'eyes_glasses':
       return (
-        <svg viewBox="0 0 100 100" className="w-12 h-12 mx-auto overflow-visible" fill="none" stroke="#1F2937" strokeWidth="8">
+        <svg viewBox="0 0 100 100" className={`${sizeClass} mx-auto overflow-visible`} fill="none" stroke="#1F2937" strokeWidth="8">
           <circle cx="30" cy="50" r="20" />
           <circle cx="70" cy="50" r="20" />
           <path d="M 50 50 L 50 50" />
@@ -59,7 +60,7 @@ const renderItemIcon = (itemId: string) => {
       );
     case 'eyes_sunglasses':
       return (
-        <svg viewBox="0 0 100 100" className="w-12 h-12 mx-auto overflow-visible">
+        <svg viewBox="0 0 100 100" className={`${sizeClass} mx-auto overflow-visible`}>
           <path d="M 10 50 Q 30 30 45 50 Q 30 70 10 50" fill="#111827" stroke="#000" strokeWidth="3" />
           <path d="M 55 50 Q 75 30 90 50 Q 75 70 55 50" fill="#111827" stroke="#000" strokeWidth="3" />
           <path d="M 45 45 L 55 45" stroke="#111827" strokeWidth="6" />
@@ -67,21 +68,21 @@ const renderItemIcon = (itemId: string) => {
       );
     case 'body_cape':
       return (
-        <svg viewBox="0 0 100 100" className="w-12 h-12 mx-auto overflow-visible">
+        <svg viewBox="0 0 100 100" className={`${sizeClass} mx-auto overflow-visible`}>
           <path d="M 30 30 Q 10 90 30 95 Q 50 100 70 95 Q 90 90 70 30 Z" fill="#EF4444" opacity="0.9" />
         </svg>
       );
     case 'aura_fire':
       return (
-        <div className="w-10 h-10 mx-auto rounded-full shadow-[0_0_20px_rgba(239,68,68,0.8)] animate-pulse" style={{ backgroundColor: '#EF444450' }} />
+        <div className={`${large ? 'w-16 h-16' : 'w-10 h-10'} mx-auto rounded-full shadow-[0_0_20px_rgba(239,68,68,0.8)] animate-pulse`} style={{ backgroundColor: '#EF444450' }} />
       );
     case 'aura_ice':
       return (
-        <div className="w-10 h-10 mx-auto rounded-full shadow-[0_0_20px_rgba(96,165,250,0.8)] animate-pulse" style={{ backgroundColor: '#60A5FA50' }} />
+        <div className={`${large ? 'w-16 h-16' : 'w-10 h-10'} mx-auto rounded-full shadow-[0_0_20px_rgba(96,165,250,0.8)] animate-pulse`} style={{ backgroundColor: '#60A5FA50' }} />
       );
     case 'aura_electric':
       return (
-        <div className="w-10 h-10 mx-auto rounded-full shadow-[0_0_20px_rgba(252,211,77,0.8)] animate-pulse" style={{ backgroundColor: '#FCD34D50' }} />
+        <div className={`${large ? 'w-16 h-16' : 'w-10 h-10'} mx-auto rounded-full shadow-[0_0_20px_rgba(252,211,77,0.8)] animate-pulse`} style={{ backgroundColor: '#FCD34D50' }} />
       );
     default:
       return null;
@@ -96,10 +97,19 @@ export const PetShop: React.FC = () => {
   const { t: _t } = useLanguage();
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setStats(loadUserStats());
-    }, 2000);
-    return () => clearInterval(interval);
+    // Refresh stats when tab becomes visible or when window regains focus,
+    // instead of polling every 2s (performance).
+    const refresh = () => setStats(loadUserStats());
+    refresh();
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') refresh();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('focus', refresh);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('focus', refresh);
+    };
   }, []);
 
   const playSuccessSound = () => {
@@ -131,9 +141,9 @@ export const PetShop: React.FC = () => {
       setStats(loadUserStats());
       confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, zIndex: 10000 });
       playSuccessSound();
-      toast.success('Mua vật phẩm thành công! 🎉');
+      toast.success(_t('shop.buySuccess'));
     } else {
-      toast.error('Không đủ Xu để mua vật phẩm này!');
+      toast.error(_t('shop.notEnoughCoins'));
     }
   };
 
@@ -199,26 +209,27 @@ export const PetShop: React.FC = () => {
             onClick={() => setCategory(cat)}
             className={`${styles.tab} ${category === cat ? styles.tabActive : ''}`}
           >
-            {cat === 'all' ? 'Tất cả' : _t(`shop.category.${cat}`)}
+            {_t(`shop.category.${cat}`)}
           </button>
         ))}
       </div>
 
-      <div className={styles.shopGrid}>
-        {/* Preview Panel */}
-        <div className={styles.preview}>
-          <div className={styles.previewWrap}>
-            <OliverPet state="good" size={240} equippedItems={previewItems} lowDetail />
-          </div>
-          <p className={styles.previewLabel}>{_t('shop.fittingRoom')}</p>
+      {/* Preview banner — moved below tabs (was left column) */}
+      <div className={styles.previewBanner}>
+        <div className={styles.previewWrap}>
+          <OliverPet state="good" size={200} equippedItems={previewItems} lowDetail />
         </div>
+        <p className={styles.previewLabel}>{_t('shop.fittingRoom')}</p>
+      </div>
 
+      <div className={styles.shopGrid}>
         {/* Shop Grid */}
         <div className={styles.items}>
           {filteredItems.map((item, index) => {
             const isUnlocked = stats.unlockedItems?.includes(item.id);
             const isEquipped = stats.equippedItems?.[item.slot] === item.id;
             const isPreviewing = previewItems[item.slot] === item.id;
+            const isLargeIcon = category !== 'all';
 
             return (
               <motion.div
@@ -231,8 +242,10 @@ export const PetShop: React.FC = () => {
                 whileHover={{ y: -5, boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}
                 whileTap={{ scale: 0.95 }}
               >
-                <div className={styles.itemIconWrap}>{renderItemIcon(item.id)}</div>
-                <h4 className={styles.itemName}>{item.name}</h4>
+                <div className={`${styles.itemIconWrap} ${isLargeIcon ? styles.itemIconWrapLarge : ''}`}>
+                  {renderItemIcon(item.id, isLargeIcon)}
+                </div>
+                <h4 className={styles.itemName}>{_t(item.nameKey)}</h4>
 
                 <div className={styles.itemFooter}>
                   {!isUnlocked ? (
@@ -240,7 +253,7 @@ export const PetShop: React.FC = () => {
                       onClick={(e) => { e.stopPropagation(); handleBuy(item.id, item.cost); }}
                       className={styles.buyBtn}
                     >
-                      <Lock size={14} /> {item.cost} Xu
+                      <Lock size={14} /> {item.cost} {_t('shop.buyWithCoins')}
                     </button>
                   ) : isEquipped ? (
                     <span className={styles.equippedTag}>{_t('shop.equipped')}</span>

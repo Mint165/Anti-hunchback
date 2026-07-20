@@ -55,7 +55,12 @@
   margin-bottom: 28px;
   padding-left: 2px;
   white-space: nowrap;
+  width: 100%;
+  justify-content: center;
+  transition: justify-content 0.2s ease;
 }
+.rail:hover .brand,
+.railParent .brand { justify-content: flex-start; }
 
 .brandLogo {
   width: 40px;
@@ -68,6 +73,7 @@
   box-shadow: 0 4px 12px var(--primary-glow);
   color: white;
   flex-shrink: 0;
+  overflow: hidden;
 }
 
 .brandName {
@@ -182,7 +188,23 @@
   border-radius: var(--radius-lg);
   background: var(--primary-light);
   white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  max-height: 0;
+  margin-bottom: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  overflow: hidden;
+  transition: opacity 0.2s ease 0.1s, max-height 0.2s ease 0.1s, padding 0.2s ease 0.1s, margin 0.2s ease 0.1s;
+}
+
+.rail:hover .langRow,
+.railParent .langRow {
   opacity: 1;
+  pointer-events: auto;
+  max-height: 60px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
 }
 
 .langButton {
@@ -231,9 +253,13 @@
   padding: 12px 8px 0;
   cursor: pointer;
   white-space: nowrap;
-  transition: opacity 0.2s ease;
+  transition: opacity 0.2s ease, justify-content 0.2s ease;
+  width: 100%;
+  justify-content: center;
 }
 .footer:hover { opacity: 0.8; }
+.rail:hover .footer,
+.railParent .footer { justify-content: flex-start; }
 
 .avatar {
   width: 40px;
@@ -248,6 +274,7 @@
   font-size: 15px;
   box-shadow: var(--shadow-sm);
   flex-shrink: 0;
+  overflow: hidden;
 }
 
 .userInfo { flex: 1; min-width: 0; }

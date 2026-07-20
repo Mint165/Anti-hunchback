@@ -2,6 +2,7 @@ import React, { useRef, useMemo, useCallback } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, Sphere, Float, ContactShadows, Sparkles } from '@react-three/drei';
 import * as THREE from 'three';
+import { useLanguage } from '../contexts/LanguageContext';
 
 export type PetState = 'good' | 'slouch' | 'close' | 'writing' | 'tired' | 'success' | 'sleep';
 
@@ -315,22 +316,22 @@ const PandaModel = ({
           ))}
         </group>
 
-        {/* Sparkles */}
-        {state === 'good' && !equippedItems?.aura && (
+        {/* Sparkles — skipped in low-detail mode for performance */}
+        {state === 'good' && !lowDetail && !equippedItems?.aura && (
           <Sparkles count={30} scale={3} size={2} color="#4EAD63" speed={0.4} opacity={0.5} />
         )}
-        {state === 'success' && !equippedItems?.aura && (
+        {state === 'success' && !lowDetail && !equippedItems?.aura && (
           <Sparkles count={50} scale={4} size={3} color="#7E5BEF" speed={1} opacity={0.8} />
         )}
 
         {/* Aura effects */}
-        {equippedItems?.aura === 'aura_fire' && (
+        {equippedItems?.aura === 'aura_fire' && !lowDetail && (
           <Sparkles count={150} scale={3} size={4} speed={0.4} opacity={0.6} color="#f97316" position={[0, 0.5, 0]} />
         )}
-        {equippedItems?.aura === 'aura_ice' && (
+        {equippedItems?.aura === 'aura_ice' && !lowDetail && (
           <Sparkles count={100} scale={4} size={2} speed={0.2} opacity={0.8} color="#38bdf8" position={[0, 0.5, 0]} />
         )}
-        {equippedItems?.aura === 'aura_electric' && (
+        {equippedItems?.aura === 'aura_electric' && !lowDetail && (
           <Sparkles count={80} scale={3.5} size={3} speed={1} opacity={0.9} color="#eab308" position={[0, 0.5, 0]} noise={1} />
         )}
       </Float>
@@ -348,19 +349,20 @@ export const OliverPet: React.FC<OliverPetProps> = ({
   hideBadge = false,
   lowDetail = false,
 }) => {
+  const { t } = useLanguage();
   const getDialogueText = useCallback(() => {
     if (customText) return customText;
     switch (state) {
-      case 'good': return 'Tuyệt vời! Hãy duy trì tư thế này nhé!';
-      case 'slouch': return 'Úi, lưng bạn cong quá kìa! Thẳng lên nào!';
-      case 'close': return 'Bạn đang ngồi quá sát màn hình rồi!';
-      case 'writing': return 'Đang tập trung viết bài, Oliver sẽ im lặng...';
-      case 'tired': return 'Oliver thấy bạn có vẻ mỏi cổ, hãy xoay cổ một chút nhé!';
-      case 'success': return 'Chúc mừng bạn đã hoàn thành mục tiêu!';
-      case 'sleep': return 'Zzz... Oliver đang nghỉ ngơi...';
-      default: return 'Oliver luôn đồng hành cùng bạn!';
+      case 'good': return t('pet.dialogueGood');
+      case 'slouch': return t('pet.dialogueSlouch');
+      case 'close': return t('pet.dialogueClose');
+      case 'writing': return t('pet.dialogueWriting');
+      case 'tired': return t('pet.dialogueTired');
+      case 'success': return t('pet.dialogueSuccess');
+      case 'sleep': return t('pet.dialogueSleep');
+      default: return t('pet.dialogueDefault');
     }
-  }, [customText, state]);
+  }, [customText, state, t]);
 
   const getThemeColor = useCallback(() => {
     switch (state) {
@@ -428,13 +430,14 @@ export const OliverPet: React.FC<OliverPetProps> = ({
           {/* Rim light for depth */}
           <pointLight position={[-4, 2, -3]} intensity={0.4} color="#A78BFA" />
           <PandaModel state={state} petLevel={petLevel} equippedItems={equippedItems} lowDetail={lowDetail} />
-          <ContactShadows position={[0, -1.2, 0]} opacity={0.6} scale={5} blur={2.5} far={4} />
+          {/* Drop ContactShadows in low-detail mode — blur={2.5} is GPU-heavy */}
+          {!lowDetail && <ContactShadows position={[0, -1.2, 0]} opacity={0.6} scale={5} blur={2.5} far={4} />}
           <OrbitControls
             enablePan={false}
             enableZoom={false}
             minPolarAngle={Math.PI / 3}
             maxPolarAngle={Math.PI / 2}
-            target={[0, 0.5, 0]}
+            target={[0, 0.2, 0]}
           />
         </Canvas>
       </div>
@@ -444,13 +447,13 @@ export const OliverPet: React.FC<OliverPetProps> = ({
           className="mt-6 px-4 py-1.5 text-xs font-bold rounded-full uppercase tracking-widest shadow-sm transition-all duration-300"
           style={{ backgroundColor: themeColor, color: '#ffffff' }}
         >
-          {state === 'good' && 'Tư thế Tốt'}
-          {state === 'slouch' && 'Cảnh báo Lưng'}
-          {state === 'close' && 'Nhìn quá sát'}
-          {state === 'writing' && 'Đang Viết'}
-          {state === 'tired' && 'Mệt mỏi'}
-          {state === 'success' && 'Hoàn thành'}
-          {state === 'sleep' && 'Nghỉ ngơi'}
+          {state === 'good' && t('pet.stateGood')}
+          {state === 'slouch' && t('pet.stateSlouch')}
+          {state === 'close' && t('pet.stateClose')}
+          {state === 'writing' && t('pet.stateWriting')}
+          {state === 'tired' && t('pet.stateTired')}
+          {state === 'success' && t('pet.stateSuccess')}
+          {state === 'sleep' && t('pet.stateSleep')}
         </div>
       )}
     </div>
