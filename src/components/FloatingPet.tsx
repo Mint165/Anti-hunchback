@@ -58,6 +58,7 @@ export const FloatingPet: React.FC = () => {
   if (isMobile) {
     return (
       <motion.div
+        key="mobile-minimized"
         className={`fixed bottom-20 right-4 z-50 ${styles.minimized} ${isDanger ? styles.danger : ''}`}
         style={{ width: '60px', height: '60px' }}
         whileHover={{ scale: 1.1 }}
@@ -83,6 +84,7 @@ export const FloatingPet: React.FC = () => {
   if (isMinimized) {
     return (
       <motion.div
+        key="desktop-minimized"
         className={`fixed bottom-6 right-6 z-50 ${styles.minimized} ${isDanger ? styles.danger : ''}`}
         onClick={() => setIsMinimized(false)}
         style={{ width: '60px', height: '60px' }}
@@ -117,6 +119,7 @@ export const FloatingPet: React.FC = () => {
     <>
       <div ref={constraintsRef} style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: -1 }} />
       <motion.div
+        key="desktop-expanded"
         className={`fixed z-50 ${styles.expanded} ${isDanger ? styles.alertBounce : ''}`}
         style={{ bottom: 24, right: 24 }}
         drag
