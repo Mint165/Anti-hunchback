@@ -2,6 +2,7 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import Layout from './components/Layout';
 import { syncFromSupabase } from './services/db';
+import { supabase } from './services/supabase';
 import { PostureProvider, usePostureContext } from './contexts/PostureContext';
 import { Toaster } from 'react-hot-toast';
 import { AuthScreen } from './components/AuthScreen';
@@ -36,6 +37,37 @@ function AppContent() {
     // Check dark mode
     if (localStorage.getItem('oliver_dark_mode') === 'true') {
       document.documentElement.classList.add('dark');
+    }
+
+    // Listen to Supabase auth state changes
+    if (supabase) {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session?.user) {
+          const metadata = session.user.user_metadata || {};
+          setUser({
+            name: metadata.name || session.user.email?.split('@')[0] || 'User',
+            role: metadata.role || 'student',
+            linkedCode: metadata.linkedCode,
+            parentLinkedCode: metadata.parentLinkedCode,
+          });
+        }
+      });
+
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        if (session?.user) {
+          const metadata = session.user.user_metadata || {};
+          setUser({
+            name: metadata.name || session.user.email?.split('@')[0] || 'User',
+            role: metadata.role || 'student',
+            linkedCode: metadata.linkedCode,
+            parentLinkedCode: metadata.parentLinkedCode,
+          });
+        } else {
+          setUser(null);
+        }
+      });
+
+      return () => subscription.unsubscribe();
     }
   }, []);
 
@@ -79,7 +111,10 @@ function AppContent() {
     setUser(loggedInUser);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    if (supabase) {
+      await supabase.auth.signOut();
+    }
     setUser(null);
     setShowProfile(false);
   };

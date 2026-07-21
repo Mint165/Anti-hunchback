@@ -461,10 +461,10 @@ export const StudentView: React.FC = () => {
       {/* ── Strong warning overlay ─────────────────────────────────── */}
       {alertLevel === 'STRONG_WARNING' && (
         <div className="fixed inset-0 z-50 bg-red-900/60 flex items-center justify-center p-4">
-          <div className="premium-card bg-red-950 border-2 border-red-500 p-10 max-w-lg shadow-[0_0_80px_rgba(255,94,94,0.3)] subtle-pulse relative">
+          <div className="premium-card border-2 border-red-500 p-10 max-w-lg shadow-[0_0_80px_rgba(255,94,94,0.3)] subtle-pulse relative">
             <AlertTriangle size={72} className="text-red-500 mx-auto mb-6 drop-shadow-[0_0_15px_rgba(255,94,94,0.5)]" />
-            <h2 className="text-4xl font-black text-white text-center mb-4">{t('student.dangerTitle')}</h2>
-            <p className="text-red-100 text-center text-lg mb-8 leading-relaxed font-medium">{t('student.dangerDesc')}</p>
+            <h2 className="text-4xl font-black text-slate-900 dark:text-white text-center mb-4">{t('student.dangerTitle')}</h2>
+            <p className="text-slate-800 dark:text-white text-center text-lg mb-8 leading-relaxed font-medium">{t('student.dangerDesc')}</p>
             <button onClick={() => resetBreak()} className="btn-primary w-full bg-red-500 hover:bg-red-600 text-white border-none py-4 text-lg font-bold">
               {t('student.fixedBtn')}
             </button>
