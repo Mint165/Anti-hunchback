@@ -91,8 +91,17 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
     e.preventDefault();
     setError('');
 
+    const isEmailInput = email.includes('@');
+    // Supabase Auth only accepts real emails — usernames are not supported
+    // when the project is connected to Supabase. Reject early with a clear message.
+    if (supabase && !isEmailInput) {
+      const msg = 'Khi kết nối Supabase, vui lòng dùng Email hợp lệ để đăng ký/đăng nhập (không hỗ trợ tên đăng nhập).';
+      setError(msg);
+      toast.error(msg);
+      return;
+    }
+
     if (isLogin) {
-      const isEmailInput = email.includes('@');
       const supabaseEmail = isEmailInput ? email : `${email}@antihunchback.local`;
 
       if (supabase) {
@@ -151,7 +160,6 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
         return;
       }
 
-      const isEmailInput = email.includes('@');
       const supabaseEmail = isEmailInput ? email : `${email}@antihunchback.local`;
 
       if (supabase) {
