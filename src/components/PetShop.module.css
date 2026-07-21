@@ -106,45 +106,89 @@
   gap: 32px;
 }
 
-/* Preview banner — horizontal banner below tabs */
+/* Preview banner — dark card with pet centered, bubble above, badge below */
 .previewBanner {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 20px 24px;
-  border-radius: 24px;
-  background: var(--bg-page);
-  border: 2px solid rgba(124, 58, 237, 0.1);
+  padding: 28px 24px 20px;
+  border-radius: 28px;
+  background: linear-gradient(160deg, #1a1333 0%, #0d1117 60%, #1a1a2e 100%);
+  border: 1.5px solid rgba(124, 58, 237, 0.25);
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255,255,255,0.06);
   margin-bottom: 28px;
+  position: relative;
+  overflow: hidden;
 }
 
-.preview {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-  border-radius: 24px;
-  background: var(--bg-page);
-  border: 2px solid rgba(124, 58, 237, 0.1);
+.previewBanner::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 0%, rgba(124, 58, 237, 0.15) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+/* Speech bubble */
+.previewBubble {
+  position: relative;
+  background: rgba(78, 173, 99, 0.15);
+  color: #4ead63;
+  border: 1.5px solid rgba(78, 173, 99, 0.35);
+  border-radius: 16px;
+  padding: 10px 20px;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 20px;
+  max-width: 280px;
+  backdrop-filter: blur(8px);
+}
+
+.previewBubbleTail {
+  position: absolute;
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%) rotate(45deg);
+  width: 14px;
+  height: 14px;
+  background: rgba(78, 173, 99, 0.15);
+  border-right: 1.5px solid rgba(78, 173, 99, 0.35);
+  border-bottom: 1.5px solid rgba(78, 173, 99, 0.35);
 }
 
 .previewWrap {
-  width: 200px;
-  height: 200px;
+  width: 180px;
+  height: 180px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 12px;
+  margin-top: 8px;
+  margin-bottom: 8px;
+}
+
+/* Status badge */
+.previewBadge {
+  margin-top: 12px;
+  padding: 6px 20px;
+  border-radius: 999px;
+  background: rgba(78, 173, 99, 1);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  box-shadow: 0 4px 16px rgba(78, 173, 99, 0.4);
 }
 
 .previewLabel {
-  font-size: 12px;
-  font-weight: 800;
+  font-size: 11px;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--text-muted);
+  letter-spacing: 0.1em;
+  color: rgba(255, 255, 255, 0.3);
+  margin-top: 10px;
 }
 
 .items {

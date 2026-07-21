@@ -97,9 +97,12 @@ export const PetShop: React.FC = () => {
   const { t: _t } = useLanguage();
 
   useEffect(() => {
-    // Refresh stats when tab becomes visible or when window regains focus,
-    // instead of polling every 2s (performance).
-    const refresh = () => setStats(loadUserStats());
+    // Refresh stats when tab becomes visible or window regains focus
+    const refresh = () => {
+      const newStats = loadUserStats();
+      setStats(newStats);
+      setPreviewItems(newStats.equippedItems || {});
+    };
     refresh();
     const onVisibility = () => {
       if (document.visibilityState === 'visible') refresh();
@@ -138,7 +141,10 @@ export const PetShop: React.FC = () => {
 
   const handleBuy = (itemId: string, cost: number) => {
     if (buyItem(itemId, cost)) {
-      setStats(loadUserStats());
+      // After purchase, add to inventory only — do NOT auto-equip.
+      // But we DO update preview to show it.
+      const newStats = loadUserStats();
+      setStats(newStats);
       confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, zIndex: 10000 });
       playSuccessSound();
       toast.success(_t('shop.buySuccess'));
@@ -149,30 +155,34 @@ export const PetShop: React.FC = () => {
 
   const handleEquipToggle = (slot: string, itemId: string) => {
     if (stats.equippedItems[slot] === itemId) {
+      // Unequip
       equipItem(slot, null);
       setPreviewItems(prev => {
-        const newPreview = { ...prev };
-        delete newPreview[slot];
-        return newPreview;
+        const next = { ...prev };
+        delete next[slot];
+        return next;
       });
     } else {
+      // Equip — also updates localStorage so FloatingPet reacts via storage event
       equipItem(slot, itemId);
       setPreviewItems(prev => ({ ...prev, [slot]: itemId }));
     }
-    setStats(loadUserStats());
+    const newStats = loadUserStats();
+    setStats(newStats);
+    // Dispatch storage event manually so same-tab listeners (FloatingPet) react immediately
+    window.dispatchEvent(new StorageEvent('storage', { key: 'oliver_stats' }));
   };
 
   const handlePreview = (slot: string, itemId: string) => {
     if (previewItems[slot] === itemId && stats.equippedItems[slot] !== itemId) {
-      // Revert preview to equipped
       setPreviewItems(prev => {
-        const newPreview = { ...prev };
+        const next = { ...prev };
         if (stats.equippedItems[slot]) {
-          newPreview[slot] = stats.equippedItems[slot];
+          next[slot] = stats.equippedItems[slot];
         } else {
-          delete newPreview[slot];
+          delete next[slot];
         }
-        return newPreview;
+        return next;
       });
     } else {
       setPreviewItems(prev => ({ ...prev, [slot]: itemId }));
@@ -180,6 +190,9 @@ export const PetShop: React.FC = () => {
   };
 
   const filteredItems = category === 'all' ? SHOP_ITEMS : SHOP_ITEMS.filter(i => i.slot === category);
+
+  // Determine pet dialogue for preview panel
+  const previewStateLabel = _t('pet.stateGood');
 
   return (
     <div className={styles.shop}>
@@ -214,11 +227,31 @@ export const PetShop: React.FC = () => {
         ))}
       </div>
 
-      {/* Preview banner — moved below tabs (was left column) */}
+      {/* Preview banner — dark card with bubble, pet, badge all integrated */}
       <div className={styles.previewBanner}>
-        <div className={styles.previewWrap}>
-          <OliverPet state="good" size={200} equippedItems={previewItems} lowDetail />
+        {/* Speech bubble */}
+        <div className={styles.previewBubble}>
+          {_t('pet.dialogueGood')}
+          <div className={styles.previewBubbleTail} />
         </div>
+
+        {/* Pet 3D model — no glass wrapper (hideBubble + hideBadge = minimal mode) */}
+        <div className={styles.previewWrap}>
+          <OliverPet
+            state="good"
+            size={180}
+            equippedItems={previewItems}
+            hideBubble
+            hideBadge
+            lowDetail
+          />
+        </div>
+
+        {/* Status badge */}
+        <div className={styles.previewBadge}>
+          {previewStateLabel}
+        </div>
+
         <p className={styles.previewLabel}>{_t('shop.fittingRoom')}</p>
       </div>
 
@@ -238,8 +271,8 @@ export const PetShop: React.FC = () => {
                 onClick={() => isUnlocked ? handleEquipToggle(item.slot, item.id) : handlePreview(item.slot, item.id)}
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: index * 0.05 }}
-                whileHover={{ y: -5, boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}
+                transition={{ delay: index * 0.04 }}
+                whileHover={{ y: -4, boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}
                 whileTap={{ scale: 0.95 }}
               >
                 <div className={`${styles.itemIconWrap} ${isLargeIcon ? styles.itemIconWrapLarge : ''}`}>

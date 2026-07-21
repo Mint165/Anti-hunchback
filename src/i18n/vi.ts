@@ -170,10 +170,14 @@ export const vi: Record<string, string> = {
 
   // Profile
   'profile.title': 'Hồ Sơ Của Bạn',
+  'profile.roleStudent': 'Học Sinh',
+  'profile.roleParent': 'Phụ Huynh',
   'profile.stats': 'Thống kê tổng quan',
   'profile.totalSessions': 'Số phiên học',
   'profile.bestStreak': 'Chuỗi dài nhất',
   'profile.linkedParent': 'Phụ huynh đã liên kết',
+  'profile.parentLinkLabel': 'Mã kết nối phụ huynh',
+  'profile.saved': 'Đã lưu thành công',
   'profile.connectParent': 'Kết nối Phụ Huynh',
   'profile.enterCode': 'Nhập mã gồm 6 chữ số',
   'profile.connect': 'Kết nối',

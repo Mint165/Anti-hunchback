@@ -585,8 +585,8 @@ export const StudentView: React.FC = () => {
             </div>
             <motion.div
               className={styles.livePill}
-              animate={{ opacity: [1, 0.5, 1] }}
-              transition={{ duration: 2, repeat: Infinity, repeatType: 'loop' }}
+              animate={{ opacity: [1, 0.4, 1] }}
+              transition={{ duration: 1.2, repeat: Infinity, repeatDelay: 1.5, ease: 'easeInOut' }}
             >
               {t('student.live')}
             </motion.div>

@@ -35,8 +35,8 @@ const PandaModel = ({
   const mouthRef = useRef<THREE.Mesh>(null);
   const zzzRef = useRef<THREE.Group>(null);
 
-  // Segment count adapts to detail level
-  const seg = lowDetail ? 16 : 32;
+  // Segment count adapts to detail level — lower = fewer triangles = better FPS
+  const seg = lowDetail ? 12 : 32;
 
   // Memoised geometries / materials so they aren't recreated each frame
   const bodyMat = useMemo(() => new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.65 }), []);
@@ -423,7 +423,14 @@ export const OliverPet: React.FC<OliverPetProps> = ({
           className="absolute inset-0 rounded-full transition-all duration-700 opacity-20 blur-xl"
           style={{ backgroundColor: themeColor, transform: 'scale(0.8)' }}
         />
-        <Canvas shadows camera={{ position: [0, 1, 6], fov: 40 }} dpr={dpr} gl={{ antialias: !lowDetail, alpha: true }}>
+        <Canvas
+          shadows={!lowDetail}
+          camera={{ position: [0, 1, 6], fov: 40 }}
+          dpr={dpr}
+          gl={{ antialias: !lowDetail, alpha: true, powerPreference: 'high-performance' }}
+          frameloop={lowDetail ? 'demand' : 'always'}
+          performance={{ min: 0.5 }}
+        >
           <ambientLight intensity={0.6} />
           <spotLight position={[5, 10, 5]} intensity={1.5} castShadow angle={0.3} penumbra={1} />
           <directionalLight position={[-5, 5, 5]} intensity={0.8} />

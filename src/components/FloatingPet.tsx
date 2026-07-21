@@ -15,24 +15,29 @@ export const FloatingPet: React.FC = () => {
   const dragControls = useDragControls();
   const constraintsRef = useRef<HTMLDivElement>(null);
 
-  // Refresh stats only when tab becomes visible (instead of polling every 2s)
+  // Refresh stats when tab becomes visible or when PetShop equips an item
   useEffect(() => {
+    const refresh = () => setStats(loadUserStats());
     const handleVisibility = () => {
-      if (document.visibilityState === 'visible') {
-        setStats(loadUserStats());
-      }
+      if (document.visibilityState === 'visible') refresh();
+    };
+    // Listen to localStorage changes — fired when PetShop equips items
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key && e.key.startsWith('oliver_')) refresh();
     };
     document.addEventListener('visibilitychange', handleVisibility);
-    // Also refresh every 30 seconds (instead of 2s) as a fallback
-    const interval = setInterval(() => setStats(loadUserStats()), 30000);
+    window.addEventListener('storage', handleStorage);
+    // Safety-net refresh every 30s
+    const interval = setInterval(refresh, 30000);
     return () => {
       document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('storage', handleStorage);
       clearInterval(interval);
     };
   }, []);
 
   if (!hasStarted) {
-    return null; // Do not show floating pet if session hasn't started globally
+    return null;
   }
 
   const getPetState = (): PetState => {
@@ -41,7 +46,7 @@ export const FloatingPet: React.FC = () => {
     if (metrics?.isWritingMode) return 'writing';
     if (metrics && metrics.eyeDistanceCm < 50) return 'close';
     if (metrics && (metrics.slouchAngle > 15 || metrics.shoulderTilt > 7)) return 'slouch';
-    if (metrics && metrics.neckAngle > 20 && !metrics.isWritingMode) return 'tired'; // head tilt
+    if (metrics && metrics.neckAngle > 20 && !metrics.isWritingMode) return 'tired';
     if (metrics?.state === 'GOOD_POSTURE') return 'good';
     return 'good';
   };
@@ -49,26 +54,54 @@ export const FloatingPet: React.FC = () => {
   const state = getPetState();
   const isDanger = state === 'slouch' || state === 'close' || state === 'tired';
 
-  // Mobile: keep simple fixed positioning (no drag — would conflict with page scroll)
-  const bottomClass = isMobile ? 'bottom-24' : 'bottom-6';
-  const rightClass = isMobile ? 'right-4' : 'right-6';
-
-  if (isMinimized || isMobile) {
+  // ── Mobile: fixed bottom-right bubble, no drag ─────────────────────
+  if (isMobile) {
     return (
       <motion.div
-        className={`fixed ${bottomClass} ${rightClass} z-50 ${styles.minimized} ${isDanger ? styles.danger : ''}`}
-        onClick={() => !isMobile && setIsMinimized(false)}
+        className={`fixed bottom-20 right-4 z-50 ${styles.minimized} ${isDanger ? styles.danger : ''}`}
         style={{ width: '60px', height: '60px' }}
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.95 }}
       >
         <div className={styles.petInner}>
-          <OliverPet state={state} size={64} petLevel={stats.petLevel} equippedItems={stats.equippedItems} hideBubble={true} hideBadge={true} lowDetail />
+          <OliverPet
+            state={state}
+            size={64}
+            petLevel={stats.petLevel}
+            equippedItems={stats.equippedItems}
+            hideBubble
+            hideBadge
+            lowDetail
+          />
         </div>
-        {isDanger && (
-          <div className={styles.dangerBadge}>!</div>
-        )}
-        {!isMobile && !isDanger && (
+        {isDanger && <div className={styles.dangerBadge}>!</div>}
+      </motion.div>
+    );
+  }
+
+  // ── Desktop minimized bubble ────────────────────────────────────────
+  if (isMinimized) {
+    return (
+      <motion.div
+        className={`fixed bottom-6 right-6 z-50 ${styles.minimized} ${isDanger ? styles.danger : ''}`}
+        onClick={() => setIsMinimized(false)}
+        style={{ width: '60px', height: '60px' }}
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.95 }}
+      >
+        <div className={styles.petInner}>
+          <OliverPet
+            state={state}
+            size={64}
+            petLevel={stats.petLevel}
+            equippedItems={stats.equippedItems}
+            hideBubble
+            hideBadge
+            lowDetail
+          />
+        </div>
+        {isDanger && <div className={styles.dangerBadge}>!</div>}
+        {!isDanger && (
           <div className={styles.expandBtn}>
             <Maximize2 size={10} />
           </div>
@@ -77,17 +110,19 @@ export const FloatingPet: React.FC = () => {
     );
   }
 
-  // Desktop expanded: draggable via framer-motion. Drag handle = the pet canvas
-  // so the user can still click the minimize button without initiating a drag.
+  // ── Desktop expanded: draggable, always starts at bottom-right ─────
+  // Key insight: we use style={{ bottom, right }} instead of CSS classes
+  // so framer-motion's drag transform doesn't fight a top/left anchor.
   return (
     <>
       <div ref={constraintsRef} style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: -1 }} />
       <motion.div
-        className={`fixed ${bottomClass} ${rightClass} z-50 ${styles.expanded} ${isDanger ? styles.alertBounce : ''}`}
+        className={`fixed z-50 ${styles.expanded} ${isDanger ? styles.alertBounce : ''}`}
+        style={{ bottom: 24, right: 24 }}
         drag
         dragControls={dragControls}
         dragConstraints={constraintsRef}
-        dragElastic={0.4}
+        dragElastic={0.15}
         dragMomentum={false}
         dragListener={false}
       >
@@ -104,7 +139,13 @@ export const FloatingPet: React.FC = () => {
             className={styles.scaledPet}
             style={{ cursor: 'grab' }}
           >
-            <OliverPet state={state} size={135} petLevel={stats.petLevel} equippedItems={stats.equippedItems} lowDetail />
+            <OliverPet
+              state={state}
+              size={135}
+              petLevel={stats.petLevel}
+              equippedItems={stats.equippedItems}
+              lowDetail
+            />
           </div>
         </div>
       </motion.div>
