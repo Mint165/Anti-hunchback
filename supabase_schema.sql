@@ -5,9 +5,21 @@
 BEGIN;
 
 -- 0. Clean old tables to ensure fresh setup (also drops dependent policies/indexes)
-DROP TABLE IF EXISTS calibration, settings, user_stats, sessions CASCADE;
+DROP TABLE IF EXISTS profiles, calibration, settings, user_stats, sessions CASCADE;
 
--- 1. Create Calibration Table
+-- 1. Create Profiles Table (to store user login info visibly in public schema)
+CREATE TABLE profiles (
+    id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    email TEXT UNIQUE NOT NULL,
+    name TEXT,
+    role TEXT,
+    linked_code TEXT,
+    parent_linked_code TEXT,
+    created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT now() NOT NULL
+);
+
+-- 2. Create Calibration Table
 CREATE TABLE calibration (
     user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     base_eye_distance INT NOT NULL,
@@ -70,10 +82,18 @@ CREATE TABLE sessions (
 CREATE INDEX idx_sessions_user_date ON sessions(user_id, date);
 
 -- Enable Row Level Security (RLS)
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE calibration ENABLE ROW LEVEL SECURITY;
 ALTER TABLE settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_stats ENABLE ROW LEVEL SECURITY;
 ALTER TABLE sessions ENABLE ROW LEVEL SECURITY;
+
+-- Create RLS Policies for Profiles
+CREATE POLICY "Users can manage their own profile data"
+ON profiles FOR ALL
+TO authenticated
+USING (auth.uid() = id)
+WITH CHECK (auth.uid() = id);
 
 -- Create RLS Policies for Calibration
 CREATE POLICY "Users can manage their own calibration data"
@@ -105,6 +125,32 @@ WITH CHECK (auth.uid() = user_id);
 
 -- Enable Realtime for settings (used by parentSync realtime subscription)
 ALTER PUBLICATION supabase_realtime ADD TABLE settings;
+
+-- 5. Create Trigger for new users
+-- This trigger automatically creates a profile row when a new user signs up
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS trigger AS $$
+BEGIN
+  INSERT INTO public.profiles (id, email, name, role, linked_code, parent_linked_code)
+  VALUES (
+    new.id,
+    new.email,
+    new.raw_user_meta_data->>'name',
+    new.raw_user_meta_data->>'role',
+    new.raw_user_meta_data->>'linkedCode',
+    new.raw_user_meta_data->>'parentLinkedCode'
+  );
+  RETURN new;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Drop trigger if it exists
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+
+-- Create the trigger
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
 
 COMMIT;
 

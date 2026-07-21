@@ -92,9 +92,12 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
     setError('');
 
     if (isLogin) {
+      const isEmailInput = email.includes('@');
+      const supabaseEmail = isEmailInput ? email : `${email}@antihunchback.local`;
+
       if (supabase) {
         const { data, error: signInError } = await supabase.auth.signInWithPassword({
-          email,
+          email: supabaseEmail,
           password,
         });
         if (signInError) {
@@ -149,11 +152,12 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
       }
 
       const isEmailInput = email.includes('@');
+      const supabaseEmail = isEmailInput ? email : `${email}@antihunchback.local`;
 
-      if (supabase && isEmailInput) {
+      if (supabase) {
         const linkedCode = role === 'student' ? generateLinkCode() : undefined;
         const { data, error: signUpError } = await supabase.auth.signUp({
-          email,
+          email: supabaseEmail,
           password,
           options: { data: { name, role, linkedCode } },
         });
