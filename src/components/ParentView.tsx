@@ -163,7 +163,7 @@ export const ParentView: React.FC = () => {
     e.preventDefault();
     if (!messageText.trim()) return;
 
-    broadcastParentMessage(messageText.trim());
+    broadcastParentMessage(messageText.trim(), getUserIdSync());
     setMessageText('');
     setIsMessageSent(true);
     setTimeout(() => setIsMessageSent(false), 3000);
@@ -194,7 +194,9 @@ export const ParentView: React.FC = () => {
           ...prev.slice(0, 9), // Keep last 10 alerts
         ]);
         setFatigueAlerts(prev => [message, ...prev]);
-      }
+      },
+      undefined,
+      getUserIdSync()
     );
 
     // Watchdog timer: If no broadcast in 3 seconds, student is offline/inactive

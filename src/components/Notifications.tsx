@@ -14,6 +14,7 @@ import {
   subscribeToStudentSync,
   type ParentNotification,
 } from '../services/parentSync';
+import { getUserIdSync } from '../services/db';
 import styles from './Notifications.module.css';
 
 const formatRelativeTime = (ts: number, t: (k: string) => string): string => {
@@ -63,7 +64,8 @@ export const Notifications: React.FC = () => {
       (_action, _msg, ts) => {
         setItems(loadNotifications());
         void ts;
-      }
+      },
+      getUserIdSync()
     );
     return () => {
       unsubscribe();

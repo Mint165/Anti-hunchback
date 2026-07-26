@@ -160,13 +160,14 @@ export const PostureProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // Subscribe to parent messages
   useEffect(() => {
+    const userId = getUserIdSync();
     const unsubscribe = subscribeToParentMessage((text) => {
       setLatestParentMessage(text);
       voiceService.speak(text, () => {
         // Clear message after speaking (optional, or keep it on screen for a bit)
         setTimeout(() => setLatestParentMessage(null), 5000);
       });
-    });
+    }, userId);
     return () => unsubscribe();
   }, []);
 
@@ -174,12 +175,13 @@ export const PostureProvider: React.FC<{ children: React.ReactNode }> = ({ child
   // We expire the aux data after 5s of silence so the merge doesn't keep
   // using stale landmarks after the aux device goes offline.
   useEffect(() => {
+    const userId = getUserIdSync();
     const unsubscribe = subscribeToAuxCameraLandmarks((deviceId, pose) => {
       if (deviceId === ownDeviceIdRef.current) return; // ignore self
       setAuxCameraDeviceId(deviceId);
       setAuxPoseLandmarks(pose);
       auxLastSeenRef.current = Date.now();
-    });
+    }, userId);
     const expiry = setInterval(() => {
       if (auxLastSeenRef.current && Date.now() - auxLastSeenRef.current > 5000) {
         setAuxPoseLandmarks(null);
@@ -364,10 +366,10 @@ export const PostureProvider: React.FC<{ children: React.ReactNode }> = ({ child
         if (avgBlinksPerMinute < 4 || avgFidget > 35) {
           setSessionFatigueFlags(f => f + 1);
           if (avgBlinksPerMinute < 4) {
-            broadcastFatigueAlert("Tần suất chớp mắt của bé quá thấp trong 5 phút qua, có dấu hiệu mỏi mắt.");
+            broadcastFatigueAlert("Tần suất chớp mắt của bé quá thấp trong 5 phút qua, có dấu hiệu mỏi mắt.", getUserIdSync());
           }
           if (avgFidget > 35) {
-            broadcastFatigueAlert("Bé nhấp nhổm nhiều trong 5 phút qua, có dấu hiệu mất tập trung hoặc mệt mỏi.");
+            broadcastFatigueAlert("Bé nhấp nhổm nhiều trong 5 phút qua, có dấu hiệu mất tập trung hoặc mệt mỏi.", getUserIdSync());
           }
         }
 
