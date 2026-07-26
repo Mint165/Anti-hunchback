@@ -289,6 +289,32 @@ $$;
 REVOKE ALL ON FUNCTION public.get_linked_student_data(UUID) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.get_linked_student_data(UUID) TO authenticated;
 
+-- 6b. Helper RPC: resolve a 6-digit student link_code → student UUID.
+-- The parent only knows the 6-digit code (typed into the linking UI),
+-- but get_linked_student_data takes a UUID. This helper bridges that
+-- gap. SECURITY DEFINER so it can read profiles despite RLS (which
+-- is owner-only on profiles); the function returns NULL if no
+-- matching student exists, so it leaks no information beyond what
+-- the caller already knows (the code itself).
+CREATE OR REPLACE FUNCTION public.get_student_uuid_by_link_code(link_code TEXT)
+RETURNS UUID
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    student_id UUID;
+BEGIN
+    SELECT id INTO student_id
+    FROM public.profiles
+    WHERE linked_code = link_code AND role = 'student'
+    LIMIT 1;
+    RETURN student_id;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.get_student_uuid_by_link_code(TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_student_uuid_by_link_code(TEXT) TO authenticated;
+
 COMMIT;
 
 -- Note: The frontend will automatically handle inserting initial default rows using "upsert" on first login/save.

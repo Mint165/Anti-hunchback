@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 import type { AuthUser } from './AuthScreen';
 import { X, Save, LogOut, Link as LinkIcon, RefreshCw } from 'lucide-react';
 import { motion } from 'framer-motion';
 import TiltCard from './ui/TiltCard';
+import { getSessionRecords, loadUserStats } from '../services/db';
 
 interface UserProfileProps {
   user: AuthUser;
@@ -16,6 +17,20 @@ export const UserProfile: React.FC<UserProfileProps> = ({ user, onClose, onLogou
   const { t } = useLanguage();
   const [parentCode, setParentCode] = useState(user.parentLinkedCode || '');
   const [saved, setSaved] = useState(false);
+
+  // Real stats from localStorage (which is kept in sync with Supabase
+  // by syncFromSupabase + the realtime subscriptions in App.tsx).
+  // Re-read on every mount so the numbers stay current after a sync.
+  // For student role only — parents don't have study sessions.
+  const [totalSessions, setTotalSessions] = useState<number>(0);
+  const [bestStreak, setBestStreak] = useState<number>(0);
+  useEffect(() => {
+    if (user.role !== 'student') return;
+    const sessions = getSessionRecords();
+    setTotalSessions(sessions.length);
+    const stats = loadUserStats();
+    setBestStreak(stats.streak);
+  }, [user.role, user.id]);
 
   const handleSave = () => {
     onUpdateParentCode(parentCode);
@@ -62,11 +77,11 @@ export const UserProfile: React.FC<UserProfileProps> = ({ user, onClose, onLogou
             <div className="grid grid-cols-2 gap-4">
               <div className="p-4 rounded-xl text-center" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
                 <div className="text-sm font-bold mb-1" style={{ color: 'var(--text-secondary)' }}>{t('profile.totalSessions')}</div>
-                <div className="text-2xl font-black" style={{ color: 'var(--primary)' }}>12</div>
+                <div className="text-2xl font-black" style={{ color: 'var(--primary)' }}>{totalSessions}</div>
               </div>
               <div className="p-4 rounded-xl text-center" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
                 <div className="text-sm font-bold mb-1" style={{ color: 'var(--text-secondary)' }}>{t('profile.bestStreak')}</div>
-                <div className="text-2xl font-black text-orange-500">5 🔥</div>
+                <div className="text-2xl font-black text-orange-500">{bestStreak} 🔥</div>
               </div>
             </div>
           </TiltCard>

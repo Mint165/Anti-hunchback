@@ -1,7 +1,7 @@
 // Main Application Shell — with PageTransition animations
 import React, { useState, useEffect, Suspense } from 'react';
 import Layout from './components/Layout';
-import { syncFromSupabase, migrateLegacyDataIfNeeded, clearUserDataOnLogout, subscribeToSupabaseChanges } from './services/db';
+import { syncFromSupabase, migrateLegacyDataIfNeeded, clearUserDataOnLogout, subscribeToSupabaseChanges, pullStudentDataForParent } from './services/db';
 import { supabase } from './services/supabase';
 import { PostureProvider, usePostureContext } from './contexts/PostureContext';
 import { Toaster } from 'react-hot-toast';
@@ -205,6 +205,14 @@ function AppContent() {
           // Non-fatal: the auth metadata is the source of truth the client
           // uses; the profile row is for cross-account RLS lookups.
           console.warn('Failed to mirror parentLinkedCode to profiles row:', profileErr.message);
+        } else if (code) {
+          // Trigger an immediate pull of the linked student's data so the
+          // parent sees real numbers within ~1s of clicking Save, instead
+          // of waiting for the 5s poll in ParentView to fire for the first
+          // time. Errors are swallowed — ParentView's poll will retry.
+          pullStudentDataForParent(code).catch((e) => {
+            console.warn('Initial parent-link pull failed (will retry on poll):', e?.message || e);
+          });
         }
       } catch (e: any) {
         console.error('Failed to persist parentLinkedCode to Supabase:', e?.message || e);
