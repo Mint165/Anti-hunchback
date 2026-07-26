@@ -130,7 +130,7 @@ export const EyeExercise: React.FC<EyeExerciseProps> = ({ isBlinking, poseLandma
       {exerciseStatus === 'active' ? (
         <div className={styles.card}>
           <div className={styles.iconWrap}>
-            <span style={{ fontSize: 32 }}>🐼</span>
+            <span style={{ fontSize: 24 }}>🐼</span>
           </div>
 
           <h2 className={styles.title}>{t('eyeExercise.title')}</h2>

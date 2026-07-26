@@ -20,29 +20,33 @@
 }
 
 /* ── Instruction card (active state) ──
-   Pinned to top-left corner so it never covers the central play area
-   where bamboo leaves spawn. Was centered + max-w-2xl which occluded
-   the leaves. */
+   Centered horizontally, shifted slightly above the middle of the
+   screen so it stays out of the bamboo-leaf play area below, and
+   shrunk + made translucent so the game stays visible behind it. */
 .card {
   position: absolute;
-  top: 16px;
-  left: 16px;
-  max-width: 24rem;        /* max-w-sm */
-  padding: 24px;
+  top: 18%;                          /* centered-then-shifted-up */
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 20rem;                  /* shrunk from 24rem */
+  padding: 18px 20px;                /* shrunk from 24px */
   border-radius: var(--radius-2xl);
-  background: var(--bg-card);
-  border: 1px solid var(--border-color);
+  /* translucent so the camera feed / leaves show through */
+  background: color-mix(in srgb, var(--bg-card) 55%, transparent);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  border: 1px solid color-mix(in srgb, var(--border-color) 70%, transparent);
   color: var(--text-main);
-  box-shadow: var(--shadow-xl);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.18);
   text-align: left;
-  pointer-events: none;    /* card never blocks interaction */
+  pointer-events: none;              /* card never blocks interaction */
   z-index: 10;
 }
 
 .iconWrap {
-  width: 64px;
-  height: 64px;
-  margin: 0 auto 16px;
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 12px;
   border-radius: 999px;
   display: flex;
   align-items: center;
@@ -69,10 +73,10 @@
 }
 
 .title {
-  font-size: 28px;
+  font-size: 22px;
   font-weight: 800;
   letter-spacing: -0.02em;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
   color: var(--secondary);
   text-align: center;
 }
@@ -84,10 +88,10 @@
 }
 
 .desc {
-  font-size: 15px;
-  line-height: 1.6;
+  font-size: 13px;
+  line-height: 1.55;
   font-weight: 500;
-  margin-bottom: 24px;
+  margin-bottom: 18px;
   color: var(--text-main);
   text-align: center;
 }
@@ -101,8 +105,8 @@
 .progressGrid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 24px;
-  margin-bottom: 16px;
+  gap: 16px;
+  margin-bottom: 12px;
 }
 
 .progressCell {
