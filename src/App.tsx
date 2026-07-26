@@ -1,7 +1,7 @@
 // Main Application Shell — with PageTransition animations
 import React, { useState, useEffect, Suspense } from 'react';
 import Layout from './components/Layout';
-import { syncFromSupabase } from './services/db';
+import { syncFromSupabase, migrateLegacyDataIfNeeded, clearUserDataOnLogout } from './services/db';
 import { supabase } from './services/supabase';
 import { PostureProvider, usePostureContext } from './contexts/PostureContext';
 import { Toaster } from 'react-hot-toast';
@@ -102,7 +102,16 @@ function AppContent() {
         if (success) {
           setIsSynced(true);
         }
+        // Sync debug log — useful when diagnosing cross-device data flow
+        // (verifies Supabase is reachable, schema is in place, and the
+        // pull didn't silently no-op). Visible in devtools console.
+        console.info('[sync] result:', success, '| user:', user.id ?? 'default');
       });
+      // Migrate legacy unscoped localStorage data (oliver_user_stats,
+      // oliver_study_sessions, ...) to user-scoped keys once per user
+      // so existing users don't lose history when the keys become
+      // scoped. No-op if already migrated or user is 'default'.
+      if (user.id) migrateLegacyDataIfNeeded(user.id);
     } else {
       setIsSynced(false);
     }
@@ -131,6 +140,11 @@ function AppContent() {
     if (supabase) {
       await supabase.auth.signOut();
     }
+    // Wipe the per-user scoped localStorage keys so the next account
+    // that logs in on this browser starts fresh (no session count
+    // bleed, no stale stats). Legacy unscoped keys and `oliver_users`
+    // (auth list) are intentionally preserved by clearUserDataOnLogout.
+    if (user?.id) clearUserDataOnLogout(user.id);
     setUser(null);
     setShowProfile(false);
   };

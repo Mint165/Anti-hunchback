@@ -22,6 +22,12 @@ import { supabase } from '../services/supabase';
 import styles from './AuthScreen.module.css';
 
 export interface AuthUser {
+  /** Stable per-user identifier used to scope localStorage keys
+      (oliver_user_stats:<id>, oliver_study_sessions:<id>, ...).
+      Supabase UUID when configured, the email/username string for
+      local-only mode (still unique within `oliver_users`), or
+      undefined for any pre-login state. */
+  id?: string;
   name: string;
   role: 'student' | 'parent';
   linkedCode?: string;
@@ -124,6 +130,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
           const metadata = data.user.user_metadata || {};
           toast.success(t('auth.loginSuccess'));
           onLogin({
+            id: data.user.id,
             name: metadata.name || email.split('@')[0],
             role: metadata.role || 'student',
             linkedCode: metadata.linkedCode,
@@ -135,6 +142,12 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
         if (users[email]) {
           if (users[email].password === password) {
             const { password: _pw, ...userWithoutPassword } = users[email];
+            // Local-only accounts are keyed by email/username in
+            // `oliver_users`, so the email string is a stable per-user
+            // identifier suitable for scoping localStorage keys. Add it
+            // here so user-scoped storage (`oliver_user_stats:<id>`)
+            // works the same as the Supabase UUID path.
+            userWithoutPassword.id = userWithoutPassword.id || email;
             toast.success('Đăng nhập thành công (Local)! 🎉');
             onLogin(userWithoutPassword);
           } else {
@@ -182,7 +195,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
         }
         toast.success(t('auth.registerSuccess'));
         if (data.session) {
-          onLogin({ name, role, linkedCode });
+          onLogin({ id: data.user?.id, name, role, linkedCode });
         } else {
           toast.success('Vui lòng kiểm tra email của bạn để xác thực tài khoản!', { duration: 6000 });
         }
@@ -198,6 +211,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
         setGeneratedOtp(otp);
         setPendingEmail(email);
         const newUser: AuthUser & { password: string } = {
+          id: email, // local-only: email/username is the stable user id
           name,
           role,
           password,
