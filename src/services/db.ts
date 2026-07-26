@@ -261,7 +261,13 @@ async function pushUserStatsToSupabase(stats: UserStats) {
       badges: stats.badges,
       coins: stats.coins,
       unlocked_items: stats.unlockedItems,
-      equipped_items: stats.equippedItems
+      equipped_items: stats.equippedItems,
+      // Pet progress is part of user_stats now (schema 4b). Pushing
+      // it lets a second device restore the pet at the same level/xp
+      // the user reached on the first device.
+      pet_xp: stats.petXp,
+      pet_level: stats.petLevel,
+      pet_good_posture_streak: stats.petGoodPostureStreak
     });
   } catch (err) {
     console.error('Failed to sync user stats to Supabase:', err);
@@ -354,10 +360,15 @@ export async function syncFromSupabase(): Promise<boolean> {
         lastSessionDate: statsData.last_session_date,
         totalStudyTime: statsData.total_study_time,
         badges: statsData.badges || [],
-        petXp: localStats?.petXp || 0,
-        petLevel: localStats?.petLevel || 1,
-        petGoodPostureStreak: localStats?.petGoodPostureStreak || 0,
-        coins: statsData.coins || localStats?.coins || 0,
+        // Pet progress now round-trips through Supabase (schema 4b).
+        // Fall back to localStats only when the Supabase row predates
+        // the migration and has NULL/zero pet fields with no local
+        // value — i.e. a brand-new device that has never seen this
+        // pet before.
+        petXp: statsData.pet_xp ?? localStats?.petXp ?? 0,
+        petLevel: statsData.pet_level ?? localStats?.petLevel ?? 1,
+        petGoodPostureStreak: statsData.pet_good_posture_streak ?? localStats?.petGoodPostureStreak ?? 0,
+        coins: statsData.coins ?? localStats?.coins ?? 0,
         unlockedItems: statsData.unlocked_items || localStats?.unlockedItems || [],
         equippedItems: statsData.equipped_items || localStats?.equippedItems || {},
       };
@@ -626,21 +637,32 @@ export function getBadgesStatus(): Badge[] {
 }
 
 // --- Realtime Subscriptions ---
-export function subscribeToSupabaseChanges(onSettingsChange: (settings: AppSettings) => void) {
+// Subscribes to the user's own settings row (cross-device settings
+// sync) AND to inserts/updates on their own sessions + user_stats rows
+// (cross-device history + stats sync). When a session is saved on
+// device A, device B receives a postgres_changes event and re-pulls
+// the affected data so its local view stays current without a reload.
+export function subscribeToSupabaseChanges(
+  onSettingsChange: (settings: AppSettings) => void,
+  onSessionsChange?: () => void,
+  onStatsChange?: () => void,
+) {
   const client = supabase;
   if (!isSupabaseConfigured || !client) return () => {};
 
-  const getUserIdSync = async () => {
+  const getUserIdAsync = async () => {
     const { data } = await client.auth.getSession();
     return data.session?.user.id;
   };
 
-  let subscription: any;
+  let settingsSub: any;
+  let sessionsSub: any;
+  let statsSub: any;
 
-  getUserIdSync().then((userId) => {
+  getUserIdAsync().then((userId) => {
     if (!userId) return;
 
-    subscription = client
+    settingsSub = client
       .channel('public:settings')
       .on(
         'postgres_changes',
@@ -669,9 +691,56 @@ export function subscribeToSupabaseChanges(onSettingsChange: (settings: AppSetti
         }
       )
       .subscribe();
+
+    // Sessions: INSERT (new session saved on another device) or
+    // UPDATE (rare — session row edited). Either way, signal the
+    // caller to re-pull sessions from Supabase so the local view
+    // shows the new row without a full page reload.
+    if (onSessionsChange) {
+      sessionsSub = client
+        .channel('public:sessions')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'sessions',
+            filter: `user_id=eq.${userId}`,
+          },
+          (payload) => {
+            console.log('Realtime sessions change received:', payload);
+            onSessionsChange();
+          }
+        )
+        .subscribe();
+    }
+
+    // user_stats: UPDATE (xp/level/streak/pet/coins changed on
+    // another device). Signal the caller to re-pull stats so the
+    // header counters and pet state stay in sync.
+    if (onStatsChange) {
+      statsSub = client
+        .channel('public:user_stats')
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'user_stats',
+            filter: `user_id=eq.${userId}`,
+          },
+          (payload) => {
+            console.log('Realtime user_stats update received:', payload);
+            onStatsChange();
+          }
+        )
+        .subscribe();
+    }
   });
 
   return () => {
-    if (subscription) client.removeChannel(subscription);
+    if (settingsSub) client.removeChannel(settingsSub);
+    if (sessionsSub) client.removeChannel(sessionsSub);
+    if (statsSub) client.removeChannel(statsSub);
   };
 }
