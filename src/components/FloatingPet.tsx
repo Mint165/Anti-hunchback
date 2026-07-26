@@ -5,22 +5,9 @@ import OliverPet, { type PetState } from './OliverPet';
 import { loadUserStats } from '../services/db';
 import { Maximize2, Minimize2 } from 'lucide-react';
 import { useMediaQuery } from 'react-responsive';
-import type { AppTab } from '../App';
 import styles from './FloatingPet.module.css';
 
-interface FloatingPetProps {
-  /**
-   * Currently-active app tab. When the user is on the Pet tab,
-   * PetProfile already renders a larger OliverPet in the page body —
-   * mounting the corner overlay there would spawn a redundant WebGL
-   * context (3 simultaneous Canvases on the Pet tab). Returning null
-   * unmounts this overlay's OliverPet entirely (clearing its WebGL
-   * context + 30s stats refresh interval) while the Pet tab is open.
-   */
-  activeTab?: AppTab;
-}
-
-export const FloatingPet: React.FC<FloatingPetProps> = ({ activeTab }) => {
+export const FloatingPet: React.FC = () => {
   const { metrics, hasStarted, alertLevel, eyeExerciseTriggered } = usePostureContext();
   const [isMinimized, setIsMinimized] = useState(false);
   const [stats, setStats] = useState(() => loadUserStats());
@@ -48,16 +35,6 @@ export const FloatingPet: React.FC<FloatingPetProps> = ({ activeTab }) => {
       clearInterval(interval);
     };
   }, []);
-
-  // Hide the corner pet when the user is on the Pet tab — PetProfile
-  // already renders a larger OliverPet in the page body, so keeping this
-  // overlay mounted would spawn a redundant WebGL context (3 simultaneous
-  // Canvases on the Pet tab). Returning null here unmounts the overlay's
-  // OliverPet entirely. Placed AFTER all hooks so the Rules of Hooks
-  // (same hook order every render) are preserved.
-  if (activeTab === 'pet') {
-    return null;
-  }
 
   if (!hasStarted) {
     return null;
