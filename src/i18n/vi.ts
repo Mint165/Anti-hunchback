@@ -136,6 +136,15 @@ export const vi: Record<string, string> = {
   'auth.loginFailed': 'Đăng nhập thất bại: ',
   'auth.loginSuccess': 'Đăng nhập thành công! 🎉',
   'auth.registerSuccess': 'Đăng ký thành công! 🎉',
+  // Thông báo thân thiện cho các lỗi Supabase auth — map theo substring
+  // (case-insensitive) của error.message gốc do Supabase trả về.
+  'auth.errEmailNotConfirmed': 'Email chưa được xác thực. Vui lòng mở email xác thực chúng tôi đã gửi và bấm vào liên kết, sau đó đăng nhập lại. (Nếu bạn vừa tắt "Confirm email" trên Supabase, hãy đăng xuất rồi đăng nhập lại một lần.)',
+  'auth.errInvalidCredentials': 'Email hoặc mật khẩu không đúng. Vui lòng kiểm tra lại thông tin đăng nhập.',
+  'auth.errUserAlreadyExists': 'Email này đã được đăng ký. Vui lòng đăng nhập thay vì tạo mới.',
+  'auth.errWeakPassword': 'Mật khẩu quá yếu. Vui lòng dùng ít nhất 8 ký tự gồm chữ và số.',
+  'auth.errSignupDisabled': 'Đăng ký đang bị tắt trên máy chủ. Vui lòng liên hệ quản trị viên.',
+  'auth.errNetwork': 'Không thể kết nối đến máy chủ Supabase. Vui lòng kiểm tra mạng, tắt Trình chặn quảng cáo (Adblocker / Brave Shield) và thử lại.',
+  'auth.errGeneric': 'Đã có lỗi xảy ra. Vui lòng thử lại.',
   
   // Parent
   'parent.dashboard': 'Phụ Huynh Dashboard',

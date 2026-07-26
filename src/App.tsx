@@ -248,7 +248,7 @@ function AppContent() {
   // FloatingPet) consume PostureContext, so they must live inside the
   // provider. They're rendered as a sibling to Layout's children so
   // they overlay the whole screen.
-  const studentExtras = isStudent ? <StudentExtras /> : null;
+  const studentExtras = isStudent ? <StudentExtras activeTab={activeTab} /> : null;
 
   return (
     <PostureProviderWrapper enabled={isStudent}>
@@ -294,7 +294,12 @@ const PostureProviderWrapper: React.FC<{ enabled: boolean; children: React.React
 // (reads metrics/hasStarted/alertLevel/eyeExerciseTriggered). Must
 // be mounted INSIDE <PostureProvider> so useContext(PostureContext)
 // resolves to the real provider value.
-function StudentExtras() {
+//
+// `activeTab` is forwarded so FloatingPet can unmount itself when the
+// user is on the Pet tab — PetProfile already renders a larger
+// OliverPet, so keeping the corner overlay mounted would spawn a
+// second (redundant) WebGL context. See App.tsx renderTabContent.
+function StudentExtras({ activeTab }: { activeTab: AppTab }) {
   const { eyeExerciseTriggered, onEyeExerciseComplete, metrics, poseLandmarks } = usePostureContext();
 
   // Pause decorative page-wide motion (CSS animations, framer-motion page
@@ -322,7 +327,13 @@ function StudentExtras() {
         )}
       </Suspense>
       <Suspense fallback={null}>
-        <FloatingPet />
+        {/* Skip the corner pet overlay while the Pet tab is open —
+            PetProfile already renders a larger OliverPet in the page
+            body, so mounting FloatingPet there would spawn a redundant
+            WebGL context (3 simultaneous Canvases: FloatingPet +
+            PetProfile + PetShop). Unmounting here also clears the
+            overlay's 30s stats refresh interval via useEffect cleanup. */}
+        {activeTab !== 'pet' && <FloatingPet />}
       </Suspense>
     </>
   );

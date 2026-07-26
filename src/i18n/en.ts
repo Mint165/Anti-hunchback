@@ -136,6 +136,16 @@ export const en: Record<string, string> = {
   'auth.loginFailed': 'Login failed: ',
   'auth.loginSuccess': 'Login successful! 🎉',
   'auth.registerSuccess': 'Registration successful! 🎉',
+  // Friendly mappings for Supabase auth errors so users see a clear
+  // Vietnamese/English message instead of the raw Supabase string.
+  // The match is case-insensitive on a substring of the error message.
+  'auth.errEmailNotConfirmed': 'Email not confirmed yet. Please open the verification email we sent and click the link, then try logging in again. (If you turned off "Confirm email" in Supabase after signing up, sign out and sign back in once.)',
+  'auth.errInvalidCredentials': 'Incorrect email or password. Please double-check your credentials.',
+  'auth.errUserAlreadyExists': 'An account with this email already exists. Please log in instead.',
+  'auth.errWeakPassword': 'Password is too weak. Use at least 8 characters with a mix of letters and numbers.',
+  'auth.errSignupDisabled': 'Sign-ups are currently disabled on the server. Please contact the administrator.',
+  'auth.errNetwork': 'Cannot reach the Supabase server. Please check your internet connection, disable any ad-blocker / Brave Shield, and try again.',
+  'auth.errGeneric': 'Something went wrong. Please try again.',
   
   // Profile
   'profile.roleStudent': 'Student',
