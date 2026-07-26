@@ -157,6 +157,22 @@ WITH CHECK (auth.uid() = parent_user_id);
 -- realtime subscriptions for cross-device delivery).
 ALTER PUBLICATION supabase_realtime ADD TABLE settings;
 ALTER PUBLICATION supabase_realtime ADD TABLE notifications;
+-- Enable Realtime for sessions + user_stats so cross-device sync of
+-- study history and stats (xp/level/streak/pet progress) is pushed to
+-- other devices logged into the same account, and so the parent view
+-- sees new sessions show up without polling.
+ALTER PUBLICATION supabase_realtime ADD TABLE sessions;
+ALTER PUBLICATION supabase_realtime ADD TABLE user_stats;
+
+-- 4b. Add pet progress columns to user_stats. Pet state (petXp,
+-- petLevel, petGoodPostureStreak) was previously client-only and
+-- never pushed to Supabase, so logging into a second device would
+-- reset the pet to level 1 / 0 xp even though xp/level/streak/coins
+-- restored correctly. These columns let pushUserStatsToSupabase
+-- persist pet progress and syncFromSupabase restore it cross-device.
+ALTER TABLE user_stats ADD COLUMN IF NOT EXISTS pet_xp INT NOT NULL DEFAULT 0;
+ALTER TABLE user_stats ADD COLUMN IF NOT EXISTS pet_level INT NOT NULL DEFAULT 1;
+ALTER TABLE user_stats ADD COLUMN IF NOT EXISTS pet_good_posture_streak INT NOT NULL DEFAULT 0;
 
 -- 5. Create Trigger for new users
 -- This trigger automatically creates a profile row when a new user signs up

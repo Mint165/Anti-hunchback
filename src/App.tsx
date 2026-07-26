@@ -1,7 +1,7 @@
 // Main Application Shell — with PageTransition animations
 import React, { useState, useEffect, Suspense } from 'react';
 import Layout from './components/Layout';
-import { syncFromSupabase, migrateLegacyDataIfNeeded, clearUserDataOnLogout } from './services/db';
+import { syncFromSupabase, migrateLegacyDataIfNeeded, clearUserDataOnLogout, subscribeToSupabaseChanges } from './services/db';
 import { supabase } from './services/supabase';
 import { PostureProvider, usePostureContext } from './contexts/PostureContext';
 import { Toaster } from 'react-hot-toast';
@@ -118,6 +118,30 @@ function AppContent() {
       setIsSynced(false);
     }
   }, [user]);
+
+  // Subscribe to Supabase Realtime changes for the current user's own
+  // rows: settings (existing), sessions + user_stats (new). When
+  // another device logged into the same account saves a session or
+  // updates stats, this device receives a postgres_changes event and
+  // re-pulls the affected data so the local view stays current
+  // without a full page reload. The callbacks just re-run the sync
+  // pull — granular row merging isn't worth the complexity here.
+  useEffect(() => {
+    if (!user?.id || !supabase) return;
+    const unsubscribe = subscribeToSupabaseChanges(
+      // onSettingsChange — settings are applied inline by the
+      // existing payload mapping inside the helper; no extra work
+      // needed here.
+      () => {},
+      // onSessionsChange — re-pull sessions so StudentView/ParentView
+      // history tables update.
+      () => { syncFromSupabase().then(() => setIsSynced(true)); },
+      // onStatsChange — re-pull stats so header counters and pet
+      // state update.
+      () => { syncFromSupabase().then(() => setIsSynced(true)); },
+    );
+    return () => { unsubscribe(); };
+  }, [user?.id]);
 
   useEffect(() => {
     if (user) {
