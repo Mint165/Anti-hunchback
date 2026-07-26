@@ -122,11 +122,12 @@ export const PostureProvider: React.FC<{ children: React.ReactNode }> = ({ child
     (() => {
       try {
         const k = 'oliver_device_id';
-        let id = sessionStorage.getItem(k);
-        if (!id) {
-          id = (crypto as any).randomUUID?.() ?? `dev_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-          sessionStorage.setItem(k, id);
-        }
+        const stored = sessionStorage.getItem(k);
+        if (stored) return stored;
+        const id: string =
+          (crypto as any).randomUUID?.() ??
+          `dev_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+        sessionStorage.setItem(k, id);
         return id;
       } catch {
         return `dev_${Date.now()}_${Math.random().toString(36).slice(2)}`;
