@@ -10,6 +10,103 @@ async function getUserId(): Promise<string> {
   return data.session?.user.id || 'default';
 }
 
+/**
+ * Sync resolver for the current user's stable identifier.
+ *
+ * Why this exists: the storage keys used to be GLOBAL
+ * (`oliver_user_stats`, `oliver_study_sessions`, ...) which meant a new
+ * account on the same browser saw the previous account's sessions /
+ * stats — the "tài khoản mới thấy data cũ" bug. We now scope every
+ * per-user key by the user id so each account's data is isolated.
+ *
+ * Source of the id, in priority order:
+ *   1. `oliver_current_user.id` — set by AuthScreen at login time
+ *      (Supabase UUID when configured, email string for local-only
+ *      mode so it's still unique within `oliver_users`).
+ *   2. `'default'` — pre-login / unknown user; falls back to the
+ *      legacy unscoped keys so the very first run still works.
+ */
+export function getUserIdSync(): string {
+  try {
+    const raw = localStorage.getItem('oliver_current_user');
+    if (!raw) return 'default';
+    const parsed = JSON.parse(raw);
+    return parsed?.id || 'default';
+  } catch {
+    return 'default';
+  }
+}
+
+/**
+ * Per-user storage key. Returns the legacy unscoped key when the user
+ * id is `'default'` (pre-login or no Supabase session) so the very
+ * first run and any not-yet-logged-in state still read the legacy
+ * keys. Once a real user id is present, returns a scoped key
+ * `oliver_<kind>:<userId>` so each account's data is isolated.
+ */
+function storageKey(kind: 'calibration_data' | 'app_settings' | 'study_sessions' | 'user_stats', userId?: string): string {
+  const uid = userId ?? getUserIdSync();
+  const LEGACY: Record<typeof kind, string> = {
+    calibration_data: 'oliver_calibration_data',
+    app_settings: 'oliver_app_settings',
+    study_sessions: 'oliver_study_sessions',
+    user_stats: 'oliver_user_stats',
+  };
+  if (!uid || uid === 'default') return LEGACY[kind];
+  return `${LEGACY[kind]}:${uid}`;
+}
+
+/**
+ * One-time legacy→scoped migration per user. Called from App.tsx after
+ * login. If the user has no data under their scoped key yet but the
+ * legacy unscoped key has data, copy it across so they don't lose
+ * their history when the storage keys become user-scoped. The legacy
+ * key is left in place as a backup — `clearUserDataOnLogout` removes
+ * only the scoped keys, never the legacy ones.
+ */
+export function migrateLegacyDataIfNeeded(userId: string): void {
+  if (!userId || userId === 'default') return;
+  const kinds: Array<'calibration_data' | 'app_settings' | 'study_sessions' | 'user_stats'> = [
+    'calibration_data', 'app_settings', 'study_sessions', 'user_stats',
+  ];
+  for (const kind of kinds) {
+    const scoped = storageKey(kind, userId);
+    if (localStorage.getItem(scoped)) continue; // already migrated
+    const legacy = localStorage.getItem(storageKey(kind, 'default'));
+    if (!legacy) continue;
+    try {
+      localStorage.setItem(scoped, legacy);
+      console.info(`[storage] migrated legacy "${kind}" → scoped key for user ${userId}`);
+    } catch (err) {
+      console.warn(`[storage] failed to migrate "${kind}" for user ${userId}:`, err);
+    }
+  }
+}
+
+/**
+ * Wipe the per-user scoped keys on logout so the next account that
+ * logs in on this browser starts fresh (no session count bleed, no
+ * stale stats). The legacy unscoped keys and `oliver_users` (auth
+ * list) are intentionally preserved — they hold no per-account data
+ * once scoped keys exist, and keeping them lets a re-logging-in user
+ * re-migrate if needed. `oliver_dark_mode` (UI pref) and
+ * `oliver_current_user` (cleared by App.tsx) are also untouched here.
+ */
+export function clearUserDataOnLogout(userId: string): void {
+  if (!userId || userId === 'default') return;
+  const kinds: Array<'calibration_data' | 'app_settings' | 'study_sessions' | 'user_stats'> = [
+    'calibration_data', 'app_settings', 'study_sessions', 'user_stats',
+  ];
+  for (const kind of kinds) {
+    try {
+      localStorage.removeItem(storageKey(kind, userId));
+    } catch (err) {
+      console.warn(`[storage] failed to clear "${kind}" for user ${userId}:`, err);
+    }
+  }
+  console.info(`[storage] cleared scoped data for user ${userId} on logout`);
+}
+
 export interface AppSettings {
   screenDistanceThreshold: number; // default 50cm
   neckTiltThreshold: number;       // default 20 deg
@@ -78,11 +175,13 @@ export const DEFAULT_SETTINGS: AppSettings = {
   soundAlertEnabled: true,
 };
 
-const STORAGE_KEYS = {
-  CALIBRATION: 'oliver_calibration_data',
-  SETTINGS: 'oliver_app_settings',
-  SESSIONS: 'oliver_study_sessions',
-  STATS: 'oliver_user_stats',
+// Convenience wrappers so callers don't have to remember the kind-string
+// mapping. Each one resolves the current user via getUserIdSync().
+const sk = {
+  CALIBRATION: () => storageKey('calibration_data'),
+  SETTINGS: () => storageKey('app_settings'),
+  SESSIONS: () => storageKey('study_sessions'),
+  STATS: () => storageKey('user_stats'),
 };
 
 // --- Background Supabase Pushes ---
@@ -190,7 +289,7 @@ export async function syncFromSupabase(): Promise<boolean> {
         baseTorsoHeight: calibrationData.base_torso_height,
         baseEAR: calibrationData.base_ear,
       };
-      localStorage.setItem(STORAGE_KEYS.CALIBRATION, JSON.stringify(calibration));
+      localStorage.setItem(storageKey('calibration_data', userId), JSON.stringify(calibration));
     }
 
     // 2. Fetch Settings
@@ -207,13 +306,13 @@ export async function syncFromSupabase(): Promise<boolean> {
         eyeExerciseInterval: settingsData.eye_exercise_interval,
         soundAlertEnabled: settingsData.sound_alert_enabled,
       };
-      localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
+      localStorage.setItem(storageKey('app_settings', userId), JSON.stringify(settings));
     }
 
     // 3. Fetch Stats
     const { data: statsData } = await supabase.from('user_stats').select('*').eq('user_id', userId).single();
     if (statsData) {
-      const localStatsRaw = localStorage.getItem(STORAGE_KEYS.STATS);
+      const localStatsRaw = localStorage.getItem(storageKey('user_stats', userId));
       const localStats = localStatsRaw ? JSON.parse(localStatsRaw) : null;
       const stats: UserStats = {
         xp: statsData.xp,
@@ -229,7 +328,7 @@ export async function syncFromSupabase(): Promise<boolean> {
         unlockedItems: statsData.unlocked_items || localStats?.unlockedItems || [],
         equippedItems: statsData.equipped_items || localStats?.equippedItems || {},
       };
-      localStorage.setItem(STORAGE_KEYS.STATS, JSON.stringify(stats));
+      localStorage.setItem(storageKey('user_stats', userId), JSON.stringify(stats));
     }
 
     // 4. Fetch Sessions (RLS ensures we only get our own sessions, but we can also filter)
@@ -249,7 +348,7 @@ export async function syncFromSupabase(): Promise<boolean> {
         completedEyeExercises: s.completed_eye_exercises,
         streakAdded: s.streak_added,
       }));
-      localStorage.setItem(STORAGE_KEYS.SESSIONS, JSON.stringify(sessions));
+      localStorage.setItem(storageKey('study_sessions', userId), JSON.stringify(sessions));
     }
 
     return true;
@@ -261,29 +360,29 @@ export async function syncFromSupabase(): Promise<boolean> {
 
 // --- Calibration ---
 export function saveCalibration(data: CalibrationData): void {
-  localStorage.setItem(STORAGE_KEYS.CALIBRATION, JSON.stringify(data));
+  localStorage.setItem(sk.CALIBRATION(), JSON.stringify(data));
   pushCalibrationToSupabase(data);
 }
 
 export function loadCalibration(): CalibrationData {
-  const data = localStorage.getItem(STORAGE_KEYS.CALIBRATION);
+  const data = localStorage.getItem(sk.CALIBRATION());
   return data ? JSON.parse(data) : { ...DEFAULT_CALIBRATION };
 }
 
 // --- Settings ---
 export function saveSettings(settings: AppSettings): void {
-  localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
+  localStorage.setItem(sk.SETTINGS(), JSON.stringify(settings));
   pushSettingsToSupabase(settings);
 }
 
 export function loadSettings(): AppSettings {
-  const settings = localStorage.getItem(STORAGE_KEYS.SETTINGS);
+  const settings = localStorage.getItem(sk.SETTINGS());
   return settings ? JSON.parse(settings) : { ...DEFAULT_SETTINGS };
 }
 
 // --- Stats & Gamification ---
 export function loadUserStats(): UserStats {
-  const statsStr = localStorage.getItem(STORAGE_KEYS.STATS);
+  const statsStr = localStorage.getItem(sk.STATS());
   const defaultStats: UserStats = {
     xp: 0,
     level: 1,
@@ -316,7 +415,7 @@ export function loadUserStats(): UserStats {
 }
 
 export function saveUserStats(stats: UserStats): void {
-  localStorage.setItem(STORAGE_KEYS.STATS, encryptData(stats));
+  localStorage.setItem(sk.STATS(), encryptData(stats));
   pushUserStatsToSupabase(stats);
 }
 
@@ -434,7 +533,7 @@ export function checkAndUpdateStreak(): number {
 export function saveSessionRecord(record: SessionRecord): void {
   const sessions = getSessionRecords();
   sessions.push(record);
-  localStorage.setItem(STORAGE_KEYS.SESSIONS, JSON.stringify(sessions));
+  localStorage.setItem(sk.SESSIONS(), JSON.stringify(sessions));
 
   // Push to Supabase
   pushSessionToSupabase(record);
@@ -449,7 +548,7 @@ export function saveSessionRecord(record: SessionRecord): void {
 }
 
 export function getSessionRecords(): SessionRecord[] {
-  const sessions = localStorage.getItem(STORAGE_KEYS.SESSIONS);
+  const sessions = localStorage.getItem(sk.SESSIONS());
   return sessions ? JSON.parse(sessions) : [];
 }
 
@@ -532,7 +631,7 @@ export function subscribeToSupabaseChanges(onSettingsChange: (settings: AppSetti
             eyeExerciseInterval: s.eye_exercise_interval,
             soundAlertEnabled: s.sound_alert_enabled,
           };
-          localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(newSettings));
+          localStorage.setItem(sk.SETTINGS(), JSON.stringify(newSettings));
           onSettingsChange(newSettings);
         }
       )
