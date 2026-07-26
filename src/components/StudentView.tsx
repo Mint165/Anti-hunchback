@@ -20,7 +20,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import type { CalibrationData } from '../services/postureAI';
 import { loadUserStats, saveSessionRecord, addXP, getBadgesStatus } from '../services/db';
 import type { Badge } from '../services/db';
-import { broadcastStudentStatus, broadcastFatigueAlert } from '../services/parentSync';
+import { broadcastStudentStatus, broadcastFatigueAlert, broadcastCameraOffAlert } from '../services/parentSync';
 import { usePostureContext } from '../contexts/PostureContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { voiceService } from '../services/voiceService';
@@ -83,13 +83,61 @@ export const StudentView: React.FC = () => {
     sessionFatigueFlags, sessionAngleAccumulator,
     isManualWritingMode,
     setIsManualWritingMode,
+    isCameraActive,
+    pauseCamera,
+    resumeCamera,
   } = usePostureContext();
   const { t } = useLanguage();
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const [showCamera, setShowCamera] = useState<boolean>(true);
+  // `showCamera` is now derived from the real camera state in context. We
+  // keep a local mirror only so the calibration / pre-start video preview
+  // element (which exists before the session starts) can still toggle its
+  // own visibility without touching the global MediaPipe stream.
+  const showCamera = isCameraActive;
   const [isAudioEnabled, setIsAudioEnabled] = useState<boolean>(true);
   const [showTips, setShowTips] = useState<boolean>(false);
+
+  // Track the previous camera state so we only broadcast on actual
+  // transitions, not on every re-render that reads isCameraActive.
+  const prevCameraActiveRef = useRef<boolean>(isCameraActive);
+  useEffect(() => {
+    if (prevCameraActiveRef.current === isCameraActive) return;
+    const became = isCameraActive ? 'on' : 'off';
+    prevCameraActiveRef.current = isCameraActive;
+    // Only broadcast when a real session is in progress — toggling the
+    // camera during calibration / pre-start would be noise to the parent.
+    if (!hasStarted || !calibration) return;
+    if (became === 'off') {
+      broadcastCameraOffAlert(t('notifications.cameraOffMsg'), 'off');
+    } else {
+      broadcastCameraOffAlert(t('notifications.cameraOnMsg'), 'on');
+    }
+  }, [isCameraActive, hasStarted, calibration, t]);
+
+  // When the camera is actually stopped (Task 7), the global video element's
+  // srcObject is cleared by useMediaPipe. Mirror that to the local preview
+  // element so the last frame doesn't linger behind the placeholder, and
+  // restore it when the camera comes back on.
+  useEffect(() => {
+    if (!videoRef.current) return;
+    if (!isCameraActive) {
+      videoRef.current.srcObject = null;
+    } else {
+      const globalVideo = document.getElementById('global-webcam') as HTMLVideoElement | null;
+      if (globalVideo && videoRef.current.srcObject !== globalVideo.srcObject) {
+        videoRef.current.srcObject = globalVideo.srcObject;
+      }
+    }
+  }, [isCameraActive]);
+
+  const handleToggleCamera = () => {
+    if (isCameraActive) {
+      pauseCamera();
+    } else {
+      resumeCamera();
+    }
+  };
 
   const [sessionStartTime, setSessionStartTime] = useState<number>(Date.now());
   const [sessionElapsedSeconds, setSessionElapsedSeconds] = useState<number>(0);
@@ -124,7 +172,7 @@ export const StudentView: React.FC = () => {
       globalVideo.removeEventListener('play', syncStream);
       clearInterval(interval);
     };
-  }, [showCamera, hasStarted, isModelReady]);
+  }, [showCamera, hasStarted, isModelReady, isCameraActive]);
 
   useEffect(() => {
     if (!hasStarted) return;
@@ -542,7 +590,7 @@ export const StudentView: React.FC = () => {
               <Play size={14} style={{ color: 'var(--primary)' }} /> {t('student.cameraAi')}
             </div>
             <motion.button
-              onClick={() => setShowCamera(!showCamera)}
+              onClick={handleToggleCamera}
               className={`${styles.cameraToggle} ${showCamera ? styles.cameraToggleOff : styles.cameraToggleOn}`}
               whileTap={{ scale: 0.9 }}
             >

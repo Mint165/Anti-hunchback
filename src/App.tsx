@@ -18,8 +18,9 @@ const Settings = React.lazy(() => import('./components/Settings'));
 const PetProfile = React.lazy(() => import('./components/PetProfile'));
 const FloatingPet = React.lazy(() => import('./components/FloatingPet'));
 const EyeExercise = React.lazy(() => import('./components/EyeExercise'));
+const Notifications = React.lazy(() => import('./components/Notifications'));
 
-export type AppTab = 'student' | 'parent' | 'pet' | 'settings';
+export type AppTab = 'student' | 'parent' | 'pet' | 'settings' | 'notifications';
 export type AppMode = 'student' | 'parent';
 
 function AppContent() {
@@ -97,9 +98,11 @@ function AppContent() {
   useEffect(() => {
     if (user) {
       localStorage.setItem('oliver_current_user', JSON.stringify(user));
-      if (user.role === 'parent' && activeTab !== 'parent' && activeTab !== 'settings') {
+      // Parent may legitimately be on parent / settings / notifications tabs.
+      // Only redirect away from student-only tabs (student / pet).
+      if (user.role === 'parent' && (activeTab === 'student' || activeTab === 'pet')) {
         setActiveTab('parent');
-      } else if (user.role === 'student' && activeTab === 'parent') {
+      } else if (user.role === 'student' && (activeTab === 'parent' || activeTab === 'notifications')) {
         setActiveTab('student');
       }
     } else {
@@ -119,10 +122,41 @@ function AppContent() {
     setShowProfile(false);
   };
 
-  const handleUpdateParentCode = (code: string) => {
+  // Task 6b: persist the parent's linked code to Supabase so it survives
+  // across devices / sessions, not just local state. Falls back to
+  // local-only mode when Supabase isn't configured (per the project's
+  // local-only mode documented in the constitution).
+  const handleUpdateParentCode = async (code: string) => {
     if (!user) return;
     const updatedUser = { ...user, parentLinkedCode: code };
     setUser(updatedUser);
+    // Mirror to localStorage so the value is available immediately on
+    // reload even before Supabase auth state re-hydrates.
+    localStorage.setItem('oliver_current_user', JSON.stringify(updatedUser));
+
+    if (supabase) {
+      try {
+        // 1. Update auth.user.user_metadata so onAuthStateChange picks it up.
+        const { error: authErr } = await supabase.auth.updateUser({
+          data: { parentLinkedCode: code },
+        });
+        if (authErr) throw authErr;
+        // 2. Mirror to the public.profiles row so the SECURITY DEFINER RPC
+        //    in supabase_schema.sql (Task 6c) can read it when the parent
+        //    requests the linked student's data.
+        const { error: profileErr } = await supabase
+          .from('profiles')
+          .update({ parent_linked_code: code, updated_at: new Date().toISOString() })
+          .eq('id', (await supabase.auth.getUser()).data.user?.id ?? '');
+        if (profileErr) {
+          // Non-fatal: the auth metadata is the source of truth the client
+          // uses; the profile row is for cross-account RLS lookups.
+          console.warn('Failed to mirror parentLinkedCode to profiles row:', profileErr.message);
+        }
+      } catch (e: any) {
+        console.error('Failed to persist parentLinkedCode to Supabase:', e?.message || e);
+      }
+    }
   };
 
   if (!user) {
@@ -144,6 +178,8 @@ function AppContent() {
         return user.role === 'student' ? <PetProfile key={isSynced ? 'synced_pet' : 'pending_pet'} /> : null;
       case 'parent':
         return user.role === 'parent' ? <ParentView key={isSynced ? 'synced' : 'pending'} /> : null;
+      case 'notifications':
+        return user.role === 'parent' ? <Notifications key={isSynced ? 'synced_notif' : 'pending_notif'} /> : null;
       case 'settings':
         return <Settings key={isSynced ? 'synced' : 'pending'} />;
       default:

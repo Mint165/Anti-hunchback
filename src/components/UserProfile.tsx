@@ -72,6 +72,50 @@ export const UserProfile: React.FC<UserProfileProps> = ({ user, onClose, onLogou
           </TiltCard>
         )}
 
+        {/* Student share-code block (Task 6a): shows the student's 6-digit
+            linkedCode so they can hand it to a parent. Mirrors the parent's
+            link-input block below for visual symmetry. All colors via tokens
+            so it auto-adapts to data-theme + .dark per the constitution. */}
+        {user.role === 'student' && user.linkedCode && (
+          <div
+            className="p-6 rounded-2xl border mb-4"
+            style={{
+              background: 'var(--secondary-light)',
+              borderColor: 'var(--secondary)',
+            }}
+          >
+            <div className="flex items-center gap-3 mb-3">
+              <LinkIcon size={20} style={{ color: 'var(--secondary)' }} />
+              <h3 className="font-black text-lg" style={{ color: 'var(--secondary)' }}>
+                {t('profile.shareCode')}
+              </h3>
+            </div>
+            <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>
+              {t('profile.shareDesc')}
+            </p>
+            <label
+              className="text-xs font-bold uppercase tracking-wider mb-2 block"
+              style={{ color: 'var(--text-secondary)' }}
+            >
+              {t('profile.linkCodeLabel')}
+            </label>
+            <div
+              className="p-4 rounded-xl text-center font-black tracking-[0.4em] text-2xl select-all"
+              style={{
+                background: 'var(--bg-page)',
+                border: '1px dashed var(--secondary)',
+                color: 'var(--secondary)',
+              }}
+              aria-label={t('profile.linkCodeLabel')}
+            >
+              {user.linkedCode}
+            </div>
+            <p className="text-xs mt-3" style={{ color: 'var(--text-muted)' }}>
+              {t('profile.linkCodeDesc')}
+            </p>
+          </div>
+        )}
+
         <div className="space-y-4 mb-8">
           {user.role === 'parent' && (
             <div className="p-6 rounded-2xl border" style={{ background: 'var(--primary-light)', borderColor: 'rgba(124, 58, 237, 0.2)' }}>

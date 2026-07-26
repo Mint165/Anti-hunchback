@@ -42,15 +42,15 @@
   gap: 16px;
   padding: 16px 24px;
   border-radius: 20px;
-  background: linear-gradient(135deg, #fef3c7, #fde68a);
-  border: 2px solid #fcd34d;
+  background: var(--accent-light);
+  border: 2px solid var(--accent);
   box-shadow: inset 0 2px 6px rgba(245, 158, 11, 0.1);
 }
 
 .coinsLabel {
   font-size: 12px;
   font-weight: 800;
-  color: #b45309;
+  color: var(--accent);
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
@@ -58,7 +58,7 @@
 .coinsValue {
   font-size: 1.875rem;
   font-weight: 900;
-  color: #d97706;
+  color: var(--accent);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -106,7 +106,10 @@
   gap: 32px;
 }
 
-/* Preview banner — dark card with pet centered, bubble above, badge below */
+/* Preview banner — theme-aware showcase. Uses tokens + a soft brand
+   glow so it adapts to data-theme (student/parent) and .dark.
+   Previously hardcoded #1a1333 / #0d1117 / #1a1a2e which forced the
+   panel to always look dark even in light mode (Task #3 root cause). */
 .previewBanner {
   display: flex;
   flex-direction: column;
@@ -114,9 +117,9 @@
   justify-content: center;
   padding: 28px 24px 20px;
   border-radius: 28px;
-  background: linear-gradient(160deg, #1a1333 0%, #0d1117 60%, #1a1a2e 100%);
-  border: 1.5px solid rgba(124, 58, 237, 0.25);
-  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255,255,255,0.06);
+  background: linear-gradient(160deg, var(--bg-card) 0%, var(--bg-card-hover) 60%, var(--bg-card) 100%);
+  border: 1.5px solid var(--border-strong);
+  box-shadow: var(--shadow-lg), inset 0 1px 0 rgba(255,255,255,0.06);
   margin-bottom: 28px;
   position: relative;
   overflow: hidden;
@@ -126,16 +129,17 @@
   content: '';
   position: absolute;
   inset: 0;
-  background: radial-gradient(ellipse at 50% 0%, rgba(124, 58, 237, 0.15) 0%, transparent 70%);
+  background: radial-gradient(ellipse at 50% 0%, var(--primary-light) 0%, transparent 70%);
   pointer-events: none;
+  opacity: 0.6;
 }
 
 /* Speech bubble */
 .previewBubble {
   position: relative;
-  background: rgba(78, 173, 99, 0.15);
-  color: #4ead63;
-  border: 1.5px solid rgba(78, 173, 99, 0.35);
+  background: var(--secondary-light);
+  color: var(--secondary);
+  border: 1.5px solid var(--secondary);
   border-radius: 16px;
   padding: 10px 20px;
   font-size: 13px;
@@ -143,7 +147,6 @@
   text-align: center;
   margin-bottom: 20px;
   max-width: 280px;
-  backdrop-filter: blur(8px);
 }
 
 .previewBubbleTail {
@@ -153,9 +156,9 @@
   transform: translateX(-50%) rotate(45deg);
   width: 14px;
   height: 14px;
-  background: rgba(78, 173, 99, 0.15);
-  border-right: 1.5px solid rgba(78, 173, 99, 0.35);
-  border-bottom: 1.5px solid rgba(78, 173, 99, 0.35);
+  background: var(--secondary-light);
+  border-right: 1.5px solid var(--secondary);
+  border-bottom: 1.5px solid var(--secondary);
 }
 
 .previewWrap {
@@ -173,13 +176,13 @@
   margin-top: 12px;
   padding: 6px 20px;
   border-radius: 999px;
-  background: rgba(78, 173, 99, 1);
-  color: #fff;
+  background: var(--secondary);
+  color: #ffffff;
   font-size: 11px;
   font-weight: 900;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  box-shadow: 0 4px 16px rgba(78, 173, 99, 0.4);
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.4);
 }
 
 .previewLabel {
@@ -187,7 +190,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: rgba(255, 255, 255, 0.3);
+  color: var(--text-muted);
   margin-top: 10px;
 }
 

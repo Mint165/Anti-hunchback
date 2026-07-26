@@ -64,6 +64,10 @@
   --stu-shadow-card: 0 4px 16px rgba(37, 99, 235, 0.08);
   --stu-shadow-card-hover: 0 12px 32px rgba(37, 99, 235, 0.12);
 
+  /* ── Border colors (theme-aware) ── */
+  --stu-border-color: rgba(37, 99, 235, 0.12);
+  --stu-border-strong: rgba(37, 99, 235, 0.25);
+
   /* ═══════════════════════════════════════════════════════════════
      PARENT THEME — Warm Professional (Slate + Amber + Sage)
      ═══════════════════════════════════════════════════════════════ */
@@ -93,6 +97,10 @@
   --par-radius-card: 12px;            /* moderate radii for adults */
   --par-shadow-card: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
   --par-shadow-card-hover: 0 4px 12px rgba(15, 23, 42, 0.08);
+
+  /* ── Border colors (theme-aware) ── */
+  --par-border-color: rgba(15, 23, 42, 0.10);
+  --par-border-strong: rgba(15, 23, 42, 0.20);
 
   /* ── Legacy aliases (backward-compat with existing components) ── */
   --primary: var(--stu-primary);
@@ -129,6 +137,10 @@
   --shadow-xl: 0 12px 40px rgba(0, 0, 0, 0.12);
   --shadow-glow-primary: 0 4px 20px var(--primary-glow);
   --shadow-glow-danger: 0 4px 20px var(--danger-glow);
+
+  /* ── Border aliases (resolve per theme + dark mode) ── */
+  --border-color: var(--stu-border-color);
+  --border-strong: var(--stu-border-strong);
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -148,6 +160,8 @@
   --text-main: var(--stu-text-main);
   --text-secondary: var(--stu-text-secondary);
   --text-muted: var(--stu-text-muted);
+  --border-color: var(--stu-border-color);
+  --border-strong: var(--stu-border-strong);
 }
 
 /* Parent theme — overrides legacy aliases */
@@ -171,6 +185,8 @@
   --text-main: var(--par-text-main);
   --text-secondary: var(--par-text-secondary);
   --text-muted: var(--par-text-muted);
+  --border-color: var(--par-border-color);
+  --border-strong: var(--par-border-strong);
   --shadow-glow-primary: 0 4px 20px rgba(15, 23, 42, 0.12);
 }
 
@@ -203,4 +219,10 @@
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
   --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
   --shadow-xl: 0 12px 40px rgba(0, 0, 0, 0.6);
+
+  /* Dark-mode border variants — slightly stronger for visibility on dark surfaces */
+  --stu-border-color: rgba(124, 58, 237, 0.18);
+  --stu-border-strong: rgba(124, 58, 237, 0.35);
+  --par-border-color: rgba(148, 163, 184, 0.18);
+  --par-border-strong: rgba(148, 163, 184, 0.30);
 }

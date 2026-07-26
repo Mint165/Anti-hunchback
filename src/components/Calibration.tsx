@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Camera, CheckCircle, HelpCircle } from 'lucide-react';
 import type { Landmark, CalibrationData } from '../services/postureAI';
 import { saveCalibration } from '../services/db';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface CalibrationProps {
   poseLandmarks: Landmark[] | null;
@@ -18,6 +19,7 @@ export const Calibration: React.FC<CalibrationProps> = ({
   onCalibrationComplete,
   isModelReady,
 }) => {
+  const { t } = useLanguage();
   const [step, setStep] = useState<'idle' | 'counting' | 'saving' | 'complete'>('idle');
   const [countdown, setCountdown] = useState<number>(3);
   const [error, setError] = useState<string | null>(null);
@@ -36,7 +38,7 @@ export const Calibration: React.FC<CalibrationProps> = ({
 
   const startCalibration = () => {
     if (!isModelReady || !poseLandmarks || !faceLandmarks) {
-      setError('Vui lòng đợi mô hình AI tải xong và webcam hiển thị rõ mặt.');
+      setError(t('calibration.errorModelNotReady'));
       return;
     }
     setError(null);
@@ -46,7 +48,7 @@ export const Calibration: React.FC<CalibrationProps> = ({
 
   const performCalibration = () => {
     if (!poseLandmarks || !faceLandmarks || poseLandmarks.length < 13 || faceLandmarks.length < 363) {
-      setError('Không tìm thấy khuôn mặt hoặc cơ thể. Hãy ngồi chính giữa khung hình.');
+      setError(t('calibration.errorNoFace'));
       setStep('idle');
       return;
     }
@@ -126,62 +128,158 @@ export const Calibration: React.FC<CalibrationProps> = ({
       }, 1000);
     } catch (e) {
       console.error(e);
-      setError('Lỗi tính toán chỉ số hiệu chuẩn. Hãy thử lại.');
+      setError(t('calibration.errorCompute'));
       setStep('idle');
     }
   };
 
   return (
-    <div className="glass-card p-6 flex flex-col items-center justify-center text-center max-w-lg mx-auto my-6 fade-in">
-      <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center text-green-600 mb-4">
+    <div
+      className="glass-card fade-in"
+      style={{
+        padding: '32px',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        textAlign: 'center',
+        maxWidth: '512px',
+        margin: '24px auto',
+      }}
+    >
+      <div
+        style={{
+          width: '64px',
+          height: '64px',
+          borderRadius: '50%',
+          background: 'var(--secondary-light)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: 'var(--secondary)',
+          marginBottom: '16px',
+        }}
+      >
         <Camera size={32} />
       </div>
-      
-      <h2 className="text-2xl font-bold text-gray-800 mb-2">Hiệu chỉnh Tư thế Chuẩn</h2>
-      <p className="text-gray-600 mb-6 leading-relaxed">
-        Để hệ thống AI đo lường tư thế gù lưng và khoảng cách mắt chính xác nhất, bạn vui lòng:
+
+      <h2
+        style={{
+          fontSize: '24px',
+          fontWeight: 800,
+          color: 'var(--text-main)',
+          marginBottom: '8px',
+        }}
+      >
+        {t('calibration.title')}
+      </h2>
+      <p
+        style={{
+          color: 'var(--text-secondary)',
+          marginBottom: '24px',
+          lineHeight: 1.6,
+        }}
+      >
+        {t('calibration.desc')}
         <br />
-        <strong className="text-green-600">1. Ngồi thẳng lưng chuẩn.</strong>
+        <strong style={{ color: 'var(--secondary)' }}>{t('calibration.step1')}</strong>
         <br />
-        <strong className="text-green-600">2. Mắt nhìn thẳng vào màn hình, cách camera 50cm - 70cm.</strong>
+        <strong style={{ color: 'var(--secondary)' }}>{t('calibration.step2')}</strong>
       </p>
 
       {step === 'idle' && (
         <button
           onClick={startCalibration}
           disabled={!isModelReady}
-          className={`px-8 py-3 rounded-xl font-semibold shadow-sm transition-all duration-300 ${
-            isModelReady 
-              ? 'bg-green-600 text-white hover:bg-green-700 hover:shadow-md' 
-              : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-          }`}
+          style={
+            isModelReady
+              ? {
+                  padding: '12px 32px',
+                  borderRadius: 'var(--radius-lg)',
+                  fontWeight: 700,
+                  background: 'var(--primary)',
+                  color: '#FFFFFF',
+                  border: 'none',
+                  borderBottom: '4px solid var(--primary-dark)',
+                  cursor: 'pointer',
+                  boxShadow: 'var(--shadow-glow-primary)',
+                  transition: 'transform 80ms ease, box-shadow 0.2s',
+                }
+              : {
+                  padding: '12px 32px',
+                  borderRadius: 'var(--radius-lg)',
+                  fontWeight: 700,
+                  background: 'var(--bg-card-hover)',
+                  color: 'var(--text-muted)',
+                  border: '1px solid var(--border-color)',
+                  cursor: 'not-allowed',
+                }
+          }
         >
-          {isModelReady ? 'Bắt đầu Hiệu chỉnh' : 'Đang tải AI Model...'}
+          {isModelReady ? t('calibration.startBtn') : t('calibration.loadingModel')}
         </button>
       )}
 
       {step === 'counting' && (
-        <div className="text-6xl font-black text-green-600 animate-ping">
+        <div
+          style={{
+            fontSize: '64px',
+            fontWeight: 900,
+            color: 'var(--secondary)',
+            animation: 'subtle-pulse 1s ease-in-out infinite',
+          }}
+        >
           {countdown}
         </div>
       )}
 
       {step === 'complete' && (
-        <div className="flex flex-col items-center text-green-600">
-          <CheckCircle size={48} className="animate-bounce mb-2" />
-          <span className="font-semibold text-lg">Đã lưu tư thế chuẩn thành công!</span>
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            color: 'var(--secondary)',
+          }}
+        >
+          <CheckCircle size={48} style={{ animation: 'float 3s ease-in-out infinite', marginBottom: '8px' }} />
+          <span style={{ fontWeight: 600, fontSize: '18px' }}>{t('calibration.completeMsg')}</span>
         </div>
       )}
 
       {error && (
-        <div className="mt-4 p-3 bg-red-50 text-red-600 rounded-xl text-sm border border-red-100">
+        <div
+          style={{
+            marginTop: '16px',
+            padding: '12px',
+            background: 'var(--danger-light)',
+            color: 'var(--danger)',
+            borderRadius: 'var(--radius-lg)',
+            fontSize: '14px',
+            border: '1px solid var(--danger)',
+            textAlign: 'left',
+          }}
+        >
           {error}
         </div>
       )}
 
-      <div className="mt-6 flex items-center gap-2 text-xs text-gray-400 bg-gray-50 p-3 rounded-xl">
-        <HelpCircle size={16} className="text-gray-400 flex-shrink-0" />
-        <span>Hệ thống chỉ lưu tọa độ số liệu khung xương ảo trên máy của bạn. Tuyệt đối không lưu ảnh thực tế.</span>
+      <div
+        style={{
+          marginTop: '24px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          fontSize: '12px',
+          color: 'var(--text-muted)',
+          background: 'var(--bg-card-hover)',
+          padding: '12px',
+          borderRadius: 'var(--radius-lg)',
+          textAlign: 'left',
+        }}
+      >
+        <HelpCircle size={16} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+        <span>{t('calibration.privacyNote')}</span>
       </div>
     </div>
   );

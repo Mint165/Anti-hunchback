@@ -252,5 +252,97 @@ export const vi: Record<string, string> = {
   'student.unlockedWarrior': 'Đã mở khoá huy hiệu: Chiến binh Bền bỉ!',
   'student.sessionSaved': 'Buổi học đã hoàn thành! Dữ liệu đã được lưu trữ.',
   'student.fidgetAlert': 'Bé bắt đầu nhấp nhổm nhiều, có dấu hiệu mất tập trung hoặc mỏi cơ.',
-  'student.sitStraightVoice': 'Chủ nhân ơi, ngồi thẳng lên nhé!'
+  'student.sitStraightVoice': 'Chủ nhân ơi, ngồi thẳng lên nhé!',
+
+  // Common toggle labels (reused across Settings & other components)
+  'common.on': 'Bật',
+  'common.off': 'Tắt',
+
+  // Settings — missing keys previously rendering as raw strings
+  'settings.header': 'Cài đặt',
+  'settings.subheader': 'Tùy chỉnh ứng dụng theo thói quen học tập của bạn.',
+  'settings.darkModeDesc': 'Chuyển đổi giữa giao diện sáng và tối',
+  'settings.languageDesc': 'Chọn ngôn ngữ hiển thị',
+  'settings.eyeDistance': 'Khoảng cách Mắt - Màn hình',
+  'settings.eyeDistanceDesc': 'Khoảng cách tối thiểu trước khi phát cảnh báo',
+  'settings.neckTilt': 'Ngưỡng Cúi Cổ',
+  'settings.shoulderTilt': 'Ngưỡng Lệch Vai',
+  'settings.slouch': 'Ngưỡng Gù Lưng',
+  'settings.clearSuccess': 'Đã xóa toàn bộ lịch sử. Trang web sẽ tải lại.',
+
+  // Settings — keys for previously-hardcoded Vietnamese strings
+  'settings.timersSoundHeading': 'Chu kỳ Cảnh báo & Âm thanh',
+  'settings.eyeExerciseCycle': 'Chu kỳ Bài tập Mắt',
+  'settings.sessionBreakCycle': 'Thời gian Khóa vận động',
+  'settings.warningSoundDesc': 'Phát chuỗi âm thanh bíp khi ngồi sai. Độ trễ có thể tùy chỉnh để tránh bị làm phiền.',
+  'settings.every15Min': 'Mỗi 15 phút',
+  'settings.every20Min': 'Mỗi 20 phút (Khuyên dùng)',
+  'settings.every30Min': 'Mỗi 30 phút',
+  'settings.every45Min': 'Mỗi 45 phút (Khuyên dùng)',
+  'settings.every60Min': 'Mỗi 60 phút',
+  'settings.after5Sec': 'Sau 5 giây (Test)',
+  'settings.after10Sec': 'Sau 10 giây',
+  'settings.after30Sec': 'Sau 30 giây',
+  'settings.after1Min': 'Sau 1 phút',
+  'settings.after2Min': 'Sau 2 phút (Mặc định)',
+  'settings.after5Min': 'Sau 5 phút',
+  'settings.saveBtn': 'Lưu Cài Đặt',
+  'settings.resetDefault': 'Khôi phục mặc định',
+  'settings.clearHistory': 'Xóa lịch sử',
+  'settings.saveSuccess': 'Đã lưu thay đổi thành công! 🎉',
+  'settings.confirmReset': 'Bạn có muốn khôi phục cài đặt mặc định không?',
+  'settings.confirmClearHistory': 'CẢNH BÁO: Hành động này sẽ xóa toàn bộ lịch sử buổi học và điểm kinh nghiệm XP. Bạn có chắc chắn muốn thực hiện?',
+
+  // Layout — Notifications nav item (Task 7)
+  'layout.notifications': 'Thông báo',
+
+  // Calibration (Task 1 / Task 4)
+  'calibration.title': 'Hiệu chỉnh Tư thế Chuẩn',
+  'calibration.desc': 'Để hệ thống AI đo lường tư thế gù lưng và khoảng cách mắt chính xác nhất, bạn vui lòng:',
+  'calibration.step1': '1. Ngồi thẳng lưng chuẩn.',
+  'calibration.step2': '2. Mắt nhìn thẳng vào màn hình, cách camera 50cm - 70cm.',
+  'calibration.startBtn': 'Bắt đầu Hiệu chỉnh',
+  'calibration.loadingModel': 'Đang tải AI Model...',
+  'calibration.completeMsg': 'Đã lưu tư thế chuẩn thành công!',
+  'calibration.privacyNote': 'Hệ thống chỉ lưu tọa độ số liệu khung xương ảo trên máy của bạn. Tuyệt đối không lưu ảnh thực tế.',
+  'calibration.errorModelNotReady': 'Vui lòng đợi mô hình AI tải xong và webcam hiển thị rõ mặt.',
+  'calibration.errorNoFace': 'Không tìm thấy khuôn mặt hoặc cơ thể. Hãy ngồi chính giữa khung hình.',
+  'calibration.errorCompute': 'Lỗi tính toán chỉ số hiệu chuẩn. Hãy thử lại.',
+
+  // Eye Exercise (minigame overlay)
+  'eyeExercise.title': 'Panda Bamboo Gym!',
+  'eyeExercise.desc': 'Tới giờ giải lao rồi! Để bảo vệ mắt và cột sống cổ:',
+  'eyeExercise.step1': '1. Dùng <strong>đầu (mũi)</strong> của bạn di chuyển điểm xanh lá để ăn lá tre.',
+  'eyeExercise.step2': '2. Hãy <strong>chớp mắt 4 lần</strong> để thư giãn mắt.',
+  'eyeExercise.blinks': 'Chớp mắt',
+  'eyeExercise.bamboo': 'Ăn lá tre',
+  'eyeExercise.skipBtn': 'Bỏ qua bài tập (Không nhận thưởng)',
+  'eyeExercise.successTitle': 'Tuyệt Vời!',
+  'eyeExercise.successDesc': 'Bạn đã tập luyện cổ và thư giãn mắt rất tốt! Cột sống và thị lực của bạn đang được bảo vệ.',
+  'eyeExercise.xpReward': '+300 XP',
+
+  // Notifications (Task 7) — parent-side feed
+  'notifications.title': 'Thông báo',
+  'notifications.empty': 'Chưa có thông báo',
+  'notifications.emptyDesc': 'Các cảnh báo về camera và tư thế của bé sẽ hiển thị tại đây.',
+  'notifications.cameraOff': 'Camera đã tắt',
+  'notifications.cameraOffDesc': 'Học sinh đã tắt camera AI.',
+  'notifications.cameraOn': 'Camera đã bật lại',
+  'notifications.cameraOnDesc': 'Học sinh đã bật lại camera AI.',
+  'notifications.fatigueAlert': 'Cảnh báo mệt mỏi',
+  'notifications.markAllRead': 'Đánh dấu đã đọc',
+  'notifications.clear': 'Xóa tất cả',
+  'notifications.minuteAgo': 'phút trước',
+  'notifications.hourAgo': 'giờ trước',
+  'notifications.dayAgo': 'ngày trước',
+  'notifications.justNow': 'vừa xong',
+  'notifications.unreadBadge': 'chưa đọc',
+  'notifications.cameraOffMsg': 'Học sinh đã tắt camera AI — đang tạm dừng theo dõi tư thế.',
+  'notifications.cameraOnMsg': 'Học sinh đã bật lại camera AI — tiếp tục theo dõi tư thế.',
+
+  // Profile — sync missing keys into vi.ts
+  'profile.parentLinkDesc': 'Nhập mã liên kết 6 chữ số của bé để bắt đầu theo dõi.',
+  'profile.saveBtn': 'Lưu',
+  'profile.linkCodeDesc': 'Đây là mã liên kết của bạn. Gửi mã này cho phụ huynh để họ có thể theo dõi tiến trình của bạn.',
+  'profile.linkCodeLabel': 'Mã liên kết của bạn:'
 };
