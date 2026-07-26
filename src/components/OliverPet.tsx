@@ -420,8 +420,8 @@ export const OliverPet: React.FC<OliverPetProps> = ({
         style={{ width: size, height: size }}
       >
         <div
-          className="absolute inset-0 rounded-full transition-all duration-700 opacity-20 blur-xl"
-          style={{ backgroundColor: themeColor, transform: 'scale(0.8)' }}
+          className="absolute inset-0 rounded-full transition-all duration-700 opacity-10 blur-xl"
+          style={{ backgroundColor: themeColor, transform: 'scale(0.6)' }}
         />
         <Canvas
           shadows={!lowDetail}
