@@ -132,7 +132,12 @@ export function useMediaPipe(): UseMediaPipeResult {
     };
   }, [stopCamera]);
 
-  // Start webcam and send frames to models (throttled to 10 FPS to save CPU)
+  // Start webcam and send frames to models (throttled to ~10 FPS to save CPU).
+  // Higher than 10 FPS causes React re-render storms (each frame fires onResults
+  // → setMetrics in PostureContext) and competing layout work; ~10 FPS is the
+  // sweet spot for posture-feedback latency vs. frame budget on mid-range
+  // laptops. Paired with the EyeExercise motion-pause + WebGL pause so the
+  // foreground task gets the full CPU/GPU when active.
   const startCamera = useCallback(
     (videoElement: HTMLVideoElement) => {
       if (!isModelReady || !poseRef.current || !faceMeshRef.current) {
@@ -141,7 +146,7 @@ export function useMediaPipe(): UseMediaPipeResult {
       }
 
       videoElementRef.current = videoElement;
-      
+
       if (cameraRef.current) {
         cameraRef.current.stop();
       }
@@ -151,11 +156,13 @@ export function useMediaPipe(): UseMediaPipeResult {
       const camera = new window.Camera(videoElement, {
         onFrame: async () => {
           if (!videoElementRef.current) return;
-          
+
           const now = performance.now();
-          // Throttling: Run AI inference only once every 300ms (~3 FPS)
-          // This significantly reduces CPU usage and React re-renders
-          if (now - lastProcessedTime < 300) {
+          // Throttling: run AI inference once every 100ms (~10 FPS).
+          // Was 300ms (~3 FPS) which made posture feedback feel laggy;
+          // 100ms is responsive enough to catch slouch onset without
+          // saturating the main thread.
+          if (now - lastProcessedTime < 100) {
             return;
           }
           lastProcessedTime = now;

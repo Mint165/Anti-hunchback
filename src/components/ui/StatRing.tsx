@@ -62,8 +62,30 @@ const StatRingBase: React.FC<StatRingProps> = ({
   useEffect(() => {
     if (animateCount) {
       spring.set(clamped);
-      const unsub = display.on('change', (v) => setDisplayStr(v));
-      return () => unsub();
+      // Debounce display updates to ~2Hz so the count-up animation no
+      // longer re-renders the StatRing label on every animation frame.
+      // Without this, display.on('change') fires 60×/sec → 60 setStates
+      // per ring per second, which on the Student dashboard (3 rings)
+      // is ~180 re-renders/sec just to animate digits. Sampling the
+      // spring value at 500ms intervals is visually identical for a
+      // count-up and frees the main thread for MediaPipe + WebGL.
+      let pending: string | null = null;
+      let raf: number | null = null;
+      const flush = () => {
+        raf = null;
+        if (pending !== null) setDisplayStr(pending);
+        pending = null;
+      };
+      const unsub = display.on('change', (v) => {
+        pending = v;
+        if (raf === null) {
+          raf = window.setTimeout(flush, 500) as unknown as number;
+        }
+      });
+      return () => {
+        unsub();
+        if (raf !== null) clearTimeout(raf);
+      };
     } else {
       setDisplayStr(`${roundValue ? Math.round(clamped) : clamped}${suffix}`);
     }
