@@ -264,6 +264,59 @@
   aspect-ratio: 4 / 3;
 }
 
+/* Task F — desktop split-screen: when an aux phone is streaming
+   landmarks, the camera card becomes a 2-column grid with the
+   front camera + BackboneVisualizer on the left and the
+   AuxSkeletonOverlay "ghost" on the right. Mobile never uses this
+   (the phone IS the aux view); it only kicks in on desktop. */
+.cameraSplit {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+}
+
+.cameraSplit > .cameraWrapper {
+  /* Parent grid controls height; let the pane fill it. */
+  aspect-ratio: auto;
+  height: 100%;
+}
+
+@media (max-width: 768px) {
+  /* Defensive: split should never apply on mobile, but if it ever
+     does (e.g. a tablet in landscape), collapse to 1 column. */
+  .cameraSplit { grid-template-columns: 1fr; aspect-ratio: 4 / 3; }
+}
+
+/* Small banner shown on phone when a desktop is detected but the
+   user hasn't switched into aux mode yet. */
+.auxBanner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  border-radius: var(--radius-md);
+  background: var(--secondary-light);
+  border: 1px solid var(--secondary);
+  color: var(--secondary-dark);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.auxBannerBtn {
+  margin-left: auto;
+  padding: 6px 12px;
+  border-radius: var(--radius-full);
+  background: var(--secondary);
+  color: white;
+  border: none;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
 .cameraVideo {
   width: 100%;
   height: 100%;

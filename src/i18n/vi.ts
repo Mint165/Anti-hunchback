@@ -78,6 +78,20 @@ export const vi: Record<string, string> = {
   'student.writingModeOn': '✍️ Đang viết bài',
   'student.recalibrate': 'Hiệu chỉnh lại AI',
 
+  // Task F — camera phụ góc bên (điện thoại stream landmark sang máy tính)
+  'student.auxTitle': '📱 Camera góc bên',
+  'student.auxDesc': 'Đặt điện thoại lên giá cạnh màn hình sao cho nhìn thấy nét bên của bạn. Chúng tôi chỉ truyền landmark tư thế (không phải video) sang máy tính — khoảng 6 KB/giây.',
+  'student.auxStartBtn': 'Bật camera phụ',
+  'student.auxStopBtn': 'Dừng',
+  'student.auxWaiting': 'Đang chờ máy tính…',
+  'student.auxFps': 'Tốc độ stream',
+  'student.auxConnected': 'Đang truyền sang máy tính',
+  'student.auxStatus': 'Trạng thái',
+  'student.auxBack': 'Về trang chính',
+  'student.auxLabel': '📱 Camera phụ',
+  'student.auxBannerText': 'Phát hiện máy tính cùng tài khoản đang bật — dùng điện thoại này làm camera góc bên?',
+  'student.auxDismiss': 'Bỏ qua',
+
   // Layout
   'layout.dashboard': 'Dashboard',
   'layout.pet': 'Thú cưng MediEdu',

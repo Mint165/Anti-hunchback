@@ -3,6 +3,7 @@
 // implementation; only layout + styling changed.
 
 import React, { useState, useEffect, useRef } from 'react';
+import { useMediaQuery } from 'react-responsive';
 import {
   AlertTriangle,
   RefreshCw,
@@ -15,6 +16,7 @@ import {
   X,
   Play,
   Pause,
+  Smartphone,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { CalibrationData } from '../services/postureAI';
@@ -27,6 +29,8 @@ import { voiceService } from '../services/voiceService';
 import type { PetState } from './OliverPet';
 import Calibration from './Calibration';
 import BackboneVisualizer from './BackboneVisualizer';
+import AuxSkeletonOverlay from './AuxSkeletonOverlay';
+import StudentAuxPhoneView from './StudentAuxPhoneView';
 import TiltCard from './ui/TiltCard';
 import StatRing from './ui/StatRing';
 import AnimatedCounter from './ui/AnimatedCounter';
@@ -86,8 +90,41 @@ export const StudentView: React.FC = () => {
     isCameraActive,
     pauseCamera,
     resumeCamera,
+    auxPoseLandmarks,
+    auxCameraDeviceId,
+    otherActiveDevices,
+    isDesktop,
   } = usePostureContext();
   const { t } = useLanguage();
+
+  // Task F: aux camera UI. On a phone, when a desktop on the same
+  // account is detected via presence, we offer to switch into the
+  // aux-camera role (rear-facing camera streams landmarks to the
+  // desktop). On desktop we render the split-screen automatically
+  // when aux landmarks arrive.
+  const isMobile = useMediaQuery({ maxWidth: 768 });
+  const desktopActiveOnAccount = otherActiveDevices.some((d) => d.isDesktop);
+  const [auxMode, setAuxMode] = useState<boolean>(false);
+  // Show the banner only when on phone, desktop detected, and user
+  // hasn't yet opted into aux mode (and hasn't opted out via dismiss).
+  const [auxBannerDismissed, setAuxBannerDismissed] = useState<boolean>(false);
+  const showAuxBanner =
+    isMobile && desktopActiveOnAccount && !auxMode && !auxBannerDismissed;
+
+  // If the desktop disappears, also drop aux mode — no point streaming
+  // into the void. Keep the banner state so we don't re-prompt forever
+  // if the desktop flaps on/off.
+  useEffect(() => {
+    if (!desktopActiveOnAccount && auxMode) {
+      setAuxMode(false);
+    }
+  }, [desktopActiveOnAccount, auxMode]);
+
+  // Phone aux view replaces the entire dashboard — render it before
+  // any of the regular student UI so we short-circuit cleanly.
+  if (isMobile && auxMode) {
+    return <StudentAuxPhoneView onExit={() => setAuxMode(false)} />;
+  }
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   // `showCamera` is now derived from the real camera state in context. We
@@ -415,6 +452,30 @@ export const StudentView: React.FC = () => {
 
   return (
     <div className={`${styles.container} ${alertLevel === 'MILD_WARNING' ? 'screen-alert-glow' : ''}`}>
+      {/* Task F — phone: banner inviting the user to switch into the
+          aux-camera role when a desktop on the same account is detected. */}
+      {showAuxBanner && (
+        <div className={styles.auxBanner} role="status">
+          <Smartphone size={18} aria-hidden="true" />
+          <span>{t('student.auxBannerText')}</span>
+          <button
+            type="button"
+            className={styles.auxBannerBtn}
+            onClick={() => setAuxMode(true)}
+          >
+            {t('student.auxStartBtn')}
+          </button>
+          <button
+            type="button"
+            className={styles.auxBannerBtn}
+            style={{ background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border-color)' }}
+            onClick={() => setAuxBannerDismissed(true)}
+            aria-label={t('student.auxDismiss')}
+          >
+            ✕
+          </button>
+        </div>
+      )}
       {/* ── Tips modal ──────────────────────────────────────────────── */}
       {showTips && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'var(--scrim)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)' }}>
@@ -599,6 +660,42 @@ export const StudentView: React.FC = () => {
               {showCamera ? t('student.off') : t('student.on')}
             </motion.button>
           </div>
+          {/* Task F — desktop: when an aux phone is streaming landmarks,
+              split the camera card into two columns: front camera + spine
+              overlay on the left, ghost aux skeleton on the right. The 5s
+              aux-expiry watchdog in PostureContext will null out
+              auxPoseLandmarks when the phone stops, which auto-reverts
+              this to the single-column layout. Mobile never gets here
+              because the phone renders StudentAuxPhoneView instead. */}
+          {isDesktop && auxPoseLandmarks && auxCameraDeviceId ? (
+            <div className={styles.cameraSplit}>
+              <div className={styles.cameraWrapper}>
+                {error && showCamera ? (
+                  <div className={styles.cameraError}>
+                    <AlertTriangle size={28} className="mb-1" />
+                    <span>{error}</span>
+                  </div>
+                ) : null}
+                <video ref={videoRef} className={`${styles.cameraVideo} ${!showCamera ? 'hidden' : ''}`} autoPlay playsInline muted />
+                {!showCamera && (
+                  <div className={styles.cameraPlaceholder}>
+                    <CameraOff size={24} />
+                  </div>
+                )}
+                {showCamera && metrics && !error && (
+                  <BackboneVisualizer
+                    neckAngle={metrics.neckAngle}
+                    slouchAngle={metrics.slouchAngle}
+                    healthScore={healthScore}
+                  />
+                )}
+              </div>
+              <AuxSkeletonOverlay
+                landmarks={auxPoseLandmarks}
+                label={t('student.auxLabel')}
+              />
+            </div>
+          ) : (
           <div className={styles.cameraWrapper}>
             {error && showCamera ? (
               <div className={styles.cameraError}>
@@ -620,6 +717,7 @@ export const StudentView: React.FC = () => {
               />
             )}
           </div>
+          )}
           <button
             onClick={() => setIsManualWritingMode(!isManualWritingMode)}
             className={`${styles.writingToggle} ${isManualWritingMode ? styles.writingToggleOn : ''}`}

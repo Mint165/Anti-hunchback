@@ -78,6 +78,20 @@ export const en: Record<string, string> = {
   'student.writingModeOn': '✍️ Writing Mode',
   'student.recalibrate': 'Recalibrate AI',
 
+  // Task F — auxiliary side-view camera (phone streams landmarks to desktop)
+  'student.auxTitle': '📱 Side-view camera',
+  'student.auxDesc': 'Place your phone on a stand beside the screen so it can see your side profile. We only stream lightweight pose landmarks (no video) to your desktop — about 6 KB/s.',
+  'student.auxStartBtn': 'Start side camera',
+  'student.auxStopBtn': 'Stop',
+  'student.auxWaiting': 'Waiting for desktop…',
+  'student.auxFps': 'Stream rate',
+  'student.auxConnected': 'Streaming to desktop',
+  'student.auxStatus': 'Status',
+  'student.auxBack': 'Back to dashboard',
+  'student.auxLabel': '📱 Side camera',
+  'student.auxBannerText': 'A desktop on your account is active — use this phone as a side-view camera?',
+  'student.auxDismiss': 'Dismiss',
+
   // Layout
   'layout.dashboard': 'Dashboard',
   'layout.pet': 'MediEdu Pet',
