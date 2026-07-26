@@ -84,7 +84,7 @@ export const PetProfile: React.FC = () => {
 
           <div className={styles.avatarCircle}>
             <div className={styles.avatarInner}>
-              <OliverPet state="good" size={260} petLevel={stats.petLevel} equippedItems={stats.equippedItems} hideBubble={true} hideBadge={true} />
+              <OliverPet state="good" size={208} petLevel={stats.petLevel} equippedItems={stats.equippedItems} hideBubble={true} hideBadge={true} lowDetail />
             </div>
           </div>
 
