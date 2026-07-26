@@ -27,3 +27,6 @@ dist-ssr
 .env
 .env.local
 .env.*.local
+
+# ZCode agent internal state (plan files, session cache — not project content)
+.zcode/
