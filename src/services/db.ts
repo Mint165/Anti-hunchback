@@ -60,9 +60,12 @@ function storageKey(kind: 'calibration_data' | 'app_settings' | 'study_sessions'
  * One-time legacy→scoped migration per user. Called from App.tsx after
  * login. If the user has no data under their scoped key yet but the
  * legacy unscoped key has data, copy it across so they don't lose
- * their history when the storage keys become user-scoped. The legacy
- * key is left in place as a backup — `clearUserDataOnLogout` removes
- * only the scoped keys, never the legacy ones.
+ * their history when the storage keys become user-scoped. After a
+ * successful copy the legacy key is REMOVED — it was only ever meant
+ * as a one-time bridge from the pre-scoped-storage world, and leaving
+ * it in place caused new accounts on a shared browser to inherit the
+ * previous user's data (calibration/settings/pet) via the same
+ * migration path.
  */
 export function migrateLegacyDataIfNeeded(userId: string): void {
   if (!userId || userId === 'default') return;
@@ -76,7 +79,11 @@ export function migrateLegacyDataIfNeeded(userId: string): void {
     if (!legacy) continue;
     try {
       localStorage.setItem(scoped, legacy);
-      console.info(`[storage] migrated legacy "${kind}" → scoped key for user ${userId}`);
+      // Remove the legacy key after a successful copy so subsequent
+      // new-account logins on this browser start with empty data
+      // rather than inheriting this user's pre-login state.
+      localStorage.removeItem(storageKey(kind, 'default'));
+      console.info(`[storage] migrated legacy "${kind}" → scoped key for user ${userId} (legacy cleared)`);
     } catch (err) {
       console.warn(`[storage] failed to migrate "${kind}" for user ${userId}:`, err);
     }
@@ -86,25 +93,39 @@ export function migrateLegacyDataIfNeeded(userId: string): void {
 /**
  * Wipe the per-user scoped keys on logout so the next account that
  * logs in on this browser starts fresh (no session count bleed, no
- * stale stats). The legacy unscoped keys and `oliver_users` (auth
- * list) are intentionally preserved — they hold no per-account data
- * once scoped keys exist, and keeping them lets a re-logging-in user
- * re-migrate if needed. `oliver_dark_mode` (UI pref) and
- * `oliver_current_user` (cleared by App.tsx) are also untouched here.
+ * stale stats). Also wipes the legacy unscoped keys — they should
+ * already be empty after `migrateLegacyDataIfNeeded` ran on the first
+ * login, but if a previous logout was skipped (e.g. browser closed
+ * mid-session) the legacy bucket may still hold data that would
+ * otherwise leak into the next account's migration. `oliver_users`
+ * (local-only auth list) and `oliver_dark_mode` (UI pref) are
+ * intentionally preserved. `oliver_current_user` is cleared
+ * separately by App.tsx.
  */
 export function clearUserDataOnLogout(userId: string): void {
-  if (!userId || userId === 'default') return;
   const kinds: Array<'calibration_data' | 'app_settings' | 'study_sessions' | 'user_stats'> = [
     'calibration_data', 'app_settings', 'study_sessions', 'user_stats',
   ];
+  // Always wipe legacy keys regardless of userId, so a brand-new
+  // browser that never had a real login still gets a clean slate.
   for (const kind of kinds) {
     try {
-      localStorage.removeItem(storageKey(kind, userId));
+      localStorage.removeItem(storageKey(kind, 'default'));
     } catch (err) {
-      console.warn(`[storage] failed to clear "${kind}" for user ${userId}:`, err);
+      console.warn(`[storage] failed to clear legacy "${kind}":`, err);
     }
   }
-  console.info(`[storage] cleared scoped data for user ${userId} on logout`);
+  // Then wipe the scoped keys for this specific user.
+  if (userId && userId !== 'default') {
+    for (const kind of kinds) {
+      try {
+        localStorage.removeItem(storageKey(kind, userId));
+      } catch (err) {
+        console.warn(`[storage] failed to clear scoped "${kind}" for user ${userId}:`, err);
+      }
+    }
+  }
+  console.info(`[storage] cleared data for user ${userId || 'default'} on logout (legacy + scoped)`);
 }
 
 export interface AppSettings {
@@ -290,6 +311,14 @@ export async function syncFromSupabase(): Promise<boolean> {
         baseEAR: calibrationData.base_ear,
       };
       localStorage.setItem(storageKey('calibration_data', userId), JSON.stringify(calibration));
+    } else {
+      // Brand-new account: Supabase has no row yet. If a previous
+      // legacy→scoped migration left stale data (e.g. the user
+      // signed up on a browser that had pre-login calibration from
+      // someone else), wipe the scoped key so the app falls back to
+      // default calibration instead of using someone else's
+      // baseline measurements.
+      localStorage.removeItem(storageKey('calibration_data', userId));
     }
 
     // 2. Fetch Settings
@@ -307,6 +336,10 @@ export async function syncFromSupabase(): Promise<boolean> {
         soundAlertEnabled: settingsData.sound_alert_enabled,
       };
       localStorage.setItem(storageKey('app_settings', userId), JSON.stringify(settings));
+    } else {
+      // Same rationale as calibration: don't inherit another user's
+      // settings via the legacy migration path.
+      localStorage.removeItem(storageKey('app_settings', userId));
     }
 
     // 3. Fetch Stats
