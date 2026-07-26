@@ -8,7 +8,7 @@ import { useMediaQuery } from 'react-responsive';
 import styles from './FloatingPet.module.css';
 
 export const FloatingPet: React.FC = () => {
-  const { metrics, hasStarted, alertLevel } = usePostureContext();
+  const { metrics, hasStarted, alertLevel, eyeExerciseTriggered } = usePostureContext();
   const [isMinimized, setIsMinimized] = useState(false);
   const [stats, setStats] = useState(() => loadUserStats());
   const isMobile = useMediaQuery({ maxWidth: 768 });
@@ -73,6 +73,7 @@ export const FloatingPet: React.FC = () => {
             hideBubble
             hideBadge
             lowDetail
+            paused={eyeExerciseTriggered}
           />
         </div>
         {isDanger && <div className={styles.dangerBadge}>!</div>}
@@ -100,6 +101,7 @@ export const FloatingPet: React.FC = () => {
             hideBubble
             hideBadge
             lowDetail
+            paused={eyeExerciseTriggered}
           />
         </div>
         {isDanger && <div className={styles.dangerBadge}>!</div>}
@@ -148,6 +150,7 @@ export const FloatingPet: React.FC = () => {
               petLevel={stats.petLevel}
               equippedItems={stats.equippedItems}
               lowDetail
+              paused={eyeExerciseTriggered}
             />
           </div>
         </div>

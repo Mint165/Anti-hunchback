@@ -24,13 +24,20 @@ interface PageTransitionProps {
 
 const TAB_ORDER_DEFAULT: string[] = ['student', 'pet', 'parent', 'settings'];
 
-// Honor the user's OS-level reduced-motion preference. framer-motion doesn't
-// auto-disable transforms for this, so we gate the amplitude ourselves. Read
-// at render time (not module load) so a runtime OS toggle is respected.
-const prefersReducedMotion = () =>
-  typeof window !== 'undefined' &&
-  typeof window.matchMedia === 'function' &&
-  window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+// Honor the user's OS-level reduced-motion preference, OR the runtime
+// `html.motion-paused` class toggled by App.tsx while the EyeExercise overlay
+// is open. In both cases framer-motion should collapse to a near-instant fade
+// so the foreground task gets the full frame budget. Read at render time (not
+// module load) so a runtime OS toggle or class toggle is respected.
+const prefersReducedMotion = () => {
+  if (typeof window === 'undefined') return false;
+  if (typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    return true;
+  }
+  // Runtime toggle from App.tsx (eye exercise open) — same effect as OS-level.
+  return document.documentElement.classList.contains('motion-paused');
+};
 
 export const PageTransition: React.FC<PageTransitionProps> = ({
   children,

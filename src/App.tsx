@@ -33,6 +33,18 @@ function AppContent() {
   const [showProfile, setShowProfile] = useState(false);
   const [isSynced, setIsSynced] = useState<boolean>(false);
   const { eyeExerciseTriggered, onEyeExerciseComplete, metrics, poseLandmarks } = usePostureContext();
+
+  // Pause decorative page-wide motion (CSS animations, framer-motion page
+  // transitions, WebGL pet animations via the `paused` prop) while the eye
+  // exercise overlay is open. This frees CPU/GPU for the foreground minigame
+  // and matches the constitution's "tăng fps và giảm chuyển động phức tạp của
+  // trang web khi phần này hiện lên" requirement. The class is mirrored from
+  // `@media (prefers-reduced-motion: reduce)` so the same CSS rules apply.
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.toggle('motion-paused', eyeExerciseTriggered);
+    return () => root.classList.remove('motion-paused');
+  }, [eyeExerciseTriggered]);
   
   useEffect(() => {
     // Check dark mode

@@ -136,6 +136,22 @@ body {
   }
 }
 
+/* Runtime-toggle mirror of `prefers-reduced-motion: reduce` — applied to
+   <html class="motion-paused"> while the EyeExercise overlay is open so the
+   bamboo-leaf minigame gets the full CPU/GPU budget and the page background
+   stops competing for frames. The PageTransition component also checks this
+   class via `prefersReducedMotion()` to flatten its slide. See App.tsx
+   useEffect toggling the class on `eyeExerciseTriggered`. */
+html.motion-paused *,
+html.motion-paused *::before,
+html.motion-paused *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
+html.motion-paused .gradient-mesh { animation: none !important; }
+
 /* ═══════════════════════════════════════════════════════════════
    SKELETON LOADER — shimmer placeholder for loading states
    ═══════════════════════════════════════════════════════════════ */

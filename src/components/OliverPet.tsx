@@ -16,6 +16,9 @@ interface OliverPetProps {
   hideBadge?: boolean;
   /** Reduce geometry detail for small render sizes (FloatingPet). */
   lowDetail?: boolean;
+  /** Freeze the per-frame animation loop (e.g. while the eye-exercise
+      overlay is open) to free CPU/GPU for the foreground task. */
+  paused?: boolean;
 }
 
 const PandaModel = ({
@@ -23,11 +26,13 @@ const PandaModel = ({
   petLevel,
   equippedItems,
   lowDetail = false,
+  paused = false,
 }: {
   state: PetState;
   petLevel: number;
   equippedItems?: Record<string, string>;
   lowDetail?: boolean;
+  paused?: boolean;
 }) => {
   const group = useRef<THREE.Group>(null);
   const leftPupil = useRef<THREE.Mesh>(null);
@@ -47,6 +52,12 @@ const PandaModel = ({
   const pupilMat = useMemo(() => new THREE.MeshStandardMaterial({ color: '#0f172a' }), []);
 
   useFrame((stateObj) => {
+    // Pause the per-frame animation loop (e.g. while the eye exercise
+    // overlay is open) to free CPU/GPU for the exercise. The canvas
+    // still renders the last composed frame; only the lerp/scale updates
+    // are skipped, so the panda freezes in place rather than running at
+    // 60fps in the background.
+    if (paused) return;
     if (!group.current) return;
     const time = stateObj.clock.getElapsedTime();
 
@@ -348,6 +359,7 @@ export const OliverPet: React.FC<OliverPetProps> = ({
   hideBubble = false,
   hideBadge = false,
   lowDetail = false,
+  paused = false,
 }) => {
   const { t } = useLanguage();
   const getDialogueText = useCallback(() => {
@@ -436,7 +448,7 @@ export const OliverPet: React.FC<OliverPetProps> = ({
           <directionalLight position={[-5, 5, 5]} intensity={0.8} />
           {/* Rim light for depth */}
           <pointLight position={[-4, 2, -3]} intensity={0.4} color="#A78BFA" />
-          <PandaModel state={state} petLevel={petLevel} equippedItems={equippedItems} lowDetail={lowDetail} />
+          <PandaModel state={state} petLevel={petLevel} equippedItems={equippedItems} lowDetail={lowDetail} paused={paused} />
           {/* Drop ContactShadows in low-detail mode — blur={2.5} is GPU-heavy */}
           {!lowDetail && <ContactShadows position={[0, -1.2, 0]} opacity={0.6} scale={5} blur={2.5} far={4} />}
           <OrbitControls
