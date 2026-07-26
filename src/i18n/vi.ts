@@ -295,6 +295,7 @@ export const vi: Record<string, string> = {
 
   // Layout — Notifications nav item (Task 7)
   'layout.notifications': 'Thông báo',
+  'layout.profile': 'Hồ sơ',
 
   // Calibration (Task 1 / Task 4)
   'calibration.title': 'Hiệu chỉnh Tư thế Chuẩn',

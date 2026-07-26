@@ -9,6 +9,7 @@ import {
   Eye,
   Globe,
   Bell,
+  User,
 } from 'lucide-react';
 import { useMediaQuery } from 'react-responsive';
 import { motion } from 'framer-motion';
@@ -156,7 +157,10 @@ export const Layout: React.FC<LayoutProps> = ({
       {/* ─── Mobile bottom nav ─────────────────────────────────────── */}
       {/* Now shown for BOTH student and parent on mobile. visibleItems already
           filters out parent-only tabs for students and vice versa, so each
-          role gets the right short list of icons. */}
+          role gets the right short list of icons. A trailing Profile button
+          (not a tab — calls onAvatarClick to open the UserProfile drawer) is
+          appended so parents on mobile can reach the link-code input + logout
+          that desktop exposes via the sidebar avatar. */}
       {isMobile && (
         <div className={styles.bottomNav}>
           {visibleItems.map((item) => {
@@ -176,6 +180,17 @@ export const Layout: React.FC<LayoutProps> = ({
               </motion.button>
             );
           })}
+          <motion.button
+            onClick={() => onAvatarClick?.()}
+            className={styles.bottomNavItem}
+            whileTap={{ scale: 0.9 }}
+            aria-label={t('layout.profile')}
+          >
+            <div className={styles.bottomNavIcon}>
+              <User size={22} strokeWidth={2} />
+            </div>
+            <span>{t('layout.profile')}</span>
+          </motion.button>
         </div>
       )}
     </div>
