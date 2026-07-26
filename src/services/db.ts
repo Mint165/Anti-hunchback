@@ -38,6 +38,24 @@ export function getUserIdSync(): string {
 }
 
 /**
+ * Sync helper returning the full persisted current-user object
+ * (the same shape AuthScreen / App.tsx write into
+ * `oliver_current_user`). Used by components that need fields beyond
+ * just the id — e.g. ParentView needs `parentLinkedCode` to know
+ * which student to pull data for. Returns null if no user is
+ * persisted or the JSON is corrupt.
+ */
+export function getCurrentUserSync(): { id?: string; name: string; role: 'student' | 'parent'; linkedCode?: string; parentLinkedCode?: string } | null {
+  try {
+    const raw = localStorage.getItem('oliver_current_user');
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Per-user storage key. Returns the legacy unscoped key when the user
  * id is `'default'` (pre-login or no Supabase session) so the very
  * first run and any not-yet-logged-in state still read the legacy
@@ -400,6 +418,176 @@ export async function syncFromSupabase(): Promise<boolean> {
     console.error('Failed to pull sync from Supabase:', err);
     return false;
   }
+}
+
+// --- Parent ↔ Student link ------------------------------------------------
+// The parent enters the student's 6-digit link_code in the UI. We
+// resolve it to the student's Supabase UUID via the
+// get_student_uuid_by_link_code helper RPC, then call
+// get_linked_student_data(student_uuid) which is a SECURITY DEFINER
+// RPC that bypasses RLS but verifies the caller's parent_linked_code
+// matches the student's linked_code before returning anything. The
+// returned bundle contains the student's recent sessions (LIMIT 30),
+// user_stats row, and calibration row — enough for ParentView to
+// render the dashboard without direct table access.
+
+export interface StudentDataForParent {
+  studentName: string;
+  studentEmail: string;
+  studentUuid: string;
+  recentSessions: SessionRecord[];
+  userStats: UserStats | null;
+  calibration: CalibrationData | null;
+}
+
+/**
+ * Pull the linked student's data for a parent. Returns null when:
+ *   - Supabase isn't configured
+ *   - the link_code doesn't resolve to any student
+ *   - the parent's parent_linked_code doesn't match the student's
+ *     linked_code (the SECURITY DEFINER RPC returns no rows)
+ *   - the underlying RPC errors
+ * In all null cases the caller (ParentView) should render the
+ * empty/error state and let the user re-enter the link code.
+ */
+export async function pullStudentDataForParent(linkCode: string): Promise<StudentDataForParent | null> {
+  if (!isSupabaseConfigured || !supabase) return null;
+  if (!linkCode || linkCode.trim().length === 0) return null;
+
+  try {
+    // 1. Resolve link_code → student UUID.
+    const { data: studentUuid, error: lookupErr } = await supabase.rpc(
+      'get_student_uuid_by_link_code',
+      { link_code: linkCode.trim() },
+    );
+    if (lookupErr || !studentUuid) {
+      console.warn('[parent-sync] no student found for link_code', linkCode, lookupErr?.message);
+      return null;
+    }
+
+    // 2. Fetch the linked student's data bundle. The RPC enforces
+    //    that the caller's parent_linked_code matches the student's
+    //    linked_code; if not, it returns zero rows and we surface
+    //    null so the UI can prompt the user to re-enter the code.
+    const { data: bundleRows, error: bundleErr } = await supabase.rpc(
+      'get_linked_student_data',
+      { student_uuid: studentUuid },
+    );
+    if (bundleErr || !bundleRows || bundleRows.length === 0) {
+      console.warn('[parent-sync] get_linked_student_data returned no rows for', studentUuid, bundleErr?.message);
+      return null;
+    }
+    const row = bundleRows[0];
+
+    // 3. Map the JSON-shaped row into the typed shape used by the
+    //    React components. The RPC returns recent_sessions as a JSON
+    //    array, user_stats and calibration as JSON objects (or null).
+    const recentSessions: SessionRecord[] = (row.recent_sessions || []).map((s: any) => ({
+      id: s.id,
+      date: s.date,
+      startTime: Number(s.start_time),
+      endTime: Number(s.end_time),
+      durationMinutes: s.duration_minutes,
+      averageHealthScore: s.average_health_score,
+      goodPosturePercentage: s.good_posture_percentage,
+      warningsCount: s.warnings_count,
+      blinksCount: s.blinks_count,
+      fidgetFlagsCount: s.fidget_flags_count,
+      completedEyeExercises: s.completed_eye_exercises,
+      streakAdded: s.streak_added,
+    }));
+
+    let userStats: UserStats | null = null;
+    if (row.user_stats) {
+      const u = row.user_stats;
+      userStats = {
+        xp: u.xp ?? 0,
+        level: u.level ?? 1,
+        streak: u.streak ?? 0,
+        lastSessionDate: u.last_session_date ?? null,
+        totalStudyTime: u.total_study_time ?? 0,
+        badges: u.badges || [],
+        petXp: u.pet_xp ?? 0,
+        petLevel: u.pet_level ?? 1,
+        petGoodPostureStreak: u.pet_good_posture_streak ?? 0,
+        coins: u.coins ?? 0,
+        unlockedItems: u.unlocked_items || [],
+        equippedItems: u.equipped_items || {},
+      };
+    }
+
+    let calibration: CalibrationData | null = null;
+    if (row.calibration) {
+      const c = row.calibration;
+      calibration = {
+        baseEyeDistance: c.base_eye_distance,
+        baseNeckYOffset: c.base_neck_y_offset,
+        baseShoulderYDiff: c.base_shoulder_y_diff,
+        baseTorsoHeight: c.base_torso_height,
+        baseEAR: c.base_ear,
+      };
+    }
+
+    return {
+      studentName: row.student_name ?? '',
+      studentEmail: row.student_email ?? '',
+      studentUuid,
+      recentSessions,
+      userStats,
+      calibration,
+    };
+  } catch (err) {
+    console.error('[parent-sync] pullStudentDataForParent failed:', err);
+    return null;
+  }
+}
+
+/**
+ * Subscribe to realtime INSERT/UPDATE on the linked student's
+ * sessions row, so the parent view sees new sessions appear within
+ * ~1s of the student saving them, without waiting for the 5s poll.
+ *
+ * Note: RLS would block the parent from subscribing to a row owned
+ * by the student directly — Supabase Realtime respects RLS for
+ * postgres_changes. So instead we subscribe to the parent's OWN
+ * notifications table (which the student writes a row into via
+ * broadcastCameraOffAlert etc. when significant events happen) and
+ * use that as the realtime trigger. For session-save events in
+ * particular, we fall back to the 5s poll; the realtime here is a
+ * best-effort nudge for the parent's notifications channel.
+ *
+ * Returns an unsubscribe function.
+ */
+export function subscribeToLinkedStudentChanges(
+  parentUserId: string,
+  onChange: () => void,
+): () => void {
+  if (!isSupabaseConfigured || !supabase) return () => {};
+  if (!parentUserId || parentUserId === 'default') return () => {};
+
+  const sub = supabase
+    .channel(`parent_notifications:${parentUserId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'notifications',
+        filter: `parent_user_id=eq.${parentUserId}`,
+      },
+      (payload) => {
+        console.log('[parent-sync] notification insert received:', payload);
+        // Any new notification for this parent is a signal that the
+        // student did something worth re-pulling (camera off/on,
+        // fatigue alert, etc.). The 5s poll will pick up session
+        // changes; this realtime nudge makes the UI feel responsive
+        // for live events.
+        onChange();
+      },
+    )
+    .subscribe();
+
+  return () => { try { supabase?.removeChannel(sub); } catch {} };
 }
 
 // --- Calibration ---

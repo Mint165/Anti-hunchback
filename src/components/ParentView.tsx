@@ -1,10 +1,10 @@
 // Parent Dashboard Component
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Eye, Bell, Shield, ShieldAlert, Heart, AlertCircle, Send, MessageSquare, Download, Calendar, TrendingUp } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar } from 'recharts';
-import { getSessionRecords } from '../services/db';
-import type { SessionRecord } from '../services/db';
+import { pullStudentDataForParent, subscribeToLinkedStudentChanges, getUserIdSync, getCurrentUserSync } from '../services/db';
+import type { SessionRecord, StudentDataForParent } from '../services/db';
 import { subscribeToStudentSync, broadcastParentMessage } from '../services/parentSync';
 import { useLanguage } from '../contexts/LanguageContext';
 import AnimatedCounter from './ui/AnimatedCounter';
@@ -42,6 +42,62 @@ export const ParentView: React.FC = () => {
 
   const [alerts, setAlerts] = useState<AlertLog[]>([]);
   const [sessions, setSessions] = useState<SessionRecord[]>([]);
+  // Real student data pulled from Supabase via the
+  // get_linked_student_data RPC. Null = not yet fetched or fetch
+  // failed (no link code, link code invalid, network error). The
+  // parent UI uses this to render the student's name + email and to
+  // decide whether to show the empty-state card.
+  const [studentData, setStudentData] = useState<StudentDataForParent | null>(null);
+  const [studentDataLoading, setStudentDataLoading] = useState<boolean>(false);
+  const [studentDataError, setStudentDataError] = useState<string | null>(null);
+  const [lastSyncAt, setLastSyncAt] = useState<number | null>(null);
+  // Ref so the 5s poll reads the latest link code without resetting
+  // the interval whenever the user updates the code (avoids a fetch
+  // storm if the user types fast in the link-code input).
+  const linkCodeRef = useRef<string>('');
+  // Ref flag set true after the first successful pull so the initial
+  // "Đang đồng bộ..." state can be distinguished from "sync failed".
+  const hasFetchedOnceRef = useRef<boolean>(false);
+
+  // Pull the linked student's data via the SECURITY DEFINER RPC.
+  // Memoized in a ref so the 5s poll and the realtime callback can
+  // share the same function instance without re-creating the
+  // interval on every render.
+  const pullLinkedStudent = React.useCallback(async () => {
+    const linkCode = linkCodeRef.current;
+    if (!linkCode) {
+      setStudentData(null);
+      setStudentDataError(null);
+      return;
+    }
+    setStudentDataLoading(true);
+    setStudentDataError(null);
+    const data = await pullStudentDataForParent(linkCode);
+    setStudentDataLoading(false);
+    setLastSyncAt(Date.now());
+    hasFetchedOnceRef.current = true;
+    if (data) {
+      setStudentData(data);
+      setSessions(data.recentSessions);
+      setStudentDataError(null);
+    } else {
+      // Don't blow away existing data on a transient failure — only
+      // surface an error if we never successfully fetched.
+      if (!studentData) {
+        setStudentDataError('sync_failed');
+      }
+    }
+  }, [studentData]);
+
+  // Initialize linkCodeRef from the persisted current user, then
+  // kick off the first pull. Re-runs when the persisted user changes
+  // (e.g. after the user updates their parent_linked_code in
+  // UserProfile and App.tsx writes a new oliver_current_user).
+  useEffect(() => {
+    const u = getCurrentUserSync();
+    linkCodeRef.current = u?.parentLinkedCode ?? '';
+    pullLinkedStudent();
+  }, [pullLinkedStudent]);
 
   // Time Filter State
   const [timeFilter, setTimeFilter] = useState<'7' | '30' | 'all'>('7');
@@ -113,21 +169,10 @@ export const ParentView: React.FC = () => {
     setTimeout(() => setIsMessageSent(false), 3000);
   };
 
-  useEffect(() => {
-    let savedSessions = getSessionRecords();
-    setSessions(savedSessions);
-
-    // Initial alert log
-    setAlerts([
-      {
-        id: '1',
-        message: 'Hệ thống đã kết nối và cấu hình thành công với máy học sinh.',
-        time: '10 phút trước',
-      },
-    ]);
-  }, []);
-
-  // Listen to BroadcastChannel updates from Student view
+  // Listen to BroadcastChannel updates from Student view (live
+  // posture events: status + fatigue alerts). These are ephemeral
+  // signals, not session history — session history comes from the
+  // 5s poll + realtime subscription above.
   useEffect(() => {
     let lastActiveTime = Date.now();
 
@@ -165,6 +210,28 @@ export const ParentView: React.FC = () => {
       clearInterval(checkActiveInterval);
     };
   }, []);
+
+  // 5-second poll of the linked student's data + Supabase Realtime
+  // subscription on the parent's notifications table (any new
+  // notification for this parent is a signal that the student did
+  // something worth re-pulling). The poll is the authoritative
+  // cadence — realtime is a best-effort nudge for responsiveness.
+  useEffect(() => {
+    const pollInterval = setInterval(() => {
+      pullLinkedStudent();
+    }, 5000);
+
+    const parentUserId = getUserIdSync();
+    const unsubscribeRealtime = subscribeToLinkedStudentChanges(
+      parentUserId,
+      () => { pullLinkedStudent(); },
+    );
+
+    return () => {
+      clearInterval(pollInterval);
+      unsubscribeRealtime();
+    };
+  }, [pullLinkedStudent]);
 
   // Recharts calculations
   // 1. Posture ratio calculations for Pie Chart
@@ -397,6 +464,61 @@ export const ParentView: React.FC = () => {
           <span className={styles.tag}>{t('parent.dashboard')}</span>
           <h1 className={styles.title}>{t('parent.title')}</h1>
           <p className={styles.desc}>{t('parent.desc')}</p>
+          {/* Linked-student badge + sync status. Surfaces real state from
+              pullStudentDataForParent so the parent can tell whether the
+              link code worked, instead of the old hardcoded "connected"
+              alert. All text via i18n keys (en/vi). */}
+          <div
+            className="flex flex-wrap items-center gap-2 mt-3 text-xs font-bold"
+            style={{ color: 'var(--text-secondary)' }}
+          >
+            {studentData ? (
+              <span
+                className="px-3 py-1 rounded-full"
+                style={{
+                  background: 'var(--secondary-light)',
+                  border: '1px solid var(--secondary)',
+                  color: 'var(--secondary)',
+                }}
+              >
+                {t('parent.studentName')}: {studentData.studentName}
+              </span>
+            ) : studentDataLoading ? (
+              <span
+                className="px-3 py-1 rounded-full"
+                style={{
+                  background: 'var(--primary-light)',
+                  border: '1px solid var(--primary)',
+                  color: 'var(--primary)',
+                }}
+              >
+                {t('parent.syncingData')}
+              </span>
+            ) : studentDataError ? (
+              <span
+                className="px-3 py-1 rounded-full"
+                style={{
+                  background: 'rgba(239, 68, 68, 0.1)',
+                  border: '1px solid var(--danger)',
+                  color: 'var(--danger)',
+                }}
+              >
+                {t('parent.syncFailed')}
+              </span>
+            ) : null}
+            {lastSyncAt && (
+              <span
+                className="px-3 py-1 rounded-full"
+                style={{
+                  background: 'var(--bg-card)',
+                  border: '1px solid var(--border-color)',
+                  color: 'var(--text-muted)',
+                }}
+              >
+                {t('parent.lastSync')}: {new Date(lastSyncAt).toLocaleTimeString()}
+              </span>
+            )}
+          </div>
         </div>
         <motion.button
           onClick={handleExportPDF}
@@ -596,7 +718,7 @@ export const ParentView: React.FC = () => {
                 <div className={styles.pieCenter}>
                   <span className={styles.pieCenterLabel}>{t('parent.best')}</span>
                   <span className={styles.pieCenterValue}>
-                    {pieData[0] ? `${pieData[0].value}%` : '80%'}
+                    {pieData[0] ? `${pieData[0].value}%` : t('parent.noDataShort')}
                   </span>
                 </div>
               </div>
