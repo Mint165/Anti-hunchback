@@ -509,7 +509,9 @@
 }
 
 /* ── Responsive ────────────────────────────────────────────────── */
-@media (max-width: 900px) {
+/* Hide the purple illustration panel on phones (any orientation) and
+   tablets in portrait — keep only the login/register form. */
+@media (max-width: 1024px) {
   .illustration { display: none; }
   .formPanel { flex: 1; }
   .card { max-width: 440px; padding: 32px 28px; }
