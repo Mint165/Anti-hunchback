@@ -466,10 +466,56 @@ export const PostureProvider: React.FC<{ children: React.ReactNode }> = ({ child
   );
 };
 
+// NOTE: this hook tolerates being called outside a PostureProvider.
+// The parent flow does NOT mount a PostureProvider (per the
+// constitution: "Không sử dụng camera của thiết bị dù là di động hay
+// máy tính khi người dùng sử dụng tài khoản phụ huynh") so any
+// parent-side component that calls usePostureContext() would otherwise
+// throw. The student tree is always wrapped in <PostureProvider>, so
+// real student consumers always get the populated context. Components
+// that genuinely need posture data should defensively check for the
+// null markers (metrics === null, hasStarted === false, etc.) when
+// shared between roles — but in practice every posture consumer
+// (StudentView, FloatingPet, StudentAuxPhoneView) is student-only.
+const NULL_POSTURE_CONTEXT: PostureContextType = {
+  metrics: null,
+  healthScore: 100,
+  alertLevel: 'good',
+  hasStarted: false,
+  startSession: () => {},
+  resetBreak: () => {},
+  isModelReady: false,
+  isLoading: false,
+  error: null,
+  calibration: null,
+  setCalibration: () => {},
+  goodPostureStreak: 0,
+  poseLandmarks: null,
+  faceLandmarks: null,
+  eyeExerciseTriggered: false,
+  onEyeExerciseComplete: () => {},
+  sessionFatigueFlags: 0,
+  sessionAngleAccumulator: { shoulderTiltSum: 0, neckAngleSum: 0, slouchAngleSum: 0, tickCount: 0 },
+  latestParentMessage: null,
+  cameraMode: 'front',
+  setCameraMode: () => {},
+  isManualWritingMode: false,
+  setIsManualWritingMode: () => {},
+  isCameraActive: false,
+  pauseCamera: () => {},
+  resumeCamera: () => {},
+  auxPoseLandmarks: null,
+  auxCameraDeviceId: null,
+  otherActiveDevices: [],
+  ownDeviceId: '',
+  isDesktop: false,
+};
+
 export const usePostureContext = () => {
   const context = useContext(PostureContext);
-  if (context === undefined) {
-    throw new Error('usePostureContext must be used within a PostureProvider');
-  }
-  return context;
+  // Return the null-shaped default when called outside a provider
+  // (i.e. from a parent-only render path) instead of throwing —
+  // throwing would force every parent component to be wrapped or
+  // refactored, and the parent flow genuinely doesn't need posture.
+  return context ?? NULL_POSTURE_CONTEXT;
 };

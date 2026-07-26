@@ -29,24 +29,11 @@ function AppContent() {
     const savedUser = localStorage.getItem('oliver_current_user');
     return savedUser ? JSON.parse(savedUser) : null;
   });
-  
+
   const [activeTab, setActiveTab] = useState<AppTab>('student');
   const [showProfile, setShowProfile] = useState(false);
   const [isSynced, setIsSynced] = useState<boolean>(false);
-  const { eyeExerciseTriggered, onEyeExerciseComplete, metrics, poseLandmarks } = usePostureContext();
 
-  // Pause decorative page-wide motion (CSS animations, framer-motion page
-  // transitions, WebGL pet animations via the `paused` prop) while the eye
-  // exercise overlay is open. This frees CPU/GPU for the foreground minigame
-  // and matches the constitution's "tăng fps và giảm chuyển động phức tạp của
-  // trang web khi phần này hiện lên" requirement. The class is mirrored from
-  // `@media (prefers-reduced-motion: reduce)` so the same CSS rules apply.
-  useEffect(() => {
-    const root = document.documentElement;
-    root.classList.toggle('motion-paused', eyeExerciseTriggered);
-    return () => root.classList.remove('motion-paused');
-  }, [eyeExerciseTriggered]);
-  
   useEffect(() => {
     // Check dark mode
     if (localStorage.getItem('oliver_dark_mode') === 'true') {
@@ -248,6 +235,80 @@ function AppContent() {
     }
   };
 
+  // Per the constitution: "Không sử dụng camera của thiết bị dù là di
+  // động hay máy tính khi người dùng sử dụng tài khoản phụ huynh."
+  // PostureProvider unconditionally calls useMediaPipe() at mount,
+  // which calls getUserMedia() and loads the MediaPipe model from
+  // CDN — both undesirable for parents. So we only mount PostureProvider
+  // for students, wrapping the entire student tree (Layout + tab
+  // content + extras). The parent flow renders without it.
+  const isStudent = user.role === 'student';
+
+  // The student-only extras (eye-exercise overlay, motion-pause class,
+  // FloatingPet) consume PostureContext, so they must live inside the
+  // provider. They're rendered as a sibling to Layout's children so
+  // they overlay the whole screen.
+  const studentExtras = isStudent ? <StudentExtras /> : null;
+
+  return (
+    <PostureProviderWrapper enabled={isStudent}>
+      <Layout activeTab={activeTab} setActiveTab={setActiveTab} appMode={user.role} onAvatarClick={() => setShowProfile(true)} user={user}>
+        <Suspense fallback={<LoadingFallback />}>
+          <PageTransition pageKey={activeTab}>
+            {renderTabContent()}
+          </PageTransition>
+        </Suspense>
+
+        {showProfile && (
+          <UserProfile
+            user={user}
+            onClose={() => setShowProfile(false)}
+            onLogout={handleLogout}
+            onUpdateParentCode={handleUpdateParentCode}
+          />
+        )}
+      </Layout>
+
+      {studentExtras}
+
+      {/* Dev-only FPS overlay — stripped from production builds. Mounts
+          globally so we can measure FPS across all tabs (student/parent/
+          settings/pet) before/after the Task D perf package. */}
+      {import.meta.env.DEV && <FpsOverlay />}
+      <Toaster position="top-center" />
+    </PostureProviderWrapper>
+  );
+}
+
+// Wrapper that mounts PostureProvider only when `enabled` is true.
+// When disabled (parent flow), children render without a provider so
+// useMediaPipe / getUserMedia / MediaPipe CDN fetch never happen.
+const PostureProviderWrapper: React.FC<{ enabled: boolean; children: React.ReactNode }> = ({ enabled, children }) => {
+  if (!enabled) return <>{children}</>;
+  return <PostureProvider>{children}</PostureProvider>;
+};
+
+// Student-only extras that need to consume PostureContext: the eye
+// exercise overlay (reads metrics + poseLandmarks), the page-wide
+// motion-pause class (reads eyeExerciseTriggered), and FloatingPet
+// (reads metrics/hasStarted/alertLevel/eyeExerciseTriggered). Must
+// be mounted INSIDE <PostureProvider> so useContext(PostureContext)
+// resolves to the real provider value.
+function StudentExtras() {
+  const { eyeExerciseTriggered, onEyeExerciseComplete, metrics, poseLandmarks } = usePostureContext();
+
+  // Pause decorative page-wide motion (CSS animations, framer-motion page
+  // transitions, WebGL pet animations via the `paused` prop) while the eye
+  // exercise overlay is open. This frees CPU/GPU for the foreground minigame
+  // and matches the constitution's "tăng fps và giảm chuyển động phức tạp của
+  // trang web khi phần này hiện lên" requirement. The class is mirrored from
+  // `@media (prefers-reduced-motion: reduce)` so the same CSS rules apply.
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.toggle('motion-paused', eyeExerciseTriggered);
+    return () => root.classList.remove('motion-paused');
+  }, [eyeExerciseTriggered]);
+
   return (
     <>
       {/* Global Eye Exercise Overlay */}
@@ -260,31 +321,9 @@ function AppContent() {
           />
         )}
       </Suspense>
-      
-      <Layout activeTab={activeTab} setActiveTab={setActiveTab} appMode={user.role} onAvatarClick={() => setShowProfile(true)} user={user}>
-        <Suspense fallback={<LoadingFallback />}>
-          <PageTransition pageKey={activeTab}>
-            {renderTabContent()}
-          </PageTransition>
-        </Suspense>
-
-        {showProfile && (
-          <UserProfile 
-            user={user} 
-            onClose={() => setShowProfile(false)} 
-            onLogout={handleLogout}
-            onUpdateParentCode={handleUpdateParentCode}
-          />
-        )}
-      </Layout>
       <Suspense fallback={null}>
-        {user.role === 'student' && <FloatingPet />}
+        <FloatingPet />
       </Suspense>
-      {/* Dev-only FPS overlay — stripped from production builds. Mounts
-          globally so we can measure FPS across all tabs (student/parent/
-          settings/pet) before/after the Task D perf package. */}
-      {import.meta.env.DEV && <FpsOverlay />}
-      <Toaster position="top-center" />
     </>
   );
 }
@@ -292,9 +331,7 @@ function AppContent() {
 function App() {
   return (
     <LanguageProvider>
-      <PostureProvider>
-        <AppContent />
-      </PostureProvider>
+      <AppContent />
     </LanguageProvider>
   );
 }
