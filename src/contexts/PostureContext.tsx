@@ -1,11 +1,10 @@
 import React, { createContext, useContext, useRef, useState, useEffect, useCallback } from 'react';
 import { useMediaPipe } from '../hooks/useMediaPipe';
 import { useAlertEngine } from '../services/useAlertEngine';
-import { analyzePosture, calculateHealthScore, type PostureMetrics, type CalibrationData, type CameraMode } from '../services/postureAI';
+import { analyzePosture, calculateHealthScore, type PostureMetrics, type CalibrationData, type CameraMode, type Landmark } from '../services/postureAI';
 import { loadCalibration, loadSettings, addPetXP } from '../services/db';
-import { broadcastFatigueAlert, subscribeToParentMessage } from '../services/parentSync';
+import { broadcastFatigueAlert, subscribeToParentMessage, subscribeToAuxCameraLandmarks } from '../services/parentSync';
 import { voiceService } from '../services/voiceService';
-
 interface PostureContextType {
   metrics: PostureMetrics | null;
   healthScore: number;
@@ -39,21 +38,55 @@ interface PostureContextType {
   setCameraMode: (mode: CameraMode) => void;
   isManualWritingMode: boolean;
   setIsManualWritingMode: (val: boolean) => void;
+  // Real camera toggle (Task 7): unlike StudentView's old CSS-only showCamera,
+  // these actually stop / restart the MediaStream tracks via useMediaPipe.
+  isCameraActive: boolean;
+  pauseCamera: () => void;
+  resumeCamera: () => void;
+  // Task 6d: auxiliary-camera landmarks streamed from a second device
+  // running the same student account. Null when no aux device is active.
+  // Components that want to merge aux data into their analysis can read
+  // this; the PostureContext itself uses it to refine shoulderTilt below.
+  auxPoseLandmarks: Landmark[] | null;
+  auxCameraDeviceId: string | null;
 }
 
 const PostureContext = createContext<PostureContextType | undefined>(undefined);
 
 export const PostureProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { poseLandmarks, faceLandmarks, isLoading, error, startCamera, stopCamera, isModelReady } = useMediaPipe();
-  
+
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  
+
   const [calibration, setCalibration] = useState<CalibrationData | null>(null);
   const [metrics, setMetrics] = useState<PostureMetrics | null>(null);
   const [healthScore, setHealthScore] = useState<number>(100);
   const [goodPostureStreak, setGoodPostureStreak] = useState<number>(0);
   const [cameraMode, setCameraMode] = useState<CameraMode>('front');
   const [isManualWritingMode, setIsManualWritingMode] = useState<boolean>(false);
+
+  // Task 7: real camera toggle. The MediaStream is started in the effect
+  // below once models are ready. `isCameraActive` exposes the live state to
+  // consumers; `pauseCamera`/`resumeCamera` stop and restart the underlying
+  // MediaPipe Camera (which stops the MediaStream tracks), so StudentView's
+  // toggle button now actually frees the webcam instead of just hiding the
+  // element with CSS.
+  const [isCameraActive, setIsCameraActive] = useState<boolean>(false);
+  const isModelReadyRef = useRef<boolean>(false);
+  useEffect(() => { isModelReadyRef.current = isModelReady; }, [isModelReady]);
+
+  const pauseCamera = useCallback(() => {
+    stopCamera();
+    setIsCameraActive(false);
+  }, [stopCamera]);
+
+  const resumeCamera = useCallback(() => {
+    if (!isModelReadyRef.current) return;
+    if (videoRef.current) {
+      startCamera(videoRef.current);
+      setIsCameraActive(true);
+    }
+  }, [startCamera]);
 
   const { alertLevel, startSession, resetBreak, hasStarted } = useAlertEngine(metrics?.state || 'GOOD_POSTURE');
   
@@ -80,6 +113,28 @@ export const PostureProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const [latestParentMessage, setLatestParentMessage] = useState<string | null>(null);
 
+  // Task 6d: aux camera landmarks from a second device.
+  const [auxPoseLandmarks, setAuxPoseLandmarks] = useState<Landmark[] | null>(null);
+  const [auxCameraDeviceId, setAuxCameraDeviceId] = useState<string | null>(null);
+  // Track this device's own id so we can ignore our own aux broadcasts if
+  // the user opens two tabs on the same machine.
+  const ownDeviceIdRef = useRef<string>(
+    (() => {
+      try {
+        const k = 'oliver_device_id';
+        let id = sessionStorage.getItem(k);
+        if (!id) {
+          id = (crypto as any).randomUUID?.() ?? `dev_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+          sessionStorage.setItem(k, id);
+        }
+        return id;
+      } catch {
+        return `dev_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      }
+    })()
+  );
+  const auxLastSeenRef = useRef<number>(0);
+
   // Subscribe to parent messages
   useEffect(() => {
     const unsubscribe = subscribeToParentMessage((text) => {
@@ -91,6 +146,34 @@ export const PostureProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
     return () => unsubscribe();
   }, []);
+
+  // Task 6d: subscribe to aux-camera landmarks from a second device.
+  // We expire the aux data after 5s of silence so the merge doesn't keep
+  // using stale landmarks after the aux device goes offline.
+  useEffect(() => {
+    const unsubscribe = subscribeToAuxCameraLandmarks((deviceId, pose) => {
+      if (deviceId === ownDeviceIdRef.current) return; // ignore self
+      setAuxCameraDeviceId(deviceId);
+      setAuxPoseLandmarks(pose);
+      auxLastSeenRef.current = Date.now();
+    });
+    const expiry = setInterval(() => {
+      if (auxLastSeenRef.current && Date.now() - auxLastSeenRef.current > 5000) {
+        setAuxPoseLandmarks(null);
+        setAuxCameraDeviceId(null);
+        auxLastSeenRef.current = 0;
+      }
+    }, 2000);
+    return () => {
+      unsubscribe();
+      clearInterval(expiry);
+    };
+  }, []);
+
+  // Keep a ref so the analyze loop below can read aux landmarks without
+  // re-running the effect on every aux update (which would be very noisy).
+  const auxPoseRef = useRef<Landmark[] | null>(null);
+  useEffect(() => { auxPoseRef.current = auxPoseLandmarks; }, [auxPoseLandmarks]);
 
   // Load calibration on mount
   useEffect(() => {
@@ -104,8 +187,12 @@ export const PostureProvider: React.FC<{ children: React.ReactNode }> = ({ child
   useEffect(() => {
     if (isModelReady && videoRef.current) {
       startCamera(videoRef.current);
+      setIsCameraActive(true);
     }
-    return () => stopCamera();
+    return () => {
+      stopCamera();
+      setIsCameraActive(false);
+    };
   }, [isModelReady, startCamera, stopCamera]);
 
   // Analyze posture loop
@@ -135,6 +222,36 @@ export const PostureProvider: React.FC<{ children: React.ReactNode }> = ({ child
       cameraMode,
       isManualWritingMode
     );
+
+    // Task 6d: merge aux-camera analysis. The aux device (e.g. a side-angled
+    // phone) is better at detecting lateral shoulder tilt and rotation than
+    // the front camera, so when an aux view is live and reports a HIGHER
+    // shoulderTilt than the front camera, trust the aux value. We deliberately
+    // keep this conservative — the front camera stays authoritative for eye
+    // distance, neck angle, and slouch (which the front view measures more
+    // reliably). This is a "prefer aux when it sees worse" merge, not a full
+    // replacement of the primary AI.
+    const auxPose = auxPoseRef.current;
+    if (auxPose && auxPose.length > 12) {
+      const auxMetrics = analyzePosture(
+        auxPose,
+        null, // aux device may not stream face landmarks; we don't merge eye data
+        calibration,
+        640,
+        480,
+        [], // movement history isn't tracked for the aux view; pass empty
+        'side',
+        isManualWritingMode
+      );
+      if (auxMetrics.shoulderTilt > calculatedMetrics.shoulderTilt + 2) {
+        calculatedMetrics.shoulderTilt = auxMetrics.shoulderTilt;
+      }
+      // If aux sees a markedly worse slouch angle, surface it too —
+      // side views catch forward hunching the front camera can miss.
+      if (auxMetrics.slouchAngle > calculatedMetrics.slouchAngle + 3) {
+        calculatedMetrics.slouchAngle = auxMetrics.slouchAngle;
+      }
+    }
 
     setMetrics(calculatedMetrics);
     setHealthScore(calculateHealthScore(calculatedMetrics));
@@ -267,7 +384,12 @@ export const PostureProvider: React.FC<{ children: React.ReactNode }> = ({ child
       cameraMode,
       setCameraMode,
       isManualWritingMode,
-      setIsManualWritingMode
+      setIsManualWritingMode,
+      isCameraActive,
+      pauseCamera,
+      resumeCamera,
+      auxPoseLandmarks,
+      auxCameraDeviceId
     }}>
       <video
         id="global-webcam"

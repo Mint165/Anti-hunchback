@@ -8,18 +8,20 @@ import {
   PawPrint,
   Eye,
   Globe,
+  Bell,
 } from 'lucide-react';
 import { useMediaQuery } from 'react-responsive';
 import { motion } from 'framer-motion';
 import type { AuthUser } from './AuthScreen';
 import { useLanguage } from '../contexts/LanguageContext';
 import GradientMesh from './ui/GradientMesh';
+import type { AppTab } from '../App';
 import styles from './Layout.module.css';
 
 interface LayoutProps {
   children: React.ReactNode;
-  activeTab: 'student' | 'parent' | 'pet' | 'settings';
-  setActiveTab: (tab: 'student' | 'parent' | 'pet' | 'settings') => void;
+  activeTab: AppTab;
+  setActiveTab: (tab: AppTab) => void;
   appMode?: string;
   onAvatarClick?: () => void;
   user?: AuthUser;
@@ -37,18 +39,26 @@ export const Layout: React.FC<LayoutProps> = ({
   const { t, lang, setLang } = useLanguage();
   const isParent = (user?.role ?? appMode) === 'parent';
 
-  const menuItems = [
+  const menuItems: { id: AppTab; name: string; icon: typeof Bell }[] = [
     { id: 'student', name: t('layout.dashboard'), icon: LayoutDashboard },
     { id: 'pet', name: t('layout.pet'), icon: PawPrint },
     { id: 'parent', name: t('layout.parentSync'), icon: Shield },
+    // Notifications tab is parent-only — filtered into visibleItems below.
+    { id: 'notifications', name: t('layout.notifications'), icon: Bell },
     { id: 'settings', name: t('layout.settings'), icon: SettingsIcon },
-  ] as const;
+  ];
 
   const displayUser = user || { name: t('layout.studentDefault'), role: 'student' };
 
   const visibleItems = menuItems.filter((item) => {
-    if (displayUser.role === 'parent' && (item.id === 'student' || item.id === 'pet')) return false;
-    if (displayUser.role === 'student' && item.id === 'parent') return false;
+    if (displayUser.role === 'parent') {
+      // Parent never sees student/pet tabs.
+      if (item.id === 'student' || item.id === 'pet') return false;
+      // Parent sees: parent sync, notifications, settings.
+      return true;
+    }
+    // Student never sees parent / notifications tabs.
+    if (item.id === 'parent' || item.id === 'notifications') return false;
     return true;
   });
 
@@ -144,7 +154,10 @@ export const Layout: React.FC<LayoutProps> = ({
       </main>
 
       {/* ─── Mobile bottom nav ─────────────────────────────────────── */}
-      {isMobile && appMode !== 'parent' && (
+      {/* Now shown for BOTH student and parent on mobile. visibleItems already
+          filters out parent-only tabs for students and vice versa, so each
+          role gets the right short list of icons. */}
+      {isMobile && (
         <div className={styles.bottomNav}>
           {visibleItems.map((item) => {
             const Icon = item.icon;

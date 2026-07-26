@@ -42,6 +42,26 @@ body {
 .dark ::-webkit-scrollbar-thumb { background: #475569; }
 
 /* ═══════════════════════════════════════════════════════════════
+   GLASS CARD — theme-aware translucent surface used by Calibration,
+   EyeExercise, and other overlays. Backed by tokens.css so it
+   adapts to data-theme (student/parent) and .dark automatically.
+   ═══════════════════════════════════════════════════════════════ */
+.glass-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-lg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  color: var(--text-main);
+}
+
+.dark .glass-card {
+  background: rgba(19, 30, 54, 0.85);
+  border-color: var(--border-color);
+}
+
+/* ═══════════════════════════════════════════════════════════════
    GRADIENT MESH — CSS-only background (replaces ParticleBackground)
    ═══════════════════════════════════════════════════════════════ */
 .gradient-mesh {
@@ -99,6 +119,21 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .gradient-mesh { animation: none; }
+  /* Honor OS-level reduced-motion globally: kill decorative infinite
+     keyframe animations (alerts/bouncing badges/pulses) and force framer-motion
+     transitions to a near-instant fade. The PageTransition component also
+     gates its own slide amplitude via matchMedia, but these rules catch the
+     CSS-only animations (FloatingPet dangerPulse / bounce, GradientMesh drift,
+     skeleton shimmer, etc.) so users with vestibular sensitivity get a calm
+     UI without per-component edits. */
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════════

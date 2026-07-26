@@ -66,7 +66,7 @@ export const Settings: React.FC = () => {
   };
 
   const handleReset = () => {
-    if (window.confirm('Bạn có muốn khôi phục cài đặt mặc định không?')) {
+    if (window.confirm(t('settings.confirmReset'))) {
       setSettings(DEFAULT_SETTINGS);
       saveSettings(DEFAULT_SETTINGS);
       setIsSaved(true);
@@ -75,9 +75,8 @@ export const Settings: React.FC = () => {
   };
 
   const handleClearHistory = () => {
-    if (window.confirm('CẢNH BÁO: Hành động này sẽ xóa toàn bộ lịch sử buổi học và điểm kinh nghiệm XP. Bạn có chắc chắn muốn thực hiện?')) {
+    if (window.confirm(t('settings.confirmClearHistory'))) {
       localStorage.clear();
-      alert('Đã xóa toàn bộ lịch sử. Trang web sẽ tải lại.');
       alert(t('settings.clearSuccess'));
       window.location.reload();
     }
@@ -119,7 +118,7 @@ export const Settings: React.FC = () => {
                 if (next) document.documentElement.classList.add('dark');
                 else document.documentElement.classList.remove('dark');
               }}
-              label={isDarkMode ? 'Bật' : 'Tắt'}
+              label={isDarkMode ? t('common.on') : t('common.off')}
             />
           </div>
 
@@ -212,34 +211,34 @@ export const Settings: React.FC = () => {
         {/* Timers & Sound section */}
         <h3 className={styles.sectionTitle}>
           <span className={styles.sectionIcon}><Clock size={20} /></span>
-          Chu kỳ Cảnh báo & Âm thanh
+          {t('settings.timersSoundHeading')}
         </h3>
 
         <div className={styles.timerGrid}>
           <div className={styles.timerCell}>
-            <label className={styles.timerLabel}>Chu kỳ Bài tập Mắt</label>
+            <label className={styles.timerLabel}>{t('settings.eyeExerciseCycle')}</label>
             <select
               value={settings.eyeExerciseInterval}
               onChange={(e) => handleChange('eyeExerciseInterval', parseInt(e.target.value))}
               className={styles.timerSelect}
             >
-              <option value="15">Mỗi 15 phút</option>
-              <option value="20">Mỗi 20 phút (Khuyên dùng)</option>
-              <option value="30">Mỗi 30 phút</option>
-              <option value="45">Mỗi 45 phút</option>
+              <option value="15">{t('settings.every15Min')}</option>
+              <option value="20">{t('settings.every20Min')}</option>
+              <option value="30">{t('settings.every30Min')}</option>
+              <option value="45">{t('settings.every45Min')}</option>
             </select>
           </div>
 
           <div className={styles.timerCell}>
-            <label className={styles.timerLabel}>Thời gian Khóa vận động</label>
+            <label className={styles.timerLabel}>{t('settings.sessionBreakCycle')}</label>
             <select
               value={settings.sessionBreakInterval}
               onChange={(e) => handleChange('sessionBreakInterval', parseInt(e.target.value))}
               className={styles.timerSelect}
             >
-              <option value="30">Mỗi 30 phút</option>
-              <option value="45">Mỗi 45 phút (Khuyên dùng)</option>
-              <option value="60">Mỗi 60 phút</option>
+              <option value="30">{t('settings.every30Min')}</option>
+              <option value="45">{t('settings.every45Min')}</option>
+              <option value="60">{t('settings.every60Min')}</option>
             </select>
           </div>
 
@@ -248,9 +247,9 @@ export const Settings: React.FC = () => {
             <div className={styles.soundAlertTop}>
               <div className={styles.rowText}>
                 <div className={styles.rowTitle} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <Volume2 size={20} style={{ color: 'var(--primary)' }} /> Âm thanh cảnh báo
+                  <Volume2 size={20} style={{ color: 'var(--primary)' }} /> {t('settings.warningSound')}
                 </div>
-                <div className={styles.rowDesc}>Phát chuỗi âm thanh bíp khi ngồi sai. Độ trễ có thể tùy chỉnh để tránh bị làm phiền.</div>
+                <div className={styles.rowDesc}>{t('settings.warningSoundDesc')}</div>
               </div>
             </div>
 
@@ -260,18 +259,18 @@ export const Settings: React.FC = () => {
                 onChange={(e) => setAlertDelay(e.target.value)}
                 className={styles.select}
               >
-                <option value="5">Sau 5 giây (Test)</option>
-                <option value="10">Sau 10 giây</option>
-                <option value="30">Sau 30 giây</option>
-                <option value="60">Sau 1 phút</option>
-                <option value="120">Sau 2 phút (Mặc định)</option>
-                <option value="300">Sau 5 phút</option>
+                <option value="5">{t('settings.after5Sec')}</option>
+                <option value="10">{t('settings.after10Sec')}</option>
+                <option value="30">{t('settings.after30Sec')}</option>
+                <option value="60">{t('settings.after1Min')}</option>
+                <option value="120">{t('settings.after2Min')}</option>
+                <option value="300">{t('settings.after5Min')}</option>
               </select>
 
               <Toggle
                 on={settings.soundAlertEnabled}
                 onChange={(next) => handleChange('soundAlertEnabled', next)}
-                label={settings.soundAlertEnabled ? 'Bật' : 'Tắt'}
+                label={settings.soundAlertEnabled ? t('common.on') : t('common.off')}
               />
             </div>
           </div>
@@ -280,15 +279,15 @@ export const Settings: React.FC = () => {
         {/* Buttons */}
         <div className={styles.btnRow}>
           <button onClick={handleSave} className={`${styles.btn} ${styles.btnPrimary} ${styles.btnSaveFull}`}>
-            <Save size={18} /> Lưu Cài Đặt
+            <Save size={18} /> {t('settings.saveBtn')}
           </button>
 
           <button onClick={handleReset} className={`${styles.btn} ${styles.btnSecondary}`}>
-            <RefreshCw size={18} /> Khôi phục mặc định
+            <RefreshCw size={18} /> {t('settings.resetDefault')}
           </button>
 
           <button onClick={handleClearHistory} className={`${styles.btn} ${styles.btnDanger}`}>
-            Xóa lịch sử
+            {t('settings.clearHistory')}
           </button>
         </div>
 
@@ -300,7 +299,7 @@ export const Settings: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9 }}
             >
-              Đã lưu thay đổi thành công! 🎉
+              {t('settings.saveSuccess')}
             </motion.div>
           )}
         </AnimatePresence>

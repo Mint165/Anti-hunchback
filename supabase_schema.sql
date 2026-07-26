@@ -5,7 +5,8 @@
 BEGIN;
 
 -- 0. Clean old tables to ensure fresh setup (also drops dependent policies/indexes)
-DROP TABLE IF EXISTS profiles, calibration, settings, user_stats, sessions CASCADE;
+DROP TABLE IF EXISTS profiles, calibration, settings, user_stats, sessions, notifications CASCADE;
+DROP FUNCTION IF EXISTS public.get_linked_student_data(UUID);
 
 -- 1. Create Profiles Table (to store user login info visibly in public schema)
 CREATE TABLE profiles (
@@ -81,12 +82,29 @@ CREATE TABLE sessions (
 -- Create Index on Sessions Date and user_id to optimize queries
 CREATE INDEX idx_sessions_user_date ON sessions(user_id, date);
 
+-- 5. Create Notifications Table (Task 7) — persistent parent notifications
+-- for camera-off / fatigue / camera-on alerts. Survives across sessions and
+-- devices so an offline parent sees what happened while they were away.
+CREATE TABLE notifications (
+    id TEXT PRIMARY KEY,
+    parent_user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+    kind TEXT NOT NULL,                  -- 'camera_off' | 'camera_on' | 'fatigue'
+    title TEXT NOT NULL,
+    message TEXT NOT NULL,
+    timestamp BIGINT NOT NULL,
+    read BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMPTZ DEFAULT now() NOT NULL
+);
+
+CREATE INDEX idx_notifications_parent_ts ON notifications(parent_user_id, timestamp DESC);
+
 -- Enable Row Level Security (RLS)
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE calibration ENABLE ROW LEVEL SECURITY;
 ALTER TABLE settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_stats ENABLE ROW LEVEL SECURITY;
 ALTER TABLE sessions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 
 -- Create RLS Policies for Profiles
 CREATE POLICY "Users can manage their own profile data"
@@ -123,8 +141,22 @@ TO authenticated
 USING (auth.uid() = user_id)
 WITH CHECK (auth.uid() = user_id);
 
--- Enable Realtime for settings (used by parentSync realtime subscription)
+-- Create RLS Policies for Notifications (Task 7) — a parent only sees the
+-- notifications addressed to them. (The student's broadcastCameraOffAlert
+-- helper writes the row with parent_user_id set to the parent's UUID, which
+-- the client resolves by looking up the linked student's parent_linked_code
+-- mapping. For local-only deployments this table is simply unused and the
+-- client falls back to localStorage.)
+CREATE POLICY "Users can manage their own notifications"
+ON notifications FOR ALL
+TO authenticated
+USING (auth.uid() = parent_user_id)
+WITH CHECK (auth.uid() = parent_user_id);
+
+-- Enable Realtime for settings + notifications (used by parentSync
+-- realtime subscriptions for cross-device delivery).
 ALTER PUBLICATION supabase_realtime ADD TABLE settings;
+ALTER PUBLICATION supabase_realtime ADD TABLE notifications;
 
 -- 5. Create Trigger for new users
 -- This trigger automatically creates a profile row when a new user signs up
@@ -151,6 +183,74 @@ DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
+
+-- 6. SECURITY DEFINER RPC: parent reads their linked student's data (Task 6c).
+-- RLS on sessions/user_stats/calibration only allows the owner to read their
+-- own rows, which blocks the parent account from directly SELECTing the
+-- student's data. This RPC runs as the schema owner (SECURITY DEFINER), so
+-- it bypasses RLS, but it performs an explicit check inside: the caller's
+-- profiles.parent_linked_code MUST equal the target student's
+-- profiles.linked_code. If they don't match, the function returns NULL.
+--
+-- Returns a JSON bundle of the linked student's recent sessions, user_stats,
+-- and calibration so the parent dashboard can render progress without
+-- needing direct table access.
+CREATE OR REPLACE FUNCTION public.get_linked_student_data(student_uuid UUID)
+RETURNS TABLE (
+    student_name TEXT,
+    student_email TEXT,
+    recent_sessions JSON,
+    user_stats JSON,
+    calibration JSON
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    caller_parent_code TEXT;
+    student_link_code TEXT;
+BEGIN
+    -- Look up the caller's parent_linked_code.
+    SELECT parent_linked_code INTO caller_parent_code
+    FROM public.profiles
+    WHERE id = auth.uid();
+
+    -- Look up the target student's linked_code.
+    SELECT linked_code INTO student_link_code
+    FROM public.profiles
+    WHERE id = student_uuid;
+
+    -- Refuse if caller is not a parent, or if the codes don't match, or if
+    -- the target isn't a student. Returning no rows is safer than raising —
+    -- it degrades gracefully on the client.
+    IF caller_parent_code IS NULL OR student_link_code IS NULL OR caller_parent_code <> student_link_code THEN
+        RETURN;
+    END IF;
+
+    RETURN QUERY
+    SELECT
+        p.name,
+        p.email,
+        COALESCE((
+            SELECT json_agg(s.*) FROM public.sessions s
+            WHERE s.user_id = student_uuid
+            ORDER BY s.start_time DESC LIMIT 30
+        ), '[]'::json),
+        COALESCE((
+            SELECT to_json(u.*) FROM public.user_stats u WHERE u.user_id = student_uuid
+        ), 'null'::json),
+        COALESCE((
+            SELECT to_json(c.*) FROM public.calibration c WHERE c.user_id = student_uuid
+        ), 'null'::json)
+    FROM public.profiles p
+    WHERE p.id = student_uuid;
+END;
+$$;
+
+-- Allow any authenticated user to call the RPC; the function body itself
+-- enforces the parent↔student linkage.
+REVOKE ALL ON FUNCTION public.get_linked_student_data(UUID) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_linked_student_data(UUID) TO authenticated;
 
 COMMIT;
 

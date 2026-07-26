@@ -124,7 +124,6 @@ export const en: Record<string, string> = {
   'profile.roleParent': 'Parent',
   'profile.linkCodeDesc': 'This is your link code. Send this to your parents so they can monitor your progress.',
   'profile.linkCodeLabel': 'Your link code:',
-  'profile.parentLinkDesc': 'Enter student link code to monitor.',
   'profile.parentLinkLabel': 'Student link code:',
   'profile.saveBtn': 'Save',
   'profile.saved': 'Link code saved!',
@@ -258,5 +257,95 @@ export const en: Record<string, string> = {
   'student.unlockedWarrior': 'Unlocked badge: Endurance Warrior!',
   'student.sessionSaved': 'Session completed! Data has been saved.',
   'student.fidgetAlert': 'Your child is getting restless, showing signs of distraction or muscle fatigue.',
-  'student.sitStraightVoice': 'Master, please sit up straight!'
+  'student.sitStraightVoice': 'Master, please sit up straight!',
+
+  // Common toggle labels (reused across Settings & other components)
+  'common.on': 'On',
+  'common.off': 'Off',
+
+  // Settings — missing keys previously rendering as raw strings
+  'settings.header': 'Settings',
+  'settings.subheader': 'Customize the app to fit your study habits.',
+  'settings.darkModeDesc': 'Switch between light and dark interface',
+  'settings.languageDesc': 'Choose your preferred display language',
+  'settings.eyeDistance': 'Eye-to-Screen Distance',
+  'settings.eyeDistanceDesc': 'Minimum distance before an alert is triggered',
+  'settings.neckTilt': 'Neck Tilt Threshold',
+  'settings.shoulderTilt': 'Shoulder Tilt Threshold',
+  'settings.slouch': 'Slouch Threshold',
+  'settings.clearSuccess': 'History cleared. The page will now reload.',
+
+  // Settings — keys for previously-hardcoded Vietnamese strings
+  'settings.timersSoundHeading': 'Alert Cycle & Sounds',
+  'settings.eyeExerciseCycle': 'Eye Exercise Cycle',
+  'settings.sessionBreakCycle': 'Movement Break Cycle',
+  'settings.warningSoundDesc': 'Plays a beep sequence when posture is wrong. Delay is customizable to avoid disturbance.',
+  'settings.every15Min': 'Every 15 minutes',
+  'settings.every20Min': 'Every 20 minutes (Recommended)',
+  'settings.every30Min': 'Every 30 minutes',
+  'settings.every45Min': 'Every 45 minutes (Recommended)',
+  'settings.every60Min': 'Every 60 minutes',
+  'settings.after5Sec': 'After 5 seconds (Test)',
+  'settings.after10Sec': 'After 10 seconds',
+  'settings.after30Sec': 'After 30 seconds',
+  'settings.after1Min': 'After 1 minute',
+  'settings.after2Min': 'After 2 minutes (Default)',
+  'settings.after5Min': 'After 5 minutes',
+  'settings.saveBtn': 'Save Settings',
+  'settings.resetDefault': 'Restore Defaults',
+  'settings.clearHistory': 'Clear History',
+  'settings.saveSuccess': 'Changes saved successfully! 🎉',
+  'settings.confirmReset': 'Do you want to restore default settings?',
+  'settings.confirmClearHistory': 'WARNING: This will delete all study session history and XP. Are you sure you want to proceed?',
+
+  // Layout — Notifications nav item (Task 7)
+  'layout.notifications': 'Notifications',
+
+  // Calibration (Task 1 / Task 4)
+  'calibration.title': 'Standard Posture Calibration',
+  'calibration.desc': 'For the AI to measure slouch and eye distance most accurately, please:',
+  'calibration.step1': '1. Sit up straight with your back in standard posture.',
+  'calibration.step2': '2. Look straight at the screen, 50cm - 70cm from the camera.',
+  'calibration.startBtn': 'Start Calibration',
+  'calibration.loadingModel': 'Loading AI Model...',
+  'calibration.completeMsg': 'Standard posture saved successfully!',
+  'calibration.privacyNote': 'The system only stores virtual skeleton coordinate data on your device. No actual images are ever saved.',
+  'calibration.errorModelNotReady': 'Please wait for the AI model to load and ensure the webcam clearly shows your face.',
+  'calibration.errorNoFace': 'No face or body detected. Please sit in the center of the frame.',
+  'calibration.errorCompute': 'Error computing calibration metrics. Please try again.',
+
+  // Eye Exercise (minigame overlay)
+  'eyeExercise.title': 'Panda Bamboo Gym!',
+  'eyeExercise.desc': 'Time for a break! To protect your eyes and neck spine:',
+  'eyeExercise.step1': '1. Move your head (nose) to steer the dot and eat bamboo leaves.',
+  'eyeExercise.step2': '2. Blink 4 times to relax your eyes.',
+  'eyeExercise.blinks': 'Blinks',
+  'eyeExercise.bamboo': 'Bamboo eaten',
+  'eyeExercise.skipBtn': 'Skip exercise (no reward)',
+  'eyeExercise.successTitle': 'Awesome!',
+  'eyeExercise.successDesc': 'You trained your neck and relaxed your eyes well! Your spine and vision are now protected.',
+  'eyeExercise.xpReward': '+300 XP',
+
+  // Notifications (Task 7) — parent-side feed
+  'notifications.title': 'Notifications',
+  'notifications.empty': 'No notifications yet',
+  'notifications.emptyDesc': 'Alerts about your child\'s camera and posture will appear here.',
+  'notifications.cameraOff': 'Camera turned off',
+  'notifications.cameraOffDesc': 'The student turned off their AI camera.',
+  'notifications.cameraOn': 'Camera turned back on',
+  'notifications.cameraOnDesc': 'The student resumed AI camera monitoring.',
+  'notifications.fatigueAlert': 'Fatigue alert',
+  'notifications.markAllRead': 'Mark all as read',
+  'notifications.clear': 'Clear all',
+  'notifications.minuteAgo': 'minutes ago',
+  'notifications.hourAgo': 'hours ago',
+  'notifications.dayAgo': 'days ago',
+  'notifications.justNow': 'just now',
+  'notifications.unreadBadge': 'unread',
+  'notifications.cameraOffMsg': 'The student turned off the AI camera — posture monitoring is paused.',
+  'notifications.cameraOnMsg': 'The student turned the AI camera back on — monitoring resumed.',
+
+  // Profile — sync missing keys (linkCode etc.) into vi.ts equivalence
+  'profile.parentLinkDesc': 'Enter your child\'s 6-digit link code to start monitoring them.',
+  'profile.saveBtn': 'Save'
 };

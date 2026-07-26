@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Eye, Award, CheckCircle2 } from 'lucide-react';
 import { addXP } from '../services/db';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface EyeExerciseProps {
   isBlinking: boolean;
@@ -9,6 +10,7 @@ interface EyeExerciseProps {
 }
 
 export const EyeExercise: React.FC<EyeExerciseProps> = ({ isBlinking, poseLandmarks, onComplete }) => {
+  const { t } = useLanguage();
   const [blinksCount, setBlinksCount] = useState<number>(0);
   const [bambooCount, setBambooCount] = useState<number>(0);
   
@@ -130,35 +132,35 @@ export const EyeExercise: React.FC<EyeExerciseProps> = ({ isBlinking, poseLandma
             <span className="text-4xl">🐼</span>
           </div>
           
-          <h2 className="text-3xl font-extrabold mb-4 tracking-tight text-green-400 drop-shadow-md">Panda Bamboo Gym!</h2>
+          <h2 className="text-3xl font-extrabold mb-4 tracking-tight text-green-400 drop-shadow-md">{t('eyeExercise.title')}</h2>
           <p className="text-gray-100 text-base mb-8 leading-relaxed font-medium">
-            Tới giờ giải lao rồi! Để bảo vệ mắt và cột sống cổ:
+            {t('eyeExercise.desc')}
             <br />
-            1. Dùng <strong>đầu (mũi)</strong> của bạn di chuyển điểm xanh lá để ăn lá tre.
+            {t('eyeExercise.step1')}
             <br />
-            2. Hãy <strong>chớp mắt 4 lần</strong> để thư giãn mắt.
+            {t('eyeExercise.step2')}
           </p>
 
           {/* Progress indicators */}
           <div className="grid grid-cols-2 gap-8 mb-6">
             <div className="flex flex-col items-center">
               <span className="text-lg font-bold text-yellow-400 mb-2 flex items-center gap-2">
-                <Eye size={20} /> Chớp mắt: {blinksCount}/4
+                <Eye size={20} /> {t('eyeExercise.blinks')}: {blinksCount}/4
               </span>
               <div className="w-full h-3 bg-gray-700 rounded-full overflow-hidden">
-                <div 
+                <div
                   className="h-full bg-gradient-to-r from-yellow-400 to-yellow-200 transition-all duration-300"
                   style={{ width: `${Math.min(100, (blinksCount / 4) * 100)}%` }}
                 />
               </div>
             </div>
-            
+
             <div className="flex flex-col items-center">
               <span className="text-lg font-bold text-green-400 mb-2 flex items-center gap-2">
-                🌿 Ăn lá tre: {bambooCount}/5
+                🌿 {t('eyeExercise.bamboo')}: {bambooCount}/5
               </span>
               <div className="w-full h-3 bg-gray-700 rounded-full overflow-hidden">
-                <div 
+                <div
                   className="h-full bg-gradient-to-r from-green-500 to-green-300 transition-all duration-300"
                   style={{ width: `${Math.min(100, (bambooCount / 5) * 100)}%` }}
                 />
@@ -166,11 +168,11 @@ export const EyeExercise: React.FC<EyeExerciseProps> = ({ isBlinking, poseLandma
             </div>
           </div>
 
-          <button 
-            onClick={() => onComplete(0)} 
+          <button
+            onClick={() => onComplete(0)}
             className="mt-6 px-5 py-2 text-xs font-semibold text-gray-400 hover:text-white transition-all bg-gray-800 hover:bg-gray-700 bg-opacity-80 rounded-full pointer-events-auto shadow-lg"
           >
-            Bỏ qua bài tập (Không nhận thưởng)
+            {t('eyeExercise.skipBtn')}
           </button>
         </div>
       ) : (
@@ -179,12 +181,12 @@ export const EyeExercise: React.FC<EyeExerciseProps> = ({ isBlinking, poseLandma
           <div className="w-24 h-24 mx-auto rounded-full bg-green-500 bg-opacity-20 flex items-center justify-center text-green-300 mb-6 animate-bounce shadow-inner">
             <CheckCircle2 size={50} />
           </div>
-          <h2 className="text-4xl font-extrabold text-green-400 mb-4 drop-shadow-md">Tuyệt Vời!</h2>
+          <h2 className="text-4xl font-extrabold text-green-400 mb-4 drop-shadow-md">{t('eyeExercise.successTitle')}</h2>
           <p className="text-gray-100 text-xl mb-6 font-medium leading-relaxed">
-            Bạn đã tập luyện cổ và thư giãn mắt rất tốt! Cột sống và thị lực của bạn đang được bảo vệ.
+            {t('eyeExercise.successDesc')}
           </p>
           <div className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-yellow-400 to-orange-400 text-gray-950 font-black text-xl rounded-full shadow-lg animate-pulse">
-            <Award size={24} /> +300 XP
+            <Award size={24} /> {t('eyeExercise.xpReward')}
           </div>
         </div>
       )}

@@ -5,31 +5,47 @@
   user-select: none;
 }
 
+/* Minimized bubble — theme-aware, anchored bottom-right via inline class.
+   Use real tokens (was previously using --border-soft / --surface-1 which
+   don't exist in tokens.css, causing them to fall back to hardcoded
+   light-mode-only defaults that broke dark mode + caused visual bugs). */
 .minimized {
   width: 64px;
   height: 64px;
   border-radius: 999px;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);
-  border: 1px solid var(--border-soft, #e5e7eb);
-  background: var(--surface-1, #ffffff);
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-main);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: transform 0.25s ease, box-shadow 0.25s ease;
-  position: relative;
+  /* `fixed` (matching the JSX's Tailwind `fixed` class) instead of `relative`
+     so the bubble is truly viewport-anchored at bottom-right and won't scroll
+     with the page. CSS Module rules inject after Tailwind utilities, so a
+     `relative` here previously overrode Tailwind's `.fixed` and re-broke the
+     minimize position. `fixed` also still acts as the positioning ancestor
+     for the absolutely-positioned children (.petInner / .dangerBadge /
+     .expandBtn) below. The bottom/right/z-index offsets themselves come from
+     the Tailwind `bottom-6 right-6 z-50` classes on the JSX. */
+  position: fixed;
   overflow: hidden;
+  /* Reset any transform that may have leaked from the expanded motion.div
+     (drag-induced translate) so the bubble always sits at bottom-right. */
+  transform: none;
 }
 
 .minimized:hover {
-  transform: scale(1.08);
-  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.24);
+  box-shadow: var(--shadow-xl);
 }
 
 .danger {
-  border-color: #ef4444;
-  background: #fef2f2;
-  box-shadow: 0 0 20px rgba(239, 68, 68, 0.6);
+  border-color: var(--danger);
+  background: var(--danger-light);
+  color: var(--danger);
+  box-shadow: 0 0 20px var(--danger-glow);
   animation: dangerPulse 1.4s ease-in-out infinite;
 }
 
@@ -55,8 +71,8 @@
   right: 0;
   width: 20px;
   height: 20px;
-  background: #3b82f6;
-  color: #fff;
+  background: var(--primary);
+  color: #ffffff;
   border-radius: 999px;
   display: flex;
   align-items: center;
@@ -68,8 +84,8 @@
   position: absolute;
   top: -4px;
   left: -4px;
-  background: #dc2626;
-  color: #fff;
+  background: var(--danger);
+  color: #ffffff;
   font-weight: 700;
   border-radius: 999px;
   width: 24px;
@@ -78,7 +94,7 @@
   align-items: center;
   justify-content: center;
   font-size: 14px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-sm);
   animation: bounce 1s infinite;
 }
 
@@ -95,15 +111,15 @@
   position: absolute;
   top: -8px;
   right: -8px;
-  background: #f3f4f6;
-  color: #4b5563;
+  background: var(--bg-card-hover);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
   border-radius: 999px;
   padding: 6px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-sm);
   opacity: 0;
-  transition: opacity 0.2s ease;
+  transition: opacity 0.2s ease, background 0.2s ease;
   z-index: 10;
-  border: none;
   cursor: pointer;
 }
 
@@ -112,7 +128,8 @@
 }
 
 .minimizeBtn:hover {
-  background: #e5e7eb;
+  background: var(--primary-light);
+  color: var(--primary);
 }
 
 .scaledPet {
