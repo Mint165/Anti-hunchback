@@ -61,6 +61,32 @@ const validateEmailOrUsername = (input: string) => {
   return emailRegex.test(input) || usernameRegex.test(input);
 };
 
+/**
+ * Map a raw Supabase auth error message to a friendly i18n key.
+ * Matching is case-insensitive on a substring of the raw message so
+ * it survives minor wording changes between Supabase versions.
+ *
+ * The returned key always exists in both en.ts and vi.ts (Principle IV).
+ */
+const mapSupabaseAuthError = (raw: string): string => {
+  const msg = (raw || '').toLowerCase();
+  if (msg.includes('email not confirmed')) return 'auth.errEmailNotConfirmed';
+  if (msg.includes('invalid login credentials')) return 'auth.errInvalidCredentials';
+  if (msg.includes('user already registered') || msg.includes('already been registered') || msg.includes('already exists')) {
+    return 'auth.errUserAlreadyExists';
+  }
+  if (msg.includes('password should be at least') || msg.includes('weak password')) {
+    return 'auth.errWeakPassword';
+  }
+  if (msg.includes('signups not allowed') || msg.includes('sign up not allowed') || msg.includes('signup disabled')) {
+    return 'auth.errSignupDisabled';
+  }
+  if (msg.includes('failed to fetch') || msg.includes('networkrequestfailed') || msg.includes('network error')) {
+    return 'auth.errNetwork';
+  }
+  return 'auth.errGeneric';
+};
+
 export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
   const { t, lang, setLang } = useLanguage();
   const [isLogin, setIsLogin] = useState(true);
@@ -116,14 +142,15 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
           password,
         });
         if (signInError) {
-          let friendlyMessage = signInError.message;
-          if (signInError.message.includes('Failed to fetch')) {
-            friendlyMessage =
-              'Không thể kết nối đến máy chủ Supabase. Vui lòng kiểm tra mạng, hoặc tắt Trình chặn quảng cáo (Adblocker / Brave Shield) và thử lại!';
-          }
+          // Map raw Supabase error → friendly i18n key so the user sees
+          // a clear Vietnamese/English message instead of "Email not
+          // confirmed" / "Invalid login credentials" etc. The raw
+          // message is still logged to the console for debugging.
+          const friendlyKey = mapSupabaseAuthError(signInError.message);
+          const friendlyMessage = t(friendlyKey);
           setError(friendlyMessage);
           toast.error(friendlyMessage);
-          console.error('Supabase Login Error:', signInError);
+          console.error('Supabase Login Error:', signInError.message, '| code:', (signInError as any)?.code);
           return;
         }
         if (data.user) {
@@ -183,21 +210,30 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
           options: { data: { name, role, linkedCode } },
         });
         if (signUpError) {
-          let friendlyMessage = signUpError.message;
-          if (signUpError.message.includes('Failed to fetch')) {
-            friendlyMessage =
-              'Không thể kết nối đến máy chủ Supabase. Vui lòng kiểm tra mạng, hoặc tắt Trình chặn quảng cáo (Adblocker / Brave Shield) và thử lại!';
-          }
+          const friendlyKey = mapSupabaseAuthError(signUpError.message);
+          const friendlyMessage = t(friendlyKey);
           setError(friendlyMessage);
           toast.error(friendlyMessage);
-          console.error('Supabase Register Error:', signUpError);
+          console.error('Supabase Register Error:', signUpError.message, '| code:', (signUpError as any)?.code);
           return;
         }
         toast.success(t('auth.registerSuccess'));
         if (data.session) {
           onLogin({ id: data.user?.id, name, role, linkedCode });
         } else {
-          toast.success('Vui lòng kiểm tra email của bạn để xác thực tài khoản!', { duration: 6000 });
+          // No session means Supabase is configured to require email
+          // confirmation before issuing a session. Tell the user clearly
+          // (instead of a generic "check your email") so they know the
+          // next step is to open the verification email, not to log in
+          // (which would fail with "Email not confirmed" until verified).
+          toast.success(
+            t('auth.errEmailNotConfirmed') +
+              ' — ' +
+              (isEmailInput
+                ? `Vui lòng kiểm tra email ${email} và bấm liên kết xác thực.`
+                : 'Vui lòng kiểm tra email xác thực.'),
+            { duration: 8000 },
+          );
         }
       } else {
         const users: Record<string, AuthUser & { password: string }> = getUsers();
