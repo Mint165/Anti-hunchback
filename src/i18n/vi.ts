@@ -312,8 +312,10 @@ export const vi: Record<string, string> = {
   // Eye Exercise (minigame overlay)
   'eyeExercise.title': 'Panda Bamboo Gym!',
   'eyeExercise.desc': 'Tới giờ giải lao rồi! Để bảo vệ mắt và cột sống cổ:',
-  'eyeExercise.step1': '1. Dùng <strong>đầu (mũi)</strong> của bạn di chuyển điểm xanh lá để ăn lá tre.',
-  'eyeExercise.step2': '2. Hãy <strong>chớp mắt 4 lần</strong> để thư giãn mắt.',
+  'eyeExercise.step1': '1. Dùng đầu (mũi) của bạn di chuyển điểm xanh lá để ăn lá tre.',
+  'eyeExercise.step1Highlight': 'đầu (mũi)',
+  'eyeExercise.step2': '2. Hãy chớp mắt 4 lần để thư giãn mắt.',
+  'eyeExercise.step2Highlight': 'chớp mắt 4 lần',
   'eyeExercise.blinks': 'Chớp mắt',
   'eyeExercise.bamboo': 'Ăn lá tre',
   'eyeExercise.skipBtn': 'Bỏ qua bài tập (Không nhận thưởng)',

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Eye, Award, CheckCircle2 } from 'lucide-react';
 import { addXP } from '../services/db';
 import { useLanguage } from '../contexts/LanguageContext';
+import styles from './EyeExercise.module.css';
 
 interface EyeExerciseProps {
   isBlinking: boolean;
@@ -13,18 +14,19 @@ export const EyeExercise: React.FC<EyeExerciseProps> = ({ isBlinking, poseLandma
   const { t } = useLanguage();
   const [blinksCount, setBlinksCount] = useState<number>(0);
   const [bambooCount, setBambooCount] = useState<number>(0);
-  
+
   const [targetPos, setTargetPos] = useState<{ x: number; y: number }>({ x: 50, y: 50 });
   const [nosePos, setNosePos] = useState<{ x: number; y: number }>({ x: 50, y: 50 });
-  
+
   const [exerciseStatus, setExerciseStatus] = useState<'active' | 'success'>('active');
-  
+
   const wasBlinkingRef = useRef<boolean>(false);
 
-  // Generate new bamboo position
+  // Generate new bamboo position — keep within [20,80]% so leaves stay
+  // clear of viewport edges (was [15,85]).
   const spawnBamboo = () => {
-    const min = 15;
-    const max = 85;
+    const min = 20;
+    const max = 80;
     const x = Math.floor(Math.random() * (max - min + 1)) + min;
     const y = Math.floor(Math.random() * (max - min + 1)) + min;
     setTargetPos({ x, y });
@@ -39,7 +41,7 @@ export const EyeExercise: React.FC<EyeExerciseProps> = ({ isBlinking, poseLandma
       // Mirror x coordinate because camera is mirrored
       const x = (1 - nose.x) * 100;
       const y = nose.y * 100;
-      
+
       setNosePos({ x, y });
 
       // Collision detection
@@ -123,107 +125,122 @@ export const EyeExercise: React.FC<EyeExerciseProps> = ({ isBlinking, poseLandma
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gray-900 bg-opacity-80 backdrop-blur-xl transition-all duration-500 overflow-hidden">
-      
-      {/* Exercise Active Screen Overlay */}
+    <div className={styles.root}>
+      {/* Exercise Active Screen — instruction card pinned top-left */}
       {exerciseStatus === 'active' ? (
-        <div className="text-center p-8 max-w-2xl glass-card border border-white border-opacity-10 text-white relative bg-opacity-10 shadow-2xl z-10 pointer-events-none">
-          <div className="w-20 h-20 mx-auto rounded-full bg-green-500 bg-opacity-20 flex items-center justify-center text-green-300 mb-6 animate-pulse">
-            <span className="text-4xl">🐼</span>
+        <div className={styles.card}>
+          <div className={styles.iconWrap}>
+            <span style={{ fontSize: 32 }}>🐼</span>
           </div>
-          
-          <h2 className="text-3xl font-extrabold mb-4 tracking-tight text-green-400 drop-shadow-md">{t('eyeExercise.title')}</h2>
-          <p className="text-gray-100 text-base mb-8 leading-relaxed font-medium">
+
+          <h2 className={styles.title}>{t('eyeExercise.title')}</h2>
+          <p className={styles.desc}>
             {t('eyeExercise.desc')}
             <br />
-            {t('eyeExercise.step1')}
+            {/* Render the highlight phrase as bold. The vi.ts strings used to
+                inline literal <strong> tags which React renders as plain text;
+                split the highlight into its own key so we control the markup. */}
+            <TransStep text={t('eyeExercise.step1')} highlight={t('eyeExercise.step1Highlight')} />
             <br />
-            {t('eyeExercise.step2')}
+            <TransStep text={t('eyeExercise.step2')} highlight={t('eyeExercise.step2Highlight')} />
           </p>
 
           {/* Progress indicators */}
-          <div className="grid grid-cols-2 gap-8 mb-6">
-            <div className="flex flex-col items-center">
-              <span className="text-lg font-bold text-yellow-400 mb-2 flex items-center gap-2">
-                <Eye size={20} /> {t('eyeExercise.blinks')}: {blinksCount}/4
+          <div className={styles.progressGrid}>
+            <div className={styles.progressCell}>
+              <span className={`${styles.progressLabel} ${styles.progressLabelBlink}`}>
+                <Eye size={18} /> {t('eyeExercise.blinks')}: {blinksCount}/4
               </span>
-              <div className="w-full h-3 bg-gray-700 rounded-full overflow-hidden">
+              <div className={styles.track}>
                 <div
-                  className="h-full bg-gradient-to-r from-yellow-400 to-yellow-200 transition-all duration-300"
+                  className={styles.fillBlink}
                   style={{ width: `${Math.min(100, (blinksCount / 4) * 100)}%` }}
                 />
               </div>
             </div>
 
-            <div className="flex flex-col items-center">
-              <span className="text-lg font-bold text-green-400 mb-2 flex items-center gap-2">
+            <div className={styles.progressCell}>
+              <span className={`${styles.progressLabel} ${styles.progressLabelBamboo}`}>
                 🌿 {t('eyeExercise.bamboo')}: {bambooCount}/5
               </span>
-              <div className="w-full h-3 bg-gray-700 rounded-full overflow-hidden">
+              <div className={styles.track}>
                 <div
-                  className="h-full bg-gradient-to-r from-green-500 to-green-300 transition-all duration-300"
+                  className={styles.fillBamboo}
                   style={{ width: `${Math.min(100, (bambooCount / 5) * 100)}%` }}
                 />
               </div>
             </div>
           </div>
 
-          <button
-            onClick={() => onComplete(0)}
-            className="mt-6 px-5 py-2 text-xs font-semibold text-gray-400 hover:text-white transition-all bg-gray-800 hover:bg-gray-700 bg-opacity-80 rounded-full pointer-events-auto shadow-lg"
-          >
+          <button onClick={() => onComplete(0)} className={styles.skipBtn}>
             {t('eyeExercise.skipBtn')}
           </button>
         </div>
       ) : (
         // Exercise Success Screen
-        <div className="text-center p-10 max-w-xl glass-card border border-green-500 border-opacity-40 bg-green-950 bg-opacity-40 text-white shadow-[0_0_50px_rgba(34,197,94,0.3)] scale-105 duration-300 z-10">
-          <div className="w-24 h-24 mx-auto rounded-full bg-green-500 bg-opacity-20 flex items-center justify-center text-green-300 mb-6 animate-bounce shadow-inner">
+        <div className={styles.successCard}>
+          <div className={`${styles.iconWrap} ${styles.iconWrapSuccess}`}>
             <CheckCircle2 size={50} />
           </div>
-          <h2 className="text-4xl font-extrabold text-green-400 mb-4 drop-shadow-md">{t('eyeExercise.successTitle')}</h2>
-          <p className="text-gray-100 text-xl mb-6 font-medium leading-relaxed">
+          <h2 className={styles.titleSuccess}>{t('eyeExercise.successTitle')}</h2>
+          <p className={styles.desc} style={{ fontSize: 20 }}>
             {t('eyeExercise.successDesc')}
           </p>
-          <div className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-yellow-400 to-orange-400 text-gray-950 font-black text-xl rounded-full shadow-lg animate-pulse">
+          <div className={styles.xpBadge}>
             <Award size={24} /> {t('eyeExercise.xpReward')}
           </div>
         </div>
       )}
 
-      {/* Game Area (Only active during exercise) */}
+      {/* Game layer — wrap leaves + panda in a z-20 layer above the
+          instruction card so they are never occluded. */}
       {exerciseStatus === 'active' && (
-        <>
+        <div className={styles.gameLayer}>
           {/* Target Bamboo */}
-          <div 
-            className="absolute flex items-center justify-center transition-all duration-300 ease-out"
+          <div
+            className={styles.target}
             style={{
               left: `${targetPos.x}%`,
               top: `${targetPos.y}%`,
               transform: 'translate(-50%, -50%)',
-              width: '60px',
-              height: '60px',
             }}
           >
-            <div className="text-5xl animate-swing drop-shadow-[0_0_15px_rgba(74,222,128,0.8)] filter">🌿</div>
+            <div className={styles.targetInner}>🌿</div>
           </div>
 
           {/* Player Nose Tracker (Panda Face) */}
-          <div 
-            className="absolute flex items-center justify-center transition-transform duration-75"
+          <div
+            className={styles.player}
             style={{
               left: `${nosePos.x}%`,
               top: `${nosePos.y}%`,
               transform: 'translate(-50%, -50%)',
-              width: '50px',
-              height: '50px',
             }}
           >
-            <div className="text-4xl drop-shadow-[0_0_20px_rgba(255,255,255,0.6)]">🐼</div>
+            <div className={styles.playerInner}>🐼</div>
           </div>
-        </>
+        </div>
       )}
     </div>
   );
 };
+
+/**
+ * Render a step instruction with an optional bold highlight phrase.
+ * Falls back to plain text when the highlight key is missing or empty
+ * (e.g. the en.ts variant has no highlight), so en stays clean.
+ */
+const TransStep: React.FC<{ text: string; highlight?: string }> = ({ text, highlight }) => {
+  if (!highlight) return <>{text}</>;
+  const idx = text.indexOf(highlight);
+  if (idx === -1) return <>{text}</>;
+  return (
+    <>
+      {text.slice(0, idx)}
+      <strong className={styles.descStrong}>{highlight}</strong>
+      {text.slice(idx + highlight.length)}
+    </>
+  );
+};
+
 export default EyeExercise;
