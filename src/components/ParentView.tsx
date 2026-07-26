@@ -213,15 +213,18 @@ export const ParentView: React.FC = () => {
     };
   }, []);
 
-  // 5-second poll of the linked student's data + Supabase Realtime
+  // 10-second poll of the linked student's data + Supabase Realtime
   // subscription on the parent's notifications table (any new
   // notification for this parent is a signal that the student did
-  // something worth re-pulling). The poll is the authoritative
-  // cadence — realtime is a best-effort nudge for responsiveness.
+  // something worth re-pulling). The poll is a safety net — the
+  // realtime subscription is the responsive path, so 10s (vs. the
+  // previous 5s) cuts Supabase RPC round-trips + chart re-renders in
+  // half without any user-perceived delay for new events. Set to 5s
+  // only if you observe realtime drops events in practice.
   useEffect(() => {
     const pollInterval = setInterval(() => {
       pullLinkedStudent();
-    }, 5000);
+    }, 10000);
 
     const parentUserId = getUserIdSync();
     const unsubscribeRealtime = subscribeToLinkedStudentChanges(
@@ -708,6 +711,7 @@ export const ParentView: React.FC = () => {
                       outerRadius={75}
                       paddingAngle={5}
                       dataKey="value"
+                      isAnimationActive={false}
                     >
                       {pieData.map((_, index) => (
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -750,7 +754,7 @@ export const ParentView: React.FC = () => {
                     <XAxis dataKey="name" stroke="#9CA3AF" fontSize={11} tickLine={false} axisLine={false} dy={10} />
                     <YAxis domain={[50, 100]} stroke="#9CA3AF" fontSize={11} tickLine={false} axisLine={false} dx={-10} />
                     <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 8px 16px rgba(0,0,0,0.1)' }} />
-                    <Area type="monotone" dataKey="PHI" stroke="#7E5BEF" strokeWidth={3} fillOpacity={1} fill="url(#colorPHI)" />
+                    <Area type="monotone" dataKey="PHI" stroke="#7E5BEF" strokeWidth={3} fillOpacity={1} fill="url(#colorPHI)" isAnimationActive={false} />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
@@ -773,7 +777,7 @@ export const ParentView: React.FC = () => {
                       contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 8px 16px rgba(0,0,0,0.1)' }}
                       formatter={(value) => [`${value}%`, 'Concentration']}
                     />
-                    <Bar dataKey="concentration" fill="#3b82f6" radius={[6, 6, 0, 0]} />
+                    <Bar dataKey="concentration" fill="#3b82f6" radius={[6, 6, 0, 0]} isAnimationActive={false} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>

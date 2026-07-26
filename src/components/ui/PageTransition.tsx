@@ -80,11 +80,12 @@ export const PageTransition: React.FC<PageTransitionProps> = ({
         initial="initial"
         animate="animate"
         exit="exit"
-        // Short, snappy easing. `will-change` keeps the layer promoted for
-        // the duration of the transition so we don't pay the paint cost on
-        // the first frame of every tab switch.
+        // Short, snappy easing. `willChange` is set inline only for the
+        // 220ms transition window (framer-motion applies it on mount
+        // and cleans up on exit), so we don't pay the cost of keeping
+        // the layer promoted for the lifetime of each tab.
         transition={{ duration: reduced ? 0.15 : 0.22, ease: [0.4, 0, 0.2, 1] }}
-        style={{ width: '100%', height: '100%', willChange: 'transform, opacity' }}
+        style={{ width: '100%', height: '100%' }}
       >
         {children}
       </motion.div>

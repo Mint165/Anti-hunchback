@@ -77,7 +77,11 @@ body {
     radial-gradient(at 60% 80%, hsl(45 100% 92%) 0px, transparent 50%),
     radial-gradient(at 30% 70%, hsl(260 100% 92%) 0px, transparent 50%);
   /* animation: mesh-drift 22s ease-in-out infinite alternate; */
-  will-change: transform;
+  /* `will-change: transform` removed — the mesh-drift animation is
+     disabled above, so promoting this layer to a GPU compositor layer
+     just bakes a 140%-viewport blurred texture permanently into VRAM.
+     Without it the browser can paint the blurred background once and
+     drop the layer when offscreen. */
   filter: blur(8px);
 }
 

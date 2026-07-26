@@ -409,6 +409,17 @@
   font-weight: 800;
   background: var(--accent-light);
   color: #92400E;
+  /* CSS-only opacity pulse — replaces framer-motion's
+     `animate={{ opacity: [1, 0.4, 1] }}` which was running a JS spring
+     loop forever, re-rendering this subtree every animation frame even
+     when the rest of the dashboard was idle. CSS keyframes are
+     compositor-only and free the main thread for MediaPipe + WebGL. */
+  animation: livePulseCss 2.4s ease-in-out infinite;
+}
+
+@keyframes livePulseCss {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
 }
 
 .statRow { margin-bottom: 16px; }

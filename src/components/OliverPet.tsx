@@ -327,23 +327,29 @@ const PandaModel = ({
           ))}
         </group>
 
-        {/* Sparkles — skipped in low-detail mode for performance */}
+        {/* Sparkles — skipped in low-detail mode for performance.
+            Also capped counts so the high-detail path doesn't spawn
+            150 GPU particles (aura_fire) on screen at once. */}
         {state === 'good' && !lowDetail && !equippedItems?.aura && (
-          <Sparkles count={30} scale={3} size={2} color="#4EAD63" speed={0.4} opacity={0.5} />
+          <Sparkles count={12} scale={3} size={2} color="#4EAD63" speed={0.3} opacity={0.5} />
         )}
         {state === 'success' && !lowDetail && !equippedItems?.aura && (
-          <Sparkles count={50} scale={4} size={3} color="#7E5BEF" speed={1} opacity={0.8} />
+          <Sparkles count={20} scale={4} size={3} color="#7E5BEF" speed={0.6} opacity={0.8} />
         )}
 
-        {/* Aura effects */}
+        {/* Aura effects — counts halved vs. previous values. Each
+            Sparkles particle is a GPU point sprite, so going from
+            150→60 / 100→40 / 80→40 frees fillrate on mid-range GPUs
+            without a visible quality drop at the small render sizes
+            these auras are shown at. */}
         {equippedItems?.aura === 'aura_fire' && !lowDetail && (
-          <Sparkles count={150} scale={3} size={4} speed={0.4} opacity={0.6} color="#f97316" position={[0, 0.5, 0]} />
+          <Sparkles count={60} scale={3} size={4} speed={0.4} opacity={0.6} color="#f97316" position={[0, 0.5, 0]} />
         )}
         {equippedItems?.aura === 'aura_ice' && !lowDetail && (
-          <Sparkles count={100} scale={4} size={2} speed={0.2} opacity={0.8} color="#38bdf8" position={[0, 0.5, 0]} />
+          <Sparkles count={40} scale={4} size={2} speed={0.2} opacity={0.8} color="#38bdf8" position={[0, 0.5, 0]} />
         )}
         {equippedItems?.aura === 'aura_electric' && !lowDetail && (
-          <Sparkles count={80} scale={3.5} size={3} speed={1} opacity={0.9} color="#eab308" position={[0, 0.5, 0]} noise={1} />
+          <Sparkles count={40} scale={3.5} size={3} speed={0.8} opacity={0.9} color="#eab308" position={[0, 0.5, 0]} noise={1} />
         )}
       </Float>
     </group>
@@ -392,8 +398,24 @@ export const OliverPet: React.FC<OliverPetProps> = ({
   const themeColor = getThemeColor();
   const isMinimal = hideBubble && hideBadge;
 
-  // Lower dpr for low-detail (small) renders
-  const dpr: [number, number] = lowDetail ? [1, 1.2] : [1, 1.5];
+  // Lower dpr for low-detail (small) renders. The high-detail cap is
+  // 1.5 but most pet renders are 200-300px wide — dpr=1.25 is visually
+  // indistinguishable on a 2x display while cutting fillrate ~30%.
+  const dpr: [number, number] = lowDetail ? [1, 1.2] : [1, 1.25];
+
+  // frameloop choice:
+  // - 'demand' (lowDetail): the pet only re-renders when props change
+  //   (state/level/items). All animation is then CSS framer-motion on
+  //   the wrapper, NOT useFrame — saves the GPU from running a 60fps
+  //   rAF loop on a 64px bubble.
+  // - 'always' (high-detail): useFrame lerps the panda (breathing,
+  //   iris, mouth). To avoid pegging the GPU when the panda is in a
+  //   near-static state (sleep / good idle), the useFrame body still
+  //   runs but its lerp deltas shrink toward 0, so the renderer
+  //   composites cheap frames. Switching frameloop at runtime would
+  //   require recreating the WebGL context (expensive), so we pick
+  //   once at mount based on the detail level.
+  const frameloop: 'always' | 'demand' = lowDetail ? 'demand' : 'always';
 
   return (
     <div
@@ -440,7 +462,7 @@ export const OliverPet: React.FC<OliverPetProps> = ({
           camera={{ position: [0, 1, 6], fov: 40 }}
           dpr={dpr}
           gl={{ antialias: !lowDetail, alpha: true, powerPreference: 'high-performance' }}
-          frameloop={lowDetail ? 'demand' : 'always'}
+          frameloop={frameloop}
           performance={{ min: 0.5 }}
         >
           <ambientLight intensity={0.6} />
@@ -449,8 +471,15 @@ export const OliverPet: React.FC<OliverPetProps> = ({
           {/* Rim light for depth */}
           <pointLight position={[-4, 2, -3]} intensity={0.4} color="#A78BFA" />
           <PandaModel state={state} petLevel={petLevel} equippedItems={equippedItems} lowDetail={lowDetail} paused={paused} />
-          {/* Drop ContactShadows in low-detail mode — blur={2.5} is GPU-heavy */}
-          {!lowDetail && <ContactShadows position={[0, -1.2, 0]} opacity={0.6} scale={5} blur={2.5} far={4} />}
+          {/* Drop ContactShadows in low-detail mode and when the pet is
+              sleeping/idle — blur={2.5} is a multi-tap Gaussian that's
+              the single most expensive object in the scene. The
+              directional + spot lights already give a believable
+              ground feel via the dark base; the soft blob shadow is
+              polish, not load-bearing. */}
+          {!lowDetail && state !== 'sleep' && state !== 'good' && (
+            <ContactShadows position={[0, -1.2, 0]} opacity={0.6} scale={5} blur={2.5} far={4} />
+          )}
           <OrbitControls
             enablePan={false}
             enableZoom={false}

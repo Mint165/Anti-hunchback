@@ -731,13 +731,9 @@ export const StudentView: React.FC = () => {
             <div className={styles.statsTitle}>
               <Trophy size={18} style={{ color: 'var(--primary)' }} /> {t('student.statusTable')}
             </div>
-            <motion.div
-              className={styles.livePill}
-              animate={{ opacity: [1, 0.4, 1] }}
-              transition={{ duration: 1.2, repeat: Infinity, repeatDelay: 1.5, ease: 'easeInOut' }}
-            >
+            <div className={styles.livePill}>
               {t('student.live')}
-            </motion.div>
+            </div>
           </div>
 
           {/* Distance */}

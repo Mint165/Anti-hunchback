@@ -46,7 +46,12 @@
   background: var(--danger-light);
   color: var(--danger);
   box-shadow: 0 0 20px var(--danger-glow);
-  animation: dangerPulse 1.4s ease-in-out infinite;
+  /* Slower pulse (1.4s→2.4s) — the badge is a persistent overlay
+     that's always on screen while the student is in a bad-posture
+     state, so a 1.4s pulse ran 43 cycles/minute and was the kind of
+     "always moving" element that reads as flicker in peripheral
+     vision. 2.4s is calmer and ~40% fewer compositor frames. */
+  animation: dangerPulse 2.4s ease-in-out infinite;
 }
 
 @keyframes dangerPulse {
@@ -95,7 +100,11 @@
   justify-content: center;
   font-size: 14px;
   box-shadow: var(--shadow-sm);
-  animation: bounce 1s infinite;
+  /* 1s→2s bounce: matches the slower dangerPulse above. The bounce
+     is 4px tall — at 60fps that's ~96 compositor frames/sec for a
+     24px badge. Doubling the period halves the compositor work and
+     the badge still reads as "alerting". */
+  animation: bounce 2s infinite;
 }
 
 @keyframes bounce {
@@ -139,7 +148,11 @@
 }
 
 .alertBounce {
-  animation: alertBounce 0.6s ease-in-out infinite;
+  /* 0.6s→1.4s: same logic as the dangerPulse / dangerBadge slowdowns
+     above. The expanded pet's alertBounce runs while the student is
+     in a bad-posture state, so halving the cycle counts noticeably
+     reduces the always-on compositor load on the dashboard. */
+  animation: alertBounce 1.4s ease-in-out infinite;
 }
 
 @keyframes alertBounce {

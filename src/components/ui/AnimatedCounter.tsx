@@ -50,7 +50,6 @@ const AnimatedCounterBase: React.FC<AnimatedCounterProps> = ({
 }) => {
   const [display, setDisplay] = useState(animateOnChange ? 0 : value);
   const fromRef = useRef(0);
-  const rafRef = useRef<number | null>(null);
   const startRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -64,6 +63,27 @@ const AnimatedCounterBase: React.FC<AnimatedCounterProps> = ({
     if (delta === 0) return;
 
     startRef.current = null;
+    let rafId: number | null = null;
+    // Pause the count-up animation when the tab is hidden (e.g. user
+    // alt-tabbed away mid-count). rAF is throttled to 0Hz in hidden
+    // tabs by browsers anyway, but the explicit guard avoids leaving
+    // a pending rAF callback queued until the tab is refocused, which
+    // would make the digit snap to its final value on return instead
+    // of completing smoothly. We just settle to the final value
+    // immediately when hidden — visually equivalent since the user
+    // can't see it.
+    const settleIfHidden = () => {
+      if (document.hidden) {
+        if (rafId !== null) cancelAnimationFrame(rafId);
+        rafId = null;
+        fromRef.current = value;
+        setDisplay(value);
+        return true;
+      }
+      return false;
+    };
+    if (settleIfHidden()) return;
+
     const step = (ts: number) => {
       if (startRef.current === null) startRef.current = ts;
       const elapsed = ts - startRef.current;
@@ -72,16 +92,17 @@ const AnimatedCounterBase: React.FC<AnimatedCounterProps> = ({
       const current = from + delta * eased;
       setDisplay(current);
       if (t < 1) {
-        rafRef.current = requestAnimationFrame(step);
+        rafId = requestAnimationFrame(step);
       } else {
+        rafId = null;
         fromRef.current = value;
         setDisplay(value);
       }
     };
 
-    rafRef.current = requestAnimationFrame(step);
+    rafId = requestAnimationFrame(step);
     return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      if (rafId !== null) cancelAnimationFrame(rafId);
       fromRef.current = value;
     };
   }, [value, duration, ease, animateOnChange]);
