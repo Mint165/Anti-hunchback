@@ -35,22 +35,31 @@ const PRESENCE_CHANNEL_PREFIX = 'oliver_presence:user_';
  * full list of OTHER active devices (excluding the caller's own deviceId)
  * whenever the presence set changes. Returns an unsubscribe function.
  *
- * The caller is responsible for `trackPresence()` — typically called
- * once on mount from PostureContext so the device joins the presence
- * set, then `untrack()` on unmount.
+ * If `trackState` is supplied, this device is also announced on the
+ * channel: `.track()` is called from inside the `.subscribe()`
+ * `SUBSCRIBED` callback. Consolidating subscribe + track into a single
+ * channel/subscribe call is required — registering `.on('presence', …)`
+ * or calling `.track()` AFTER `.subscribe()` has already started throws
+ * `cannot add presence callbacks for … after subscribe()` because
+ * Supabase dedupes channels by name (so a separately-created "track"
+ * channel is the same instance as the subscriber's channel and inherits
+ * its `isJoining()` state).
  */
 export function subscribePresence(
   userId: string,
   ownDeviceId: string,
-  onChange: (others: PresenceState[]) => void
+  onChange: (others: PresenceState[]) => void,
+  trackState?: Omit<PresenceState, 'lastSeen'>
 ): () => void {
   if (!userId || userId === 'default') {
     // No real user — fall back to BroadcastChannel so two tabs in the
     // same browser can still demo the dual-camera flow.
+    if (trackState) trackBroadcastPresence(userId || 'default', { ...trackState, lastSeen: Date.now() });
     return subscribeBroadcastPresence(userId || 'default', ownDeviceId, onChange);
   }
 
   if (!isSupabaseConfigured || !supabase) {
+    if (trackState) trackBroadcastPresence(userId, { ...trackState, lastSeen: Date.now() });
     return subscribeBroadcastPresence(userId, ownDeviceId, onChange);
   }
 
@@ -62,6 +71,10 @@ export function subscribePresence(
     config: { presence: { key: ownDeviceId } },
   });
 
+  // CRITICAL: register all `.on('presence', …)` callbacks BEFORE
+  // `.subscribe()`. Calling `.on('presence', …)` after the channel has
+  // started joining throws `cannot add presence callbacks … after
+  // subscribe()`.
   channel
     .on('presence', { event: 'sync' }, () => {
       const state = channel.presenceState<PresenceState>();
@@ -73,7 +86,18 @@ export function subscribePresence(
       }
       onChange(others);
     })
-    .subscribe();
+    .subscribe(async (status) => {
+      // `.track()` must happen AFTER the channel is SUBSCRIBED, not
+      // before — tracking on a non-subscribed channel is a no-op and
+      // would never announce us to other devices.
+      if (status === 'SUBSCRIBED' && trackState) {
+        try {
+          await channel.track({ ...trackState, lastSeen: Date.now() });
+        } catch (e) {
+          console.warn('[presence] track failed', e);
+        }
+      }
+    });
 
   return () => {
     try {
@@ -86,9 +110,24 @@ export function subscribePresence(
 }
 
 /**
- * Track this device's presence on the user's presence channel. Call
- * once on mount; the channel is shared with `subscribePresence` via
- * the channel name. Idempotent — re-tracking with the same key is safe.
+ * Track this device's presence on the user's presence channel.
+ *
+ * NOTE: for the Supabase path this is now a **no-op** — initial tracking
+ * is performed by `subscribePresence()` (which calls `.track()` from
+ * inside the `SUBSCRIBED` callback). The previous implementation created
+ * its own channel and called `.subscribe()` separately, but because
+ * Supabase dedupes channels by name that returned the same channel the
+ * subscriber had already started joining, and subsequent `.on('presence',
+ * …)` calls in the subscriber threw `cannot add presence callbacks …
+ * after subscribe()`.
+ *
+ * The BroadcastChannel fallback path is unchanged — `trackPresence` still
+ * sets up the heartbeat so other same-browser tabs see this device.
+ *
+ * To update the tracked state mid-session (e.g. when `isDesktop` flips),
+ * re-call `subscribePresence` with the new `trackState`; the unsubscribe
+ * path will untrack + removeChannel, and the new subscription re-tracks
+ * on `SUBSCRIBED`.
  */
 export async function trackPresence(state: Omit<PresenceState, 'lastSeen'>): Promise<void> {
   const userId = getUserIdSync();
@@ -100,18 +139,8 @@ export async function trackPresence(state: Omit<PresenceState, 'lastSeen'>): Pro
     trackBroadcastPresence(userId, { ...state, lastSeen: Date.now() });
     return;
   }
-  const channelName = `${PRESENCE_CHANNEL_PREFIX}${userId}`;
-  // Note: this creates a *separate* channel instance from the one
-  // subscribePresence manages. Supabase dedupes by name internally, so
-  // both instances see the same presence state. We can't reuse the
-  // subscriber's channel handle because track/untrack need to be
-  // callable independently of subscription lifecycle.
-  const trackChannel = supabase.channel(channelName, {
-    config: { presence: { key: state.deviceId } },
-  });
-  await trackChannel.subscribe(async () => {
-    await trackChannel.track({ ...state, lastSeen: Date.now() });
-  });
+  // Supabase path: intentionally a no-op. See the doc comment above —
+  // subscribePresence() now owns the .track() call.
 }
 
 /**

@@ -5,7 +5,7 @@ import { useAlertEngine } from '../services/useAlertEngine';
 import { analyzePosture, calculateHealthScore, type PostureMetrics, type CalibrationData, type CameraMode, type Landmark } from '../services/postureAI';
 import { loadCalibration, loadSettings, addPetXP, getUserIdSync } from '../services/db';
 import { broadcastFatigueAlert, subscribeToParentMessage, subscribeToAuxCameraLandmarks } from '../services/parentSync';
-import { subscribePresence, trackPresence } from '../services/presence';
+import { subscribePresence } from '../services/presence';
 import { voiceService } from '../services/voiceService';
 import type { PresenceState } from '../services/presence';
 interface PostureContextType {
@@ -156,7 +156,6 @@ export const PostureProvider: React.FC<{ children: React.ReactNode }> = ({ child
   // desktop reads it to decide whether to split the camera card.
   const isDesktop = useMediaQuery({ minWidth: 769 });
   const [otherActiveDevices, setOtherActiveDevices] = useState<PresenceState[]>([]);
-  const presenceAnnouncedRef = useRef<boolean>(false);
 
   // Subscribe to parent messages
   useEffect(() => {
@@ -205,22 +204,29 @@ export const PostureProvider: React.FC<{ children: React.ReactNode }> = ({ child
   // per mount; the subscription stays live for the lifetime of the provider.
   // We re-announce whenever isDesktop flips (rare; e.g. user rotates a
   // hybrid device) so the phone/desktop flag stays accurate.
+  //
+  // NOTE: subscribePresence both registers the `.on('presence', …)`
+  // callback AND calls `.track()` from inside the `SUBSCRIBED` callback.
+  // We must NOT call trackPresence() separately on the Supabase path —
+  // doing so creates a second channel handle that Supabase dedupes to
+  // the same instance (already joining), and the subscriber's subsequent
+  // `.on('presence', …)` then throws
+  // `cannot add presence callbacks … after subscribe()`.
   useEffect(() => {
     const userId = getUserIdSync();
     if (!userId) return;
-    // Announce (and re-announce) our presence state.
-    trackPresence({
-      deviceId: ownDeviceIdRef.current,
-      role: 'student',
-      isDesktop,
-      isAux: false, // the desktop is never the aux; the phone sets this when it starts its camera
-    }).catch((e) => console.warn('[presence] track failed', e));
-    presenceAnnouncedRef.current = true;
 
     const unsubscribe = subscribePresence(
       userId,
       ownDeviceIdRef.current,
-      (others) => setOtherActiveDevices(others)
+      (others) => setOtherActiveDevices(others),
+      // trackState — `.track()` runs inside the SUBSCRIBED callback.
+      {
+        deviceId: ownDeviceIdRef.current,
+        role: 'student',
+        isDesktop,
+        isAux: false, // the desktop is never the aux; the phone sets this when it starts its camera
+      }
     );
     return () => {
       unsubscribe();
