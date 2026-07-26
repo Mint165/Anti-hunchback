@@ -8,6 +8,20 @@
   margin: 0 auto;
 }
 
+/* ── Full-screen overlays (onboarding, "Ready" start) — theme-aware ── */
+/* Replaces the old hardcoded `linear-gradient(135deg, #1E1B4B 0%, #0F0D1A 50%, #1E1B4B 100%)`
+   that always painted dark regardless of light/dark mode. Uses tokens so it
+   follows --bg-page / --bg-card which auto-adapt per theme + dark mode. */
+.fullScreenOverlay {
+  background: linear-gradient(
+    135deg,
+    var(--bg-page) 0%,
+    var(--bg-card) 50%,
+    var(--bg-page) 100%
+  );
+  color: var(--text-main);
+}
+
 /* ── Top action bar ────────────────────────────────────────────── */
 .topbar {
   display: flex;
