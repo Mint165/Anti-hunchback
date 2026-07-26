@@ -184,6 +184,27 @@ CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
 
+-- 5b. Auto-seed user_stats row on signup so the dashboard has a valid
+-- baseline (xp=0, level=1, streak=0, ...) before the first session.
+-- Without this, user_stats only gets a row on the first upsert from
+-- the app — which means README's "verify row exists after signup"
+-- step used to fail. The trigger makes the wiring match the docs.
+CREATE OR REPLACE FUNCTION public.handle_new_user_stats()
+RETURNS trigger AS $$
+BEGIN
+  INSERT INTO public.user_stats (user_id, xp, level, streak, total_study_time, badges, coins, unlocked_items, equipped_items)
+  VALUES (new.id, 0, 1, 0, 0, '{}', 0, '{}', '{}'::jsonb)
+  ON CONFLICT (user_id) DO NOTHING;
+  RETURN new;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS on_auth_user_created_stats ON auth.users;
+
+CREATE TRIGGER on_auth_user_created_stats
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user_stats();
+
 -- 6. SECURITY DEFINER RPC: parent reads their linked student's data (Task 6c).
 -- RLS on sessions/user_stats/calibration only allows the owner to read their
 -- own rows, which blocks the parent account from directly SELECTing the
