@@ -59,6 +59,7 @@ function AppContent() {
         if (session?.user) {
           const metadata = session.user.user_metadata || {};
           setUser({
+            id: session.user.id,
             name: metadata.name || session.user.email?.split('@')[0] || 'User',
             role: metadata.role || 'student',
             linkedCode: metadata.linkedCode,
@@ -71,6 +72,7 @@ function AppContent() {
         if (session?.user) {
           const metadata = session.user.user_metadata || {};
           setUser({
+            id: session.user.id,
             name: metadata.name || session.user.email?.split('@')[0] || 'User',
             role: metadata.role || 'student',
             linkedCode: metadata.linkedCode,
