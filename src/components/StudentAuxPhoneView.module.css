@@ -160,6 +160,42 @@
   border: 2px solid var(--border-color);
 }
 
+/* Switch-camera button. Sits next to btnStop while streaming so the
+   user can flip between rear and front lenses. Uses the primary token
+   so it harmonizes with the rest of the student palette in both light
+   and dark mode (constitution Principle III). */
+.btnSwitch {
+  flex: 0 0 auto;
+  min-width: 96px;
+  background: var(--primary);
+  color: white;
+  border-bottom: 4px solid var(--primary-dark, #4338CA);
+}
+.btnSwitch:active { border-bottom-width: 1px; }
+.btnSwitchLabel {
+  font-size: 12px;
+  font-weight: 800;
+}
+
+/* Badge in the corner of the video showing which lens is live. Uses
+   backdrop-blur so it reads well over any camera frame. */
+.cameraFaceBadge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(6px);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  pointer-events: none;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
 /* ── Mini stats card ──────────────────────────────────────────── */
 .statsCard {
   background: var(--bg-card);

@@ -125,29 +125,53 @@ export function clearNotifications(): void {
   saveNotifications([]);
 }
 
-const CHANNEL_NAME = 'oliver_parent_student_sync';
-let channel: BroadcastChannel | null = null;
-let supabaseChannel: any = null;
-
-function getChannel(): BroadcastChannel {
-  if (!channel) {
-    channel = new BroadcastChannel(CHANNEL_NAME);
-  }
-  return channel;
+// Per-user channel name. The previous global channel name
+// `oliver_parent_student_sync` meant two different student accounts on
+// the same browser (or two parent accounts watching different students)
+// would cross-talk: parent A would receive student B's posture updates
+// and aux-camera landmarks. Scoping the channel to the user id keeps
+// each family's sync isolated. Falls back to the legacy global name
+// when no user is signed in (pre-login) so the broadcast primitives
+// don't no-op during app bootstrap.
+function getChannelName(userId?: string): string {
+  if (!userId || userId === 'default') return 'oliver_parent_student_sync';
+  return `oliver_parent_student_sync:user_${userId}`;
 }
 
-function getSupabaseChannel() {
-  if (isSupabaseConfigured && supabase && !supabaseChannel) {
-    supabaseChannel = supabase.channel(CHANNEL_NAME);
-    supabaseChannel.subscribe();
-  }
-  return supabaseChannel;
+// Per-user cached BroadcastChannel + Supabase channel. A module-level
+// singleton keyed by user id so we don't re-create the channel on every
+// call (BroadcastChannel construction is cheap but Supabase channel
+// subscription is async + counted against the concurrent-channel limit).
+const broadcastChannels = new Map<string, BroadcastChannel>();
+const supabaseChannels = new Map<string, any>();
+
+function getChannel(userId?: string): BroadcastChannel {
+  const name = getChannelName(userId);
+  const existing = broadcastChannels.get(name);
+  if (existing) return existing;
+  const ch = new BroadcastChannel(name);
+  broadcastChannels.set(name, ch);
+  return ch;
 }
 
-// Broadcast student posture and indicators to parent dashboard
+function getSupabaseChannel(userId?: string) {
+  const name = getChannelName(userId);
+  if (!isSupabaseConfigured || !supabase) return null;
+  const existing = supabaseChannels.get(name);
+  if (existing) return existing;
+  const ch = supabase.channel(name);
+  ch.subscribe();
+  supabaseChannels.set(name, ch);
+  return ch;
+}
+
+// Broadcast student posture and indicators to parent dashboard.
+// `userId` scopes the channel so two students on the same browser
+// don't cross-talk; pass getUserIdSync() from the caller.
 export function broadcastStudentStatus(
   status: 'good' | 'warning' | 'danger' | 'offline',
-  details: PostureStateUpdate['details']
+  details: PostureStateUpdate['details'],
+  userId?: string
 ): void {
   try {
     const msg: PostureStateUpdate = {
@@ -155,12 +179,12 @@ export function broadcastStudentStatus(
       status,
       details,
     };
-    
+
     // Broadcast locally
-    getChannel().postMessage(msg);
-    
+    getChannel(userId).postMessage(msg);
+
     // Broadcast via Supabase
-    const sbChannel = getSupabaseChannel();
+    const sbChannel = getSupabaseChannel(userId);
     if (sbChannel) {
       sbChannel.send({
         type: 'broadcast',
@@ -174,7 +198,7 @@ export function broadcastStudentStatus(
 }
 
 // Broadcast fatigue flags / push alert messages to parent
-export function broadcastFatigueAlert(message: string): void {
+export function broadcastFatigueAlert(message: string, userId?: string): void {
   try {
     const msg: FatigueAlertUpdate = {
       type: 'fatigue_alert',
@@ -183,10 +207,10 @@ export function broadcastFatigueAlert(message: string): void {
     };
 
     // Broadcast locally
-    getChannel().postMessage(msg);
+    getChannel(userId).postMessage(msg);
 
     // Broadcast via Supabase
-    const sbChannel = getSupabaseChannel();
+    const sbChannel = getSupabaseChannel(userId);
     if (sbChannel) {
       sbChannel.send({
         type: 'broadcast',
@@ -211,7 +235,7 @@ export function broadcastFatigueAlert(message: string): void {
 
 // Broadcast a camera toggle event (off or on) from the student to the parent.
 // Persisted as a notification so the parent sees it even if they were offline.
-export function broadcastCameraOffAlert(message: string, action: 'off' | 'on' = 'off'): void {
+export function broadcastCameraOffAlert(message: string, action: 'off' | 'on' = 'off', userId?: string): void {
   try {
     const msg: CameraOffAlertUpdate = {
       type: 'camera_off_alert',
@@ -220,9 +244,9 @@ export function broadcastCameraOffAlert(message: string, action: 'off' | 'on' = 
       timestamp: Date.now(),
     };
 
-    getChannel().postMessage(msg);
+    getChannel(userId).postMessage(msg);
 
-    const sbChannel = getSupabaseChannel();
+    const sbChannel = getSupabaseChannel(userId);
     if (sbChannel) {
       sbChannel.send({
         type: 'broadcast',
@@ -245,7 +269,7 @@ export function broadcastCameraOffAlert(message: string, action: 'off' | 'on' = 
 }
 
 // Broadcast message from parent to student
-export function broadcastParentMessage(text: string): void {
+export function broadcastParentMessage(text: string, userId?: string): void {
   try {
     const msg: ParentMessageUpdate = {
       type: 'parent_message',
@@ -253,9 +277,9 @@ export function broadcastParentMessage(text: string): void {
       timestamp: Date.now(),
     };
 
-    getChannel().postMessage(msg);
+    getChannel(userId).postMessage(msg);
 
-    const sbChannel = getSupabaseChannel();
+    const sbChannel = getSupabaseChannel(userId);
     if (sbChannel) {
       sbChannel.send({
         type: 'broadcast',
@@ -279,7 +303,8 @@ export function broadcastParentMessage(text: string): void {
 export function broadcastAuxCameraLandmarks(
   deviceId: string,
   poseLandmarks: any[] | null,
-  faceLandmarks: any[] | null
+  faceLandmarks: any[] | null,
+  userId?: string
 ): void {
   try {
     const msg: AuxCameraLandmarksUpdate = {
@@ -290,9 +315,9 @@ export function broadcastAuxCameraLandmarks(
       timestamp: Date.now(),
     };
 
-    getChannel().postMessage(msg);
+    getChannel(userId).postMessage(msg);
 
-    const sbChannel = getSupabaseChannel();
+    const sbChannel = getSupabaseChannel(userId);
     if (sbChannel) {
       sbChannel.send({
         type: 'broadcast',
@@ -317,9 +342,10 @@ export function broadcastAuxCameraLandmarks(
 // once per 250ms, the older sample is dropped to avoid queueing stale
 // landmarks on a slow channel.
 export function subscribeToAuxCameraLandmarks(
-  onLandmarks: (deviceId: string, poseLandmarks: any[] | null, faceLandmarks: any[] | null, timestamp: number) => void
+  onLandmarks: (deviceId: string, poseLandmarks: any[] | null, faceLandmarks: any[] | null, timestamp: number) => void,
+  userId?: string
 ): () => void {
-  const syncChannel = getChannel();
+  const syncChannel = getChannel(userId);
   const lastSeenByDevice = new Map<string, number>();
 
   const localListener = (event: MessageEvent<SyncMessage>) => {
@@ -335,7 +361,7 @@ export function subscribeToAuxCameraLandmarks(
   let sbChannel: any = null;
   if (isSupabaseConfigured && supabase) {
     sbChannel = supabase
-      .channel(CHANNEL_NAME)
+      .channel(getChannelName(userId))
       .on('broadcast', { event: 'aux_camera_landmarks' }, ({ payload }) => {
         const msg = payload as AuxCameraLandmarksUpdate;
         const last = lastSeenByDevice.get(msg.deviceId) ?? 0;
@@ -358,10 +384,11 @@ export function subscribeToAuxCameraLandmarks(
 export function subscribeToStudentSync(
   onStatusChange: (status: 'good' | 'warning' | 'danger' | 'offline', details: PostureStateUpdate['details']) => void,
   onFatigueAlert: (message: string, timestamp: number) => void,
-  onCameraAlert?: (action: 'off' | 'on', message: string, timestamp: number) => void
+  onCameraAlert?: (action: 'off' | 'on', message: string, timestamp: number) => void,
+  userId?: string
 ): () => void {
   // Listen locally
-  const syncChannel = getChannel();
+  const syncChannel = getChannel(userId);
   const localListener = (event: MessageEvent<SyncMessage>) => {
     const msg = event.data;
     if (msg.type === 'status_update') {
@@ -377,7 +404,7 @@ export function subscribeToStudentSync(
   // Listen via Supabase Realtime
   let sbChannel: any = null;
   if (isSupabaseConfigured && supabase) {
-    const chan = supabase.channel(CHANNEL_NAME)
+    const chan = supabase.channel(getChannelName(userId))
       .on('broadcast', { event: 'status_update' }, ({ payload }) => {
         const msg = payload as PostureStateUpdate;
         onStatusChange(msg.status, msg.details);
@@ -408,9 +435,10 @@ export function subscribeToStudentSync(
 
 // Subscribe to parent messages (for Student Dashboard)
 export function subscribeToParentMessage(
-  onMessageReceived: (text: string) => void
+  onMessageReceived: (text: string) => void,
+  userId?: string
 ): () => void {
-  const syncChannel = getChannel();
+  const syncChannel = getChannel(userId);
   const localListener = (event: MessageEvent<SyncMessage>) => {
     const msg = event.data;
     if (msg.type === 'parent_message') {
@@ -421,7 +449,7 @@ export function subscribeToParentMessage(
 
   let sbChannel: any = null;
   if (isSupabaseConfigured && supabase) {
-    sbChannel = supabase.channel(CHANNEL_NAME)
+    sbChannel = supabase.channel(getChannelName(userId))
       .on('broadcast', { event: 'parent_message' }, ({ payload }) => {
         const msg = payload as ParentMessageUpdate;
         onMessageReceived(msg.text);

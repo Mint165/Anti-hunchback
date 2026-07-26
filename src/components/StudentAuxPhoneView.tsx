@@ -17,7 +17,8 @@
 // token-driven via StudentAuxPhoneView.module.css so light/dark +
 // student palette stay in sync per the constitution.
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
+import { SwitchCamera } from 'lucide-react';
 import { usePostureContext } from '../contexts/PostureContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuxCamera } from '../hooks/useAuxCamera';
@@ -38,18 +39,50 @@ export const StudentAuxPhoneView: React.FC<Props> = ({ onExit }) => {
     isModelReady,
     isStreaming,
     broadcastFps,
+    facingMode,
     startCamera,
     stopCamera,
+    switchFacingMode,
   } = useAuxCamera(ownDeviceId);
 
   const desktopActive = otherActiveDevices.some((d) => d.isDesktop);
-
-  // Stop the aux camera if the desktop goes away while streaming —
-  // no point burning battery broadcasting into the void.
+  // Track the last time we saw the desktop as active. Used to give an
+  // 8s grace period before force-stopping the aux camera when the
+  // presence flap drops desktopActive=false for a heartbeat. Without
+  // this, a single delayed presence ping would kill the aux stream
+  // mid-session even though the desktop is still alive.
+  const lastDesktopSeenRef = useRef<number>(Date.now());
   useEffect(() => {
-    if (!desktopActive && isStreaming) {
-      stopCamera();
+    if (desktopActive) lastDesktopSeenRef.current = Date.now();
+  }, [desktopActive]);
+  // Local state so the JSX can re-render when the grace timer fires.
+  const [graceActive, setGraceActive] = useState<boolean>(false);
+
+  // Stop the aux camera if the desktop goes away for more than 8s
+  // while streaming — no point burning battery broadcasting into the
+  // void. The 8s grace absorbs presence-ping flap; if the desktop is
+  // truly gone, we still stop.
+  useEffect(() => {
+    if (!isStreaming) return;
+    if (desktopActive) {
+      setGraceActive(false);
+      return;
     }
+    setGraceActive(true);
+    const elapsed = Date.now() - lastDesktopSeenRef.current;
+    const remaining = Math.max(0, 8000 - elapsed);
+    const timer = window.setTimeout(() => {
+      // Re-check inside the timeout in case presence came back.
+      const stillGone = Date.now() - lastDesktopSeenRef.current >= 8000;
+      if (stillGone) {
+        stopCamera();
+        setGraceActive(false);
+      }
+    }, remaining);
+    return () => {
+      window.clearTimeout(timer);
+      setGraceActive(false);
+    };
   }, [desktopActive, isStreaming, stopCamera]);
 
   // Cleanup on unmount: ensure camera tracks are released.
@@ -63,15 +96,30 @@ export const StudentAuxPhoneView: React.FC<Props> = ({ onExit }) => {
     if (videoRef.current) startCamera(videoRef.current);
   };
 
+  const handleSwitch = () => {
+    void switchFacingMode();
+  };
+
+  // Translate the hook's error codes into human strings. The hook
+  // returns either a literal code ('camera_playback_failed',
+  // 'Camera permission denied', 'Could not access rear/front camera',
+  // 'Failed to load Pose model') — codes get mapped to i18n, anything
+  // else is shown verbatim.
+  const errorText = error === 'camera_playback_failed'
+    ? t('student.auxPlaybackFailed')
+    : error;
+
   const statusText = !isModelReady || isLoading
     ? t('student.auxWaiting')
-    : error
-    ? error
+    : errorText
+    ? errorText
     : isStreaming
-    ? (desktopActive ? t('student.auxConnected') : t('student.auxWaiting'))
+    ? (graceActive
+        ? t('student.auxWaiting')
+        : (desktopActive ? t('student.auxConnected') : t('student.auxWaiting')))
     : t('student.auxWaiting');
 
-  const statusDotClass = isStreaming && desktopActive
+  const statusDotClass = isStreaming && desktopActive && !graceActive
     ? styles.dotConnected
     : isStreaming
     ? styles.dotWaiting
@@ -86,9 +134,9 @@ export const StudentAuxPhoneView: React.FC<Props> = ({ onExit }) => {
 
       <div className={styles.cameraCard}>
         <div className={styles.cameraWrapper}>
-          {error ? (
+          {errorText ? (
             <div className={styles.errorBox}>
-              <span>{error}</span>
+              <span>{errorText}</span>
             </div>
           ) : null}
           <video
@@ -98,10 +146,18 @@ export const StudentAuxPhoneView: React.FC<Props> = ({ onExit }) => {
             playsInline
             muted
           />
-          {!isStreaming && !error && (
+          {!isStreaming && !errorText && (
             <div className={styles.placeholder}>
               <div className={styles.placeholderIcon}>📱</div>
               <div className={styles.placeholderText}>{t('student.auxWaiting')}</div>
+            </div>
+          )}
+          {/* Camera face indicator overlay — shows which lens is
+              active so the user knows whether they're on rear or
+              front before / after flipping. */}
+          {isStreaming && (
+            <div className={styles.cameraFaceBadge}>
+              {facingMode === 'environment' ? t('student.auxCameraRear') : t('student.auxCameraFront')}
             </div>
           )}
         </div>
@@ -117,13 +173,27 @@ export const StudentAuxPhoneView: React.FC<Props> = ({ onExit }) => {
               {t('student.auxStartBtn')}
             </button>
           ) : (
-            <button
-              type="button"
-              className={`${styles.btn} ${styles.btnStop}`}
-              onClick={stopCamera}
-            >
-              {t('student.auxStopBtn')}
-            </button>
+            <>
+              <button
+                type="button"
+                className={`${styles.btn} ${styles.btnStop}`}
+                onClick={stopCamera}
+              >
+                {t('student.auxStopBtn')}
+              </button>
+              <button
+                type="button"
+                className={`${styles.btn} ${styles.btnSwitch}`}
+                onClick={handleSwitch}
+                aria-label={t('student.auxCameraSwitch')}
+                title={t('student.auxCameraSwitch')}
+              >
+                <SwitchCamera size={18} />
+                <span className={styles.btnSwitchLabel}>
+                  {facingMode === 'environment' ? t('student.auxCameraFront') : t('student.auxCameraRear')}
+                </span>
+              </button>
+            </>
           )}
           <button
             type="button"

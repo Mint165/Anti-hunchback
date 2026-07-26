@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { CalibrationData } from '../services/postureAI';
-import { loadUserStats, saveSessionRecord, addXP, getBadgesStatus } from '../services/db';
+import { loadUserStats, saveSessionRecord, addXP, getBadgesStatus, getUserIdSync } from '../services/db';
 import type { Badge } from '../services/db';
 import { broadcastStudentStatus, broadcastFatigueAlert, broadcastCameraOffAlert } from '../services/parentSync';
 import { usePostureContext } from '../contexts/PostureContext';
@@ -146,9 +146,9 @@ export const StudentView: React.FC = () => {
     // camera during calibration / pre-start would be noise to the parent.
     if (!hasStarted || !calibration) return;
     if (became === 'off') {
-      broadcastCameraOffAlert(t('notifications.cameraOffMsg'), 'off');
+      broadcastCameraOffAlert(t('notifications.cameraOffMsg'), 'off', getUserIdSync());
     } else {
-      broadcastCameraOffAlert(t('notifications.cameraOnMsg'), 'on');
+      broadcastCameraOffAlert(t('notifications.cameraOnMsg'), 'on', getUserIdSync());
     }
   }, [isCameraActive, hasStarted, calibration, t]);
 
@@ -237,7 +237,7 @@ export const StudentView: React.FC = () => {
     if (metrics.isBlinking) blinkCountRef.current += 1;
     if (metrics.fidgetFactor > 40 && totalTicksRef.current > 0 && totalTicksRef.current % 300 === 0) {
       fidgetCountRef.current += 1;
-      broadcastFatigueAlert(t('student.fidgetAlert'));
+      broadcastFatigueAlert(t('student.fidgetAlert'), getUserIdSync());
     }
     const now = Date.now();
     if (now - lastBroadcastRef.current >= 2000) {
@@ -249,7 +249,7 @@ export const StudentView: React.FC = () => {
         slouchAngle: metrics.slouchAngle,
         healthScore: healthScore,
         isWritingMode: metrics.isWritingMode,
-      });
+      }, getUserIdSync());
       lastBroadcastRef.current = now;
     }
   }, [metrics, healthScore, isModelReady, calibration]);
