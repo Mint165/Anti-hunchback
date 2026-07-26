@@ -345,7 +345,6 @@ export const en: Record<string, string> = {
   'notifications.cameraOffMsg': 'The student turned off the AI camera — posture monitoring is paused.',
   'notifications.cameraOnMsg': 'The student turned the AI camera back on — monitoring resumed.',
 
-  // Profile — sync missing keys (linkCode etc.) into vi.ts equivalence
-  'profile.parentLinkDesc': 'Enter your child\'s 6-digit link code to start monitoring them.',
-  'profile.saveBtn': 'Save'
+  // Profile — keep the more descriptive parentLinkDesc version here.
+  'profile.parentLinkDesc': 'Enter your child\'s 6-digit link code to start monitoring them.'
 };
