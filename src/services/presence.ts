@@ -54,8 +54,11 @@ export function subscribePresence(
     return subscribeBroadcastPresence(userId, ownDeviceId, onChange);
   }
 
+  // Capture into a non-null local so TS keeps the narrowing inside the
+  // closure we return below (otherwise it widens back to `SupabaseClient | null`).
+  const sb = supabase;
   const channelName = `${PRESENCE_CHANNEL_PREFIX}${userId}`;
-  const channel = supabase.channel(channelName, {
+  const channel = sb.channel(channelName, {
     config: { presence: { key: ownDeviceId } },
   });
 
@@ -75,7 +78,7 @@ export function subscribePresence(
   return () => {
     try {
       channel.untrack().catch(() => {});
-      supabase.removeChannel(channel);
+      sb.removeChannel(channel);
     } catch (e) {
       console.warn('[presence] cleanup error', e);
     }
