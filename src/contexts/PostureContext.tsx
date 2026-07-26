@@ -1,10 +1,13 @@
 import React, { createContext, useContext, useRef, useState, useEffect, useCallback } from 'react';
+import { useMediaQuery } from 'react-responsive';
 import { useMediaPipe } from '../hooks/useMediaPipe';
 import { useAlertEngine } from '../services/useAlertEngine';
 import { analyzePosture, calculateHealthScore, type PostureMetrics, type CalibrationData, type CameraMode, type Landmark } from '../services/postureAI';
-import { loadCalibration, loadSettings, addPetXP } from '../services/db';
+import { loadCalibration, loadSettings, addPetXP, getUserIdSync } from '../services/db';
 import { broadcastFatigueAlert, subscribeToParentMessage, subscribeToAuxCameraLandmarks } from '../services/parentSync';
+import { subscribePresence, trackPresence } from '../services/presence';
 import { voiceService } from '../services/voiceService';
+import type { PresenceState } from '../services/presence';
 interface PostureContextType {
   metrics: PostureMetrics | null;
   healthScore: number;
@@ -49,6 +52,17 @@ interface PostureContextType {
   // this; the PostureContext itself uses it to refine shoulderTilt below.
   auxPoseLandmarks: Landmark[] | null;
   auxCameraDeviceId: string | null;
+  // Task F: presence — list of OTHER devices currently active on the
+  // same user account. The phone uses this to detect the desktop
+  // before offering the "Start aux camera" button; the desktop uses
+  // this to know a phone is streaming so it can render split-screen.
+  otherActiveDevices: PresenceState[];
+  /** This device's stable id (crypto.randomUUID in sessionStorage). */
+  ownDeviceId: string;
+  /** True when this device is the desktop (maxWidth: 768). Used to
+      set isDesktop in presence state and to decide which aux UI to
+      render. */
+  isDesktop: boolean;
 }
 
 const PostureContext = createContext<PostureContextType | undefined>(undefined);
@@ -136,6 +150,14 @@ export const PostureProvider: React.FC<{ children: React.ReactNode }> = ({ child
   );
   const auxLastSeenRef = useRef<number>(0);
 
+  // Task F: presence — track which other devices are active on this
+  // user account, and announce this device. The phone reads
+  // otherActiveDevices to decide whether to show the aux UI; the
+  // desktop reads it to decide whether to split the camera card.
+  const isDesktop = useMediaQuery({ minWidth: 769 });
+  const [otherActiveDevices, setOtherActiveDevices] = useState<PresenceState[]>([]);
+  const presenceAnnouncedRef = useRef<boolean>(false);
+
   // Subscribe to parent messages
   useEffect(() => {
     const unsubscribe = subscribeToParentMessage((text) => {
@@ -175,6 +197,33 @@ export const PostureProvider: React.FC<{ children: React.ReactNode }> = ({ child
   // re-running the effect on every aux update (which would be very noisy).
   const auxPoseRef = useRef<Landmark[] | null>(null);
   useEffect(() => { auxPoseRef.current = auxPoseLandmarks; }, [auxPoseLandmarks]);
+
+  // Task F: announce this device on the user's presence channel + subscribe
+  // to presence updates from other devices. The announcement is done once
+  // per mount; the subscription stays live for the lifetime of the provider.
+  // We re-announce whenever isDesktop flips (rare; e.g. user rotates a
+  // hybrid device) so the phone/desktop flag stays accurate.
+  useEffect(() => {
+    const userId = getUserIdSync();
+    if (!userId) return;
+    // Announce (and re-announce) our presence state.
+    trackPresence({
+      deviceId: ownDeviceIdRef.current,
+      role: 'student',
+      isDesktop,
+      isAux: false, // the desktop is never the aux; the phone sets this when it starts its camera
+    }).catch((e) => console.warn('[presence] track failed', e));
+    presenceAnnouncedRef.current = true;
+
+    const unsubscribe = subscribePresence(
+      userId,
+      ownDeviceIdRef.current,
+      (others) => setOtherActiveDevices(others)
+    );
+    return () => {
+      unsubscribe();
+    };
+  }, [isDesktop]);
 
   // Load calibration on mount
   useEffect(() => {
@@ -390,7 +439,10 @@ export const PostureProvider: React.FC<{ children: React.ReactNode }> = ({ child
       pauseCamera,
       resumeCamera,
       auxPoseLandmarks,
-      auxCameraDeviceId
+      auxCameraDeviceId,
+      otherActiveDevices,
+      ownDeviceId: ownDeviceIdRef.current,
+      isDesktop
     }}>
       <video
         id="global-webcam"
