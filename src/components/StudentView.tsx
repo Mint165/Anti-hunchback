@@ -329,23 +329,23 @@ export const StudentView: React.FC = () => {
     if (showOnboarding) {
       return (
         <motion.div
-          className="fixed inset-0 z-[100] flex flex-col items-center justify-center text-white text-center p-8"
-          style={{ background: 'linear-gradient(135deg, #1E1B4B 0%, #0F0D1A 50%, #1E1B4B 100%)' }}
+          className={`fixed inset-0 z-[100] flex flex-col items-center justify-center text-center p-8 ${styles.fullScreenOverlay}`}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5 }}
         >
           <motion.div
             className="w-24 h-24 rounded-full flex items-center justify-center mb-6"
-            style={{ background: 'rgba(124, 58, 237, 0.2)' }}
+            style={{ background: 'color-mix(in srgb, var(--primary) 20%, transparent)' }}
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ type: 'spring', stiffness: 300, damping: 20, delay: 0.2 }}
           >
-            <Trophy size={48} className="text-purple-400" />
+            <Trophy size={48} style={{ color: 'var(--primary)' }} />
           </motion.div>
           <motion.h2
             className="text-5xl font-black mb-4 tracking-tight"
+            style={{ color: 'var(--text-main)' }}
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.3 }}
@@ -353,7 +353,8 @@ export const StudentView: React.FC = () => {
             {t('student.welcomeTitle')}
           </motion.h2>
           <motion.p
-            className="text-gray-300 text-xl mb-10 max-w-lg leading-relaxed"
+            className="text-xl mb-10 max-w-lg leading-relaxed"
+            style={{ color: 'var(--text-secondary)' }}
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.4 }}
@@ -383,7 +384,7 @@ export const StudentView: React.FC = () => {
           <div className="calibration-video-wrapper relative">
             <video ref={videoRef} className="calibration-video" autoPlay playsInline muted />
             {error ? (
-              <div className="absolute inset-0 bg-red-950/85 backdrop-blur-md flex flex-col items-center justify-center text-center p-6 rounded-3xl z-10">
+              <div className="absolute inset-0 backdrop-blur-md flex flex-col items-center justify-center text-center p-6 rounded-3xl z-10" style={{ background: 'var(--scrim-danger)' }}>
                 <AlertTriangle size={40} className="text-red-500 mb-2 animate-bounce" />
                 <span className="font-bold text-red-200 text-sm">{error}</span>
               </div>
@@ -416,7 +417,7 @@ export const StudentView: React.FC = () => {
     <div className={`${styles.container} ${alertLevel === 'MILD_WARNING' ? 'screen-alert-glow' : ''}`}>
       {/* ── Tips modal ──────────────────────────────────────────────── */}
       {showTips && (
-        <div className="fixed inset-0 z-50 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'var(--scrim)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)' }}>
           <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-md p-8 shadow-2xl relative animate-slide-in-right">
             <button onClick={() => setShowTips(false)} className="absolute top-4 right-4 p-2 bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 rounded-full transition-colors">
               <X size={20} className="text-gray-600 dark:text-gray-300" />
@@ -455,14 +456,14 @@ export const StudentView: React.FC = () => {
       <AnimatePresence>
         {!hasStarted && (
           <motion.div
-            className="fixed inset-0 z-[60] flex flex-col items-center justify-center text-white text-center p-8"
-            style={{ background: 'linear-gradient(135deg, #1E1B4B 0%, #0F0D1A 50%, #1E1B4B 100%)' }}
+            className={`fixed inset-0 z-[60] flex flex-col items-center justify-center text-center p-8 ${styles.fullScreenOverlay}`}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
           >
             <motion.h2
               className="text-5xl font-black mb-4 tracking-tight"
+              style={{ color: 'var(--text-main)' }}
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ type: 'spring', stiffness: 300 }}
@@ -470,7 +471,8 @@ export const StudentView: React.FC = () => {
               {t('student.readyTitle')}
             </motion.h2>
             <motion.p
-              className="text-gray-300 text-xl mb-10 max-w-lg leading-relaxed"
+              className="text-xl mb-10 max-w-lg leading-relaxed"
+              style={{ color: 'var(--text-secondary)' }}
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.15 }}
@@ -494,13 +496,13 @@ export const StudentView: React.FC = () => {
 
       {/* ── Break time overlay ─────────────────────────────────────── */}
       {alertLevel === 'BREAK_TIME' && (
-        <div className="fixed inset-0 z-50 bg-gray-900/95 backdrop-blur-3xl flex flex-col items-center justify-center text-white text-center p-8">
-          <div className="w-24 h-24 bg-green-500/20 rounded-full flex items-center justify-center text-green-400 mb-6 animate-pulse">
+        <div className="fixed inset-0 z-50 backdrop-blur-3xl flex flex-col items-center justify-center text-center p-8" style={{ background: 'var(--scrim-strong)', color: 'var(--text-main)' }}>
+          <div className="w-24 h-24 rounded-full flex items-center justify-center mb-6 animate-pulse" style={{ background: 'color-mix(in srgb, var(--secondary) 20%, transparent)', color: 'var(--secondary)' }}>
             <BookOpen size={48} />
           </div>
           <h2 className="text-5xl font-black mb-4 tracking-tight">{t('student.breakTitle')}</h2>
-          <p className="text-gray-300 text-xl mb-10 max-w-lg leading-relaxed">{t('student.breakDesc')}</p>
-          <button onClick={() => resetBreak()} className="btn-secondary text-lg px-10 py-4 shadow-[0_8px_32px_rgba(74,222,128,0.4)]">
+          <p className="text-xl mb-10 max-w-lg leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{t('student.breakDesc')}</p>
+          <button onClick={() => resetBreak()} className="btn-secondary text-lg px-10 py-4" style={{ boxShadow: '0 8px 32px var(--secondary)' }}>
             {t('student.breakBtn')}
           </button>
         </div>
@@ -508,12 +510,12 @@ export const StudentView: React.FC = () => {
 
       {/* ── Strong warning overlay ─────────────────────────────────── */}
       {alertLevel === 'STRONG_WARNING' && (
-        <div className="fixed inset-0 z-50 bg-red-900/60 flex items-center justify-center p-4">
-          <div className="premium-card border-2 border-red-500 p-10 max-w-lg shadow-[0_0_80px_rgba(255,94,94,0.3)] subtle-pulse relative">
-            <AlertTriangle size={72} className="text-red-500 mx-auto mb-6 drop-shadow-[0_0_15px_rgba(255,94,94,0.5)]" />
-            <h2 className="text-4xl font-black text-slate-900 dark:text-white text-center mb-4">{t('student.dangerTitle')}</h2>
-            <p className="text-slate-800 dark:text-white text-center text-lg mb-8 leading-relaxed font-medium">{t('student.dangerDesc')}</p>
-            <button onClick={() => resetBreak()} className="btn-primary w-full bg-red-500 hover:bg-red-600 text-white border-none py-4 text-lg font-bold">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'var(--scrim-danger)' }}>
+          <div className="premium-card p-10 max-w-lg subtle-pulse relative" style={{ border: `2px solid var(--danger)`, boxShadow: '0 0 80px var(--danger-glow)' }}>
+            <AlertTriangle size={72} className="mx-auto mb-6" style={{ color: 'var(--danger)', filter: 'drop-shadow(0 0 15px var(--danger-glow))' }} />
+            <h2 className="text-4xl font-black text-center mb-4" style={{ color: 'var(--text-main)' }}>{t('student.dangerTitle')}</h2>
+            <p className="text-center text-lg mb-8 leading-relaxed font-medium" style={{ color: 'var(--text-main)' }}>{t('student.dangerDesc')}</p>
+            <button onClick={() => resetBreak()} className="btn-primary w-full py-4 text-lg font-bold" style={{ background: 'var(--danger)', color: 'white', border: 'none' }}>
               {t('student.fixedBtn')}
             </button>
           </div>
