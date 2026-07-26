@@ -652,12 +652,18 @@ export const StudentView: React.FC = () => {
               <span className={styles.statGoal}>&gt; 50 cm</span>
             </div>
             <div className={styles.statBar}>
-              <motion.div
+              {/* Plain div + CSS transition instead of framer-motion: the bar
+                  re-renders on every MediaPipe frame (~10 FPS) and animating
+                  width via motion.div was forcing a re-evaluation of the
+                  framer-motion tree on each frame. The CSS transition is
+                  GPU-composited and decoupled from React's render cycle. */}
+              <div
                 className={styles.statBarFill}
-                style={{ background: distancePass ? 'var(--secondary)' : 'var(--danger)' }}
-                initial={{ width: 0 }}
-                animate={{ width: `${Math.min(100, (distanceValue / 80) * 100)}%` }}
-                transition={{ duration: 0.6 }}
+                style={{
+                  background: distancePass ? 'var(--secondary)' : 'var(--danger)',
+                  width: `${Math.min(100, (distanceValue / 80) * 100)}%`,
+                  transition: 'width 500ms ease',
+                }}
               />
             </div>
             <div className={`${styles.statValue} ${distancePass ? styles.statValuePass : styles.statValueFail}`}>
@@ -675,12 +681,13 @@ export const StudentView: React.FC = () => {
               <span className={styles.statGoal}>&lt; 15°</span>
             </div>
             <div className={styles.statBar}>
-              <motion.div
+              <div
                 className={styles.statBarFill}
-                style={{ background: slouchPass ? 'var(--secondary)' : 'var(--danger)' }}
-                initial={{ width: 0 }}
-                animate={{ width: `${Math.min(100, (slouchValue / 30) * 100)}%` }}
-                transition={{ duration: 0.6 }}
+                style={{
+                  background: slouchPass ? 'var(--secondary)' : 'var(--danger)',
+                  width: `${Math.min(100, (slouchValue / 30) * 100)}%`,
+                  transition: 'width 500ms ease',
+                }}
               />
             </div>
             <div className={`${styles.statValue} ${slouchPass ? styles.statValuePass : styles.statValueFail}`}>
@@ -698,12 +705,13 @@ export const StudentView: React.FC = () => {
               <span className={styles.statGoal}>&lt; 20°</span>
             </div>
             <div className={styles.statBar}>
-              <motion.div
+              <div
                 className={styles.statBarFill}
-                style={{ background: neckPass ? 'var(--secondary)' : 'var(--danger)' }}
-                initial={{ width: 0 }}
-                animate={{ width: `${Math.min(100, (neckValue / 40) * 100)}%` }}
-                transition={{ duration: 0.6 }}
+                style={{
+                  background: neckPass ? 'var(--secondary)' : 'var(--danger)',
+                  width: `${Math.min(100, (neckValue / 40) * 100)}%`,
+                  transition: 'width 500ms ease',
+                }}
               />
             </div>
             <div className={`${styles.statValue} ${neckPass ? styles.statValuePass : styles.statValueFail}`}>
@@ -773,11 +781,17 @@ export const StudentView: React.FC = () => {
             {t('student.level')} <AnimatedCounter value={userStats.level} duration={700} />
           </span>
           <div className={styles.xpBar}>
-            <motion.div
+            {/* Plain div + CSS transition: the XP bar re-renders when
+                userStats.xp changes (after each session / exercise
+                reward). framer-motion was re-evaluating its tree on
+                every prop change for a one-shot animation that a CSS
+                transition handles identically. */}
+            <div
               className={styles.xpBarFill}
-              initial={{ width: 0 }}
-              animate={{ width: `${Math.min(100, (userStats.xp / (userStats.level * 1000)) * 100)}%` }}
-              transition={{ duration: 1.2, ease: 'easeOut' }}
+              style={{
+                width: `${Math.min(100, (userStats.xp / (userStats.level * 1000)) * 100)}%`,
+                transition: 'width 1.2s cubic-bezier(0.22, 1, 0.36, 1)',
+              }}
             />
           </div>
           <span className={styles.miniSub}>{userStats.xp} / {userStats.level * 1000} XP</span>

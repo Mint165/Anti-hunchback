@@ -10,6 +10,7 @@ import type { AuthUser } from './components/AuthScreen';
 import { UserProfile } from './components/UserProfile';
 import { LanguageProvider } from './contexts/LanguageContext';
 import PageTransition from './components/ui/PageTransition';
+import { FpsOverlay } from './components/ui/FpsOverlay';
 
 // Lazy loaded components for code splitting
 const StudentView = React.lazy(() => import('./components/StudentView'));
@@ -231,6 +232,10 @@ function AppContent() {
       <Suspense fallback={null}>
         {user.role === 'student' && <FloatingPet />}
       </Suspense>
+      {/* Dev-only FPS overlay — stripped from production builds. Mounts
+          globally so we can measure FPS across all tabs (student/parent/
+          settings/pet) before/after the Task D perf package. */}
+      {import.meta.env.DEV && <FpsOverlay />}
       <Toaster position="top-center" />
     </>
   );
