@@ -83,6 +83,7 @@ const StudentViewInner: React.FC = () => {
     auxPairingAccepted,
     requestPhonePairing,
     dismissPhonePairing,
+    otherActiveDevices,
     isDesktop,
   } = usePostureContext();
   const { t } = useLanguage();
@@ -95,14 +96,19 @@ const StudentViewInner: React.FC = () => {
   // without cancelling the underlying phone_camera_ready broadcast
   // (the phone is still ready; we just don't want to nag the user).
   const [pairPromptDismissed, setPairPromptDismissed] = useState<boolean>(false);
-  // Show the desktop prompt only when: this is the desktop, a phone on
-  // the same account has its camera ready, the user hasn't already
-  // accepted (auxPairingAccepted flips true on the phone's ack), and
-  // the user hasn't dismissed the prompt for this phone-ready session.
-  // Also gate on `!auxPoseLandmarks` so once streaming is live we hide
-  // the prompt — the split-screen UI itself is the visible signal.
+  // Show the desktop prompt when: this is the desktop, a phone on the
+  // same account is detected (either via the explicit
+  // `phone_camera_ready` heartbeat OR via presence — presence covers
+  // the case where the phone is online but its camera failed to start,
+  // which was the root cause of the prompt never appearing), the user
+  // hasn't already accepted (auxPairingAccepted flips true on the
+  // phone's ack), and the user hasn't dismissed the prompt for this
+  // phone-ready session. Also gate on `!auxPoseLandmarks` so once
+  // streaming is live we hide the prompt — the split-screen UI itself
+  // is the visible signal.
+  const phonePresent = phoneCameraReady || otherActiveDevices.some((d) => !d.isDesktop);
   const showPairPrompt =
-    isDesktop && phoneCameraReady && !auxPairingAccepted &&
+    isDesktop && phonePresent && !auxPairingAccepted &&
     !pairPromptDismissed && !auxPoseLandmarks;
 
   // Reset the local dismiss flag whenever a new phone becomes ready
@@ -121,6 +127,27 @@ const StudentViewInner: React.FC = () => {
   useEffect(() => {
     if (!phoneCameraReady) setPairPromptDismissed(false);
   }, [phoneCameraReady]);
+
+  // Surface a toast when the phone explicitly rejects the pairing
+  // (camera failed to start on the phone side). The PostureContext
+  // resets `auxPairingAccepted` to false on a rejection, but without
+  // this toast the desktop user has no feedback — the prompt just
+  // stays on screen and they assume nothing happened. Track the
+  // previous value so we only fire the toast on a true → false edge
+  // after a request, not on the initial false → false.
+  const prevAcceptedRef = useRef<boolean>(false);
+  useEffect(() => {
+    // Only fire when we transition from "we asked" (prompt was
+    // visible / accepted was tentatively true) back to false. The
+    // phone sets accepted=true optimistically then the landmarks
+    // either arrive (and we hide the prompt) or don't (and the 5s
+    // aux-landmark expiry reverts us). The explicit `accepted=false`
+    // response is the clearest signal — fire on that edge.
+    if (prevAcceptedRef.current && !auxPairingAccepted) {
+      toast.error(t('student.pairRejectedPhoneFailed'), { duration: 5000 });
+    }
+    prevAcceptedRef.current = auxPairingAccepted;
+  }, [auxPairingAccepted, t]);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   // `showCamera` is now derived from the real camera state in context. We

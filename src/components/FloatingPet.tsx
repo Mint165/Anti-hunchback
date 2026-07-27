@@ -2,33 +2,18 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, useDragControls } from 'framer-motion';
 import { usePostureContext } from '../contexts/PostureContext';
 import OliverPet, { type PetState } from './OliverPet';
-import { PetAvatarSVG } from './PetAvatarSVG';
 import { loadUserStats } from '../services/db';
 import { Maximize2, Minimize2 } from 'lucide-react';
 import { useMediaQuery } from 'react-responsive';
 import styles from './FloatingPet.module.css';
 
 export const FloatingPet: React.FC = () => {
-  const { metrics, hasStarted, alertLevel, eyeExerciseTriggered, isCameraActive } = usePostureContext();
+  const { metrics, hasStarted, alertLevel, eyeExerciseTriggered } = usePostureContext();
   const [isMinimized, setIsMinimized] = useState(false);
   const [stats, setStats] = useState(() => loadUserStats());
   const isMobile = useMediaQuery({ maxWidth: 768 });
   const dragControls = useDragControls();
   const constraintsRef = useRef<HTMLDivElement>(null);
-
-  // ⚡ Performance: when the camera is on during a study session, the
-  // page is already running two heavy WebGL contexts (MediaPipe Pose +
-  // FaceMesh inference). Keeping OliverPet's @react-three/fiber
-  // Canvas mounted at the same time adds a THIRD WebGL context and is
-  // the dominant cause of the "camera on → page laggy" symptom — the
-  // main thread + GPU can't keep up with three concurrent contexts
-  // plus React reconciliation. We swap in the static SVG avatar
-  // (PetAvatarSVG — no WebGL, no rAF) for the duration of the camera-
-  // active session and remount the 3D OliverPet only when the camera
-  // is off (or before the session has started). This drops the active
-  // WebGL context count from 3 → 2 while preserving the panda's
-  // mood-based expression via the SVG's per-state body color + mouth.
-  const useLightweightPet = hasStarted && isCameraActive;
 
   // Refresh stats when tab becomes visible or when PetShop equips an item
   useEffect(() => {
@@ -80,20 +65,16 @@ export const FloatingPet: React.FC = () => {
         whileTap={{ scale: 0.95 }}
       >
         <div className={styles.petInner}>
-          {useLightweightPet ? (
-            <PetAvatarSVG state={state} size={48} />
-          ) : (
-            <OliverPet
-              state={state}
-              size={64}
-              petLevel={stats.petLevel}
-              equippedItems={stats.equippedItems}
-              hideBubble
-              hideBadge
-              lowDetail
-              paused={eyeExerciseTriggered}
-            />
-          )}
+          <OliverPet
+            state={state}
+            size={64}
+            petLevel={stats.petLevel}
+            equippedItems={stats.equippedItems}
+            hideBubble
+            hideBadge
+            lowDetail
+            paused={eyeExerciseTriggered}
+          />
         </div>
         {isDanger && <div className={styles.dangerBadge}>!</div>}
       </motion.div>
@@ -112,20 +93,16 @@ export const FloatingPet: React.FC = () => {
         whileTap={{ scale: 0.95 }}
       >
         <div className={styles.petInner}>
-          {useLightweightPet ? (
-            <PetAvatarSVG state={state} size={48} />
-          ) : (
-            <OliverPet
-              state={state}
-              size={64}
-              petLevel={stats.petLevel}
-              equippedItems={stats.equippedItems}
-              hideBubble
-              hideBadge
-              lowDetail
-              paused={eyeExerciseTriggered}
-            />
-          )}
+          <OliverPet
+            state={state}
+            size={64}
+            petLevel={stats.petLevel}
+            equippedItems={stats.equippedItems}
+            hideBubble
+            hideBadge
+            lowDetail
+            paused={eyeExerciseTriggered}
+          />
         </div>
         {isDanger && <div className={styles.dangerBadge}>!</div>}
         {!isDanger && (
@@ -167,18 +144,14 @@ export const FloatingPet: React.FC = () => {
             className={styles.scaledPet}
             style={{ cursor: 'grab' }}
           >
-            {useLightweightPet ? (
-              <PetAvatarSVG state={state} size={135} />
-            ) : (
-              <OliverPet
-                state={state}
-                size={135}
-                petLevel={stats.petLevel}
-                equippedItems={stats.equippedItems}
-                lowDetail
-                paused={eyeExerciseTriggered}
-              />
-            )}
+            <OliverPet
+              state={state}
+              size={135}
+              petLevel={stats.petLevel}
+              equippedItems={stats.equippedItems}
+              lowDetail
+              paused={eyeExerciseTriggered}
+            />
           </div>
         </div>
       </motion.div>

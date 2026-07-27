@@ -107,6 +107,8 @@ export const en: Record<string, string> = {
   'student.mobileCameraStartBtn': 'Start camera',
   'student.mobileCameraStopBtn': 'Stop camera',
   'student.mobileCameraPairWaiting': 'Waiting for the desktop to pair…',
+  'student.mobileCameraRetryBtn': 'Retry',
+  'student.pairRejectedPhoneFailed': 'Phone camera failed to start. Please retry on the phone.',
 
   // Layout
   'layout.dashboard': 'Dashboard',
@@ -135,7 +137,6 @@ export const en: Record<string, string> = {
   'auth.invalidCredentials': 'Invalid email or password',
   'auth.fillAllFields': 'Please fill all fields',
   'auth.emailExists': 'Email already exists',
-  'auth.emailOrUsername': 'Email',
   'auth.email': 'Email',
   'auth.errInvalidEmail': 'Please enter a valid email.',
   'auth.resendCode': 'Resend Verification Code',

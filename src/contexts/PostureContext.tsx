@@ -84,6 +84,14 @@ interface PostureContextType {
       set isDesktop in presence state and to decide which aux UI to
       render. */
   isDesktop: boolean;
+  /** True when this device is currently acting as the aux camera
+      (a phone streaming pose landmarks). MobileCameraView sets this
+      from its `useAuxCamera.isStreaming` so the presence `isAux`
+      flag stays accurate. Desktops never set this. */
+  isAuxStreaming: boolean;
+  /** Update `isAuxStreaming`. Called by MobileCameraView when the
+      phone's aux camera starts or stops streaming. */
+  setIsAuxStreaming: (val: boolean) => void;
 }
 
 const PostureContext = createContext<PostureContextType | undefined>(undefined);
@@ -186,6 +194,14 @@ export const PostureProvider: React.FC<{ children: React.ReactNode }> = ({ child
   // desktop reads it to decide whether to split the camera card.
   const isDesktop = useMediaQuery({ minWidth: 769 });
   const [otherActiveDevices, setOtherActiveDevices] = useState<PresenceState[]>([]);
+  // Whether THIS device is currently acting as the aux camera (i.e.
+  // a phone streaming pose landmarks to the desktop). MobileCameraView
+  // sets this to true when its `useAuxCamera.isStreaming` flips true,
+  // and back to false when streaming stops. We feed it into the
+  // presence `trackState` so other devices see `isAux` flip accurately
+  // — the previous code commented "the phone sets this when it starts
+  // its camera" but never actually did, so `isAux` was always false.
+  const [isAuxStreaming, setIsAuxStreaming] = useState<boolean>(false);
 
   // Subscribe to parent messages
   useEffect(() => {
@@ -241,18 +257,34 @@ export const PostureProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [phoneCameraDeviceId, setPhoneCameraDeviceId] = useState<string | null>(null);
   const [auxPairingAccepted, setAuxPairingAccepted] = useState<boolean>(false);
   const phoneReadyDeviceRef = useRef<string | null>(null);
+  // Mirror of `phoneCameraDeviceId` for use inside `requestPhonePairing`
+  // (which is memoized and would otherwise capture a stale
+  // `phoneCameraDeviceId` value). Updated in lockstep with the state
+  // via the effect below.
+  const phoneCameraDeviceIdRef = useRef<string | null>(null);
+  useEffect(() => { phoneCameraDeviceIdRef.current = phoneCameraDeviceId; }, [phoneCameraDeviceId]);
 
   useEffect(() => {
     const userId = getUserIdSync();
-    const unsubReady = subscribePhoneCameraReady((deviceId, cameraActive) => {
-      // Only the desktop cares about the prompt; on the phone itself
+    const unsubReady = subscribePhoneCameraReady((deviceId, cameraActive, ts) => {
+      // Diagnostic log so the user (or support) can verify in DevTools
+      // that the phone's heartbeat is actually reaching the desktop.
+      // Without this, "desktop never shows the pair prompt" was a
+      // black box — the phone could be heartbeating fine but the
+      // desktop's `phoneCameraReady` state silently stayed false.
+      console.info('[pair] phone_camera_ready from', deviceId, 'active=', cameraActive, 'ts=', ts);
+      // Only the desktop surfaces the prompt; on the phone itself
       // phoneCameraReady stays false (the phone is the source, not the
       // sink). This guard also prevents a phone from prompting itself.
-      if (!isDesktop) return;
+      // NOTE: we still update `phoneReadyDeviceRef` + the device-id
+      // state on non-desktop devices so a phone that briefly matches
+      // `minWidth: 769` during hydration doesn't lose the ready
+      // device id when it flips back. Only the `phoneCameraReady`
+      // boolean (which gates the visible prompt) is desktop-gated.
       if (cameraActive) {
         phoneReadyDeviceRef.current = deviceId;
         setPhoneCameraDeviceId(deviceId);
-        setPhoneCameraReady(true);
+        if (isDesktop) setPhoneCameraReady(true);
       } else {
         // The phone that was ready just stopped — clear the prompt
         // unless a different phone is still ready (rare but possible).
@@ -265,11 +297,16 @@ export const PostureProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
     }, userId);
 
-    const unsubResp = subscribeAuxPairingResponse((deviceId, accepted) => {
+    const unsubResp = subscribeAuxPairingResponse((deviceId, accepted, ts) => {
+      console.info('[pair] aux_pairing_response from', deviceId, 'accepted=', accepted, 'ts=', ts);
       if (!isDesktop) return;
       if (accepted && phoneReadyDeviceRef.current === deviceId) {
         setAuxPairingAccepted(true);
       } else if (!accepted) {
+        // Phone explicitly rejected (camera failed to start). Reset
+        // accepted state and surface a toast on the desktop so the
+        // user knows to retry on the phone side instead of waiting
+        // for landmarks that will never arrive.
         setAuxPairingAccepted(false);
       }
     }, userId);
@@ -281,11 +318,20 @@ export const PostureProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, [isDesktop]);
 
   // Desktop-only: ask the ready phone to start streaming. No-op when
-  // no phone is currently ready.
+  // no phone is currently ready. Falls back to the device id we
+  // inferred from presence (`phoneCameraDeviceId`) if the explicit
+  // `phone_camera_ready` heartbeat hasn't set `phoneReadyDeviceRef`
+  // yet — this covers the window between "presence sees a phone" and
+  // "phone's first heartbeat lands", so the user can accept the
+  // prompt immediately instead of waiting up to 5s for the next
+  // heartbeat to populate the ref.
   const requestPhonePairing = useCallback(() => {
     if (!isDesktop) return;
-    const target = phoneReadyDeviceRef.current;
-    if (!target) return;
+    const target = phoneReadyDeviceRef.current ?? phoneCameraDeviceIdRef.current;
+    if (!target) {
+      console.warn('[pair] requestPhonePairing called but no phone target known');
+      return;
+    }
     requestAuxPairing(target, getUserIdSync());
   }, [isDesktop]);
 
@@ -295,6 +341,46 @@ export const PostureProvider: React.FC<{ children: React.ReactNode }> = ({ child
     // we just don't want the prompt visible. StudentView's local
     // dismiss flag handles hiding the prompt UI.
   }, []);
+
+  // Presence-based fallback for `phoneCameraReady`. The primary signal
+  // is the phone's explicit `phone_camera_ready` heartbeat, but that
+  // heartbeat only fires while the phone's camera is actively
+  // streaming — which means if the phone's camera failed to start
+  // (the very common `camera_playback_failed` path on mobile), the
+  // desktop never sees the phone as ready and never shows the pair
+  // prompt. To break that deadlock, when presence tells us a non-
+  // desktop device on the same account is online, we ALSO flip
+  // `phoneCameraReady=true` and seed `phoneCameraDeviceId` so the
+  // desktop can surface the prompt and let the user trigger
+  // `aux_pairing_request`, which re-pokes the phone to retry its
+  // camera. The explicit heartbeat still wins when it arrives
+  // (it carries the authoritative `cameraActive` flag).
+  useEffect(() => {
+    if (!isDesktop) return;
+    const phone = otherActiveDevices.find((d) => !d.isDesktop);
+    if (phone) {
+      // Only seed if the heartbeat hasn't already populated a more
+      // authoritative device id — we don't want to clobber a real
+      // `phone_camera_ready` with a presence-only sighting.
+      if (!phoneReadyDeviceRef.current) {
+        phoneReadyDeviceRef.current = phone.deviceId;
+        setPhoneCameraDeviceId(phone.deviceId);
+        setPhoneCameraReady(true);
+      }
+    } else {
+      // No phone in presence AND no recent heartbeat — clear.
+      if (phoneReadyDeviceRef.current) {
+        // Only clear if the device id we have is NOT in the presence
+        // list (it may have come from a heartbeat that's still alive
+        // but presence hasn't synced yet). The 6s heartbeat expiry in
+        // parentSync will handle the actual offline case.
+        phoneReadyDeviceRef.current = null;
+        setPhoneCameraDeviceId(null);
+        setPhoneCameraReady(false);
+        setAuxPairingAccepted(false);
+      }
+    }
+  }, [otherActiveDevices, isDesktop]);
 
   // Task F: announce this device on the user's presence channel + subscribe
   // to presence updates from other devices. The announcement is done once
@@ -318,17 +404,21 @@ export const PostureProvider: React.FC<{ children: React.ReactNode }> = ({ child
       ownDeviceIdRef.current,
       (others) => setOtherActiveDevices(others),
       // trackState — `.track()` runs inside the SUBSCRIBED callback.
+      // `isAux` reflects whether this device is currently streaming aux
+      // landmarks (a phone with its camera on). Re-tracking when
+      // `isAuxStreaming` flips keeps the presence state accurate so
+      // other devices see the phone transition online → aux-streaming.
       {
         deviceId: ownDeviceIdRef.current,
         role: 'student',
         isDesktop,
-        isAux: false, // the desktop is never the aux; the phone sets this when it starts its camera
+        isAux: !isDesktop && isAuxStreaming,
       }
     );
     return () => {
       unsubscribe();
     };
-  }, [isDesktop]);
+  }, [isDesktop, isAuxStreaming]);
 
   // Load calibration on mount
   useEffect(() => {
@@ -575,7 +665,9 @@ export const PostureProvider: React.FC<{ children: React.ReactNode }> = ({ child
       dismissPhonePairing,
       otherActiveDevices,
       ownDeviceId: ownDeviceIdRef.current,
-      isDesktop
+      isDesktop,
+      isAuxStreaming,
+      setIsAuxStreaming,
     }}>
       <video
         id="global-webcam"
@@ -645,6 +737,8 @@ const NULL_POSTURE_CONTEXT: PostureContextType = {
   otherActiveDevices: [],
   ownDeviceId: '',
   isDesktop: false,
+  isAuxStreaming: false,
+  setIsAuxStreaming: () => {},
 };
 
 export const usePostureContext = () => {

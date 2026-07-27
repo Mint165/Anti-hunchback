@@ -40,7 +40,7 @@ import { getUserIdSync } from '../services/db';
 import styles from './MobileCameraView.module.css';
 
 export const MobileCameraView: React.FC = () => {
-  const { ownDeviceId, otherActiveDevices } = usePostureContext();
+  const { ownDeviceId, otherActiveDevices, setIsAuxStreaming } = usePostureContext();
   const { t } = useLanguage();
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const {
@@ -68,18 +68,37 @@ export const MobileCameraView: React.FC = () => {
   // Heartbeat phone_camera_ready while streaming so the desktop can
   // expire us if we disappear. Also send an explicit off event when
   // streaming stops (either user-tapped stop or component unmount).
+  //
+  // We also broadcast a `cameraActive=false` heartbeat every 5s when a
+  // desktop is detected but the camera isn't streaming yet (loading,
+  // permission pending, or a previous `camera_playback_failed`). This
+  // keeps the desktop's pair-prompt visible ("phone online, camera not
+  // on yet") instead of silently dropping the phone off the desktop's
+  // radar the moment the camera fails — which was the root cause of
+  // the user never seeing the desktop-side "Đồng ý ghép đôi" prompt:
+  // the phone's `phone_camera_ready` heartbeat only fired while
+  // `isStreaming` was true, so any camera start failure left the
+  // desktop with `phoneCameraReady=false` and the prompt never shown.
   useEffect(() => {
-    if (!isStreaming) return;
-    // Initial announce.
-    broadcastPhoneCameraReady(ownDeviceId, true, getUserIdSync());
+    // Only heartbeat when there's a desktop to hear us — otherwise
+    // it's pure noise on the user's sync channel.
+    if (!desktopActive && !isStreaming) return;
+    const cameraActive = isStreaming;
+    broadcastPhoneCameraReady(ownDeviceId, cameraActive, getUserIdSync());
     const hb = window.setInterval(() => {
-      broadcastPhoneCameraReady(ownDeviceId, true, getUserIdSync());
+      broadcastPhoneCameraReady(ownDeviceId, isStreamingRef.current, getUserIdSync());
     }, 5000);
     return () => {
       clearInterval(hb);
-      broadcastPhoneCameraReady(ownDeviceId, false, getUserIdSync());
+      // Send an explicit off only when we were actually streaming;
+      // if we were just announcing "online but camera off", the
+      // desktop's 6s expiry watchdog will drop us naturally and we
+      // don't want to clobber a different phone's ready state.
+      if (isStreamingRef.current) {
+        broadcastPhoneCameraReady(ownDeviceId, false, getUserIdSync());
+      }
     };
-  }, [isStreaming, ownDeviceId]);
+  }, [isStreaming, ownDeviceId, desktopActive]);
 
   // Also clear the paired flag when streaming stops — once we stop
   // broadcasting the desktop's aux landmark watcher will time out and
@@ -87,6 +106,18 @@ export const MobileCameraView: React.FC = () => {
   useEffect(() => {
     if (!isStreaming) setPaired(false);
   }, [isStreaming]);
+
+  // Mirror `isStreaming` into the PostureContext's `isAuxStreaming` so
+  // the presence tracker re-announces us with `isAux: true` while
+  // we're streaming. Without this, the presence `isAux` flag stayed
+  // false forever (the context's presence effect only ran on mount
+  // with `isAux: false`) — contradicting the comment that claimed
+  // "the phone sets this when it starts its camera". Other devices
+  // therefore never saw us transition into the aux-streaming state.
+  useEffect(() => {
+    setIsAuxStreaming(isStreaming);
+    return () => setIsAuxStreaming(false);
+  }, [isStreaming, setIsAuxStreaming]);
 
   // Subscribe to aux_pairing_request from the desktop. On receipt:
   //   • if not streaming yet, auto-start the camera
@@ -107,22 +138,26 @@ export const MobileCameraView: React.FC = () => {
         setPaired(true);
         return;
       }
-      // Need to start the camera first. The hook's startCamera is
-      // async-ish (it kicks off getUserMedia + rAF loop); we optimistically
-      // send accepted=true and let the hook's error path surface failures
-      // via the on-screen error box. If getUserMedia rejects, the next
-      // phone_camera_ready heartbeat will report cameraActive=true even
-      // though the stream didn't actually start — but the desktop's
-      // aux-landmark watcher will simply not see any frames, time out
-      // after 5s, and revert. That's acceptable degradation for a
-      // rare permission-denied case.
+      // Need to start the camera first. The hook's startCamera kicks
+      // off getUserMedia + the rAF loop; we optimistically send
+      // accepted=true if the model is ready and the video element is
+      // mounted, then let the hook's error path surface failures via
+      // the on-screen error box. If getUserMedia / play() ultimately
+      // rejects, the desktop's aux-landmark watcher will simply not
+      // see any frames, time out after 5s, and revert — and on this
+      // side we'll flip `paired` back to false via the
+      // `!isStreaming → setPaired(false)` effect below.
+      //
+      // If the model isn't ready yet OR there's no video element, we
+      // send an explicit `accepted=false` so the desktop doesn't wait
+      // the full 5s for landmarks that will never arrive — instead it
+      // can surface "Phone camera failed to start, retry on mobile"
+      // immediately.
       if (videoRef.current && isModelReady) {
         startCamera(videoRef.current);
         broadcastAuxPairingResponse(ownDeviceId, true, getUserIdSync());
         setPaired(true);
       } else {
-        // Model not ready or no video element — explicitly reject so
-        // the desktop doesn't wait forever for landmarks.
         broadcastAuxPairingResponse(ownDeviceId, false, getUserIdSync());
       }
     }, getUserIdSync());
@@ -184,6 +219,20 @@ export const MobileCameraView: React.FC = () => {
           {errorText ? (
             <div className={styles.errorBox}>
               <span>{errorText}</span>
+              {/* Retry button — when the camera failed to start (the
+                  common `camera_playback_failed` path on mobile), give
+                  the user a one-tap way to re-atquire the stream
+                  instead of leaving them stuck on the error box with
+                  only the disabled "Bật camera" button below. */}
+              <button
+                type="button"
+                className={`${styles.btn} ${styles.btnStart}`}
+                onClick={handleStart}
+                disabled={!isModelReady || isLoading}
+                style={{ marginTop: 8 }}
+              >
+                {t('student.mobileCameraRetryBtn')}
+              </button>
             </div>
           ) : null}
           <video

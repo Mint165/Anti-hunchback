@@ -187,14 +187,54 @@ export function useAuxCamera(deviceId: string): UseAuxCameraResult {
         return false;
       }
       streamRef.current = stream;
-      videoElement.srcObject = stream;
-      // Play with a 2s readiness guard — if play() rejects OR the
-      // readyState doesn't reach HAVE_CURRENT_DATA within 2s, surface
-      // a real error instead of silently degrading to a stuck frame.
+      // Some mobile browsers (iOS Safari, Chrome Android) need the
+      // `playsinline` attribute set programmatically in addition to
+      // the JSX prop — without it, the video element refuses to pump
+      // frames on mobile and `readyState` stays at 0, which then
+      // surfaces as a spurious `camera_playback_failed` error even
+      // though the camera permission + stream are perfectly fine.
       try {
-        await videoElement.play();
-      } catch (e: any) {
-        console.error('[auxCamera] video.play() rejected', e);
+        videoElement.setAttribute('playsinline', '');
+        videoElement.setAttribute('webkit-playsinline', '');
+      } catch {}
+      videoElement.srcObject = stream;
+      // Play with a 5s readiness guard. The previous 2s timeout was
+      // too aggressive for mobile: when MediaPipe Pose is loading
+      // concurrently, the video decoder often needs 3–4s on mid-range
+      // phones before the first frame reaches HAVE_CURRENT_DATA. The
+      // 2s cutoff then fired `camera_playback_failed` and aborted the
+      // whole flow — which is exactly why the desktop never saw the
+      // phone as ready (the heartbeat effect is gated on isStreaming,
+      // and isStreaming never flipped true). 5s gives mobile enough
+      // headroom while still surfacing a real stall.
+      const tryPlay = async (): Promise<boolean> => {
+        try {
+          await videoElement.play();
+          return true;
+        } catch (e: any) {
+          // iOS Safari occasionally rejects the first play() with
+          // AbortError while the user-gesture signal is still
+          // propagating; a single 300ms retry almost always succeeds.
+          // NotSupportedError on a freshly-attached stream has the
+          // same recovery profile. Any other error is fatal.
+          const name = e?.name || '';
+          if (name === 'AbortError' || name === 'NotSupportedError') {
+            console.warn('[auxCamera] play() rejected with', name, '— retrying in 300ms');
+            await new Promise((r) => setTimeout(r, 300));
+            try {
+              await videoElement.play();
+              return true;
+            } catch (e2: any) {
+              console.error('[auxCamera] play() retry also rejected', e2);
+              return false;
+            }
+          }
+          console.error('[auxCamera] video.play() rejected', e);
+          return false;
+        }
+      };
+      const played = await tryPlay();
+      if (!played) {
         setError('camera_playback_failed');
         setIsStreaming(false);
         stream.getTracks().forEach((t) => t.stop());
@@ -205,8 +245,13 @@ export function useAuxCamera(deviceId: string): UseAuxCameraResult {
         const started = Date.now();
         const checkReady = () => {
           if (videoElement.readyState >= 2) return resolve();
-          if (Date.now() - started > 2000) {
-            console.error('[auxCamera] readyState stuck at', videoElement.readyState);
+          if (Date.now() - started > 5000) {
+            console.error(
+              '[auxCamera] readyState stuck at',
+              videoElement.readyState,
+              'after 5s — videoError:',
+              (videoElement as any).error?.code ?? 'none',
+            );
             setError('camera_playback_failed');
             resolve();
           } else {

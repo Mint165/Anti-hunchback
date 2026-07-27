@@ -107,6 +107,8 @@ export const vi: Record<string, string> = {
   'student.mobileCameraStartBtn': 'Bật camera',
   'student.mobileCameraStopBtn': 'Tắt camera',
   'student.mobileCameraPairWaiting': 'Đang chờ máy tính ghép đôi…',
+  'student.mobileCameraRetryBtn': 'Thử lại',
+  'student.pairRejectedPhoneFailed': 'Điện thoại không bật được camera. Vui lòng thử lại trên điện thoại.',
 
   // Layout
   'layout.dashboard': 'Dashboard',
@@ -135,7 +137,6 @@ export const vi: Record<string, string> = {
   'auth.invalidCredentials': 'Tài khoản hoặc mật khẩu không đúng',
   'auth.fillAllFields': 'Vui lòng điền đầy đủ thông tin',
   'auth.emailExists': 'Email đã được sử dụng',
-  'auth.emailOrUsername': 'Email',
   'auth.email': 'Email',
   'auth.errInvalidEmail': 'Vui lòng nhập Email hợp lệ.',
   'auth.resendCode': 'Gửi lại mã xác nhận',
