@@ -132,12 +132,25 @@ export function useMediaPipe(): UseMediaPipeResult {
     };
   }, [stopCamera]);
 
-  // Start webcam and send frames to models (throttled to ~10 FPS to save CPU).
-  // Higher than 10 FPS causes React re-render storms (each frame fires onResults
-  // → setMetrics in PostureContext) and competing layout work; ~10 FPS is the
-  // sweet spot for posture-feedback latency vs. frame budget on mid-range
-  // laptops. Paired with the EyeExercise motion-pause + WebGL pause so the
-  // foreground task gets the full CPU/GPU when active.
+  // Start webcam and send frames to models (throttled to ~4 FPS to
+  // keep the main thread responsive while the camera is on).
+  //
+  // Why 250 ms / 4 FPS:
+  //   • Posture onset takes seconds, not milliseconds — 250 ms latency
+  //     is invisible to the user and well below the 30 s / 120 s alert
+  //     thresholds.
+  //   • Each Pose + FaceMesh inference pass is ~50–100 ms of main-
+  //     thread CPU (WASM + WebGL), so 10 FPS saturates ~100% of one
+  //     core. At 4 FPS the CPU load drops to ~30%, which leaves room
+  //     for the OliverPet Three.js context, framer-motion, and React
+  //     reconciliation — the previous 10 FPS setting was the dominant
+  //     cause of the "camera on → page laggy" symptom the user
+  //     reported.
+  //   • Eye-distance / blink / slouch metrics change slowly relative
+  //     to 250 ms, so the health score and PHI ring (already throttled
+  //     to 2 Hz in PostureContext) are unaffected.
+  // If a future feature needs higher frame rate (e.g. real-time motion
+  // games), add a separate fast-path hook rather than re-raising this.
   const startCamera = useCallback(
     (videoElement: HTMLVideoElement) => {
       if (!isModelReady || !poseRef.current || !faceMeshRef.current) {
@@ -158,11 +171,9 @@ export function useMediaPipe(): UseMediaPipeResult {
           if (!videoElementRef.current) return;
 
           const now = performance.now();
-          // Throttling: run AI inference once every 100ms (~10 FPS).
-          // Was 300ms (~3 FPS) which made posture feedback feel laggy;
-          // 100ms is responsive enough to catch slouch onset without
-          // saturating the main thread.
-          if (now - lastProcessedTime < 100) {
+          // Throttling: run AI inference once every 250 ms (~4 FPS).
+          // See the rationale in the comment above this hook.
+          if (now - lastProcessedTime < 250) {
             return;
           }
           lastProcessedTime = now;

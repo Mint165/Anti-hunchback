@@ -40,50 +40,13 @@ import confetti from 'canvas-confetti';
 
 // Static SVG pet avatar — lightweight alternative to the 3D OliverPet
 // in the mini card. Avoids spawning a second WebGL context on the
-// Student dashboard (each context is expensive).
-//
-// The SVG fills its 56×56 wrapper entirely (no transparent margin) and
-// the body circle is enlarged to ~r=22 so the colored body covers the
-// full clipped circle — eliminating the previous "white edge" halo
-// caused by transparent viewBox area + white sparkle/cheek dots
-// anti-aliasing against the gradient wrapper background.
-const PetAvatarSVG: React.FC<{ state: PetState }> = ({ state }) => {
-  // Body color shifts slightly per state to convey mood.
-  const bodyColor =
-    state === 'good' ? '#60A5FA' :
-    state === 'slouch' ? '#94A3B8' :
-    state === 'close' ? '#F59E0B' :
-    state === 'writing' ? '#A78BFA' :
-    '#60A5FA';
-  const cheekColor = state === 'good' ? '#F472B6' : '#FCA5A5';
-  // Mouth changes with mood.
-  const mouthPath =
-    state === 'good' ? 'M 18 32 Q 24 38 30 32' :
-    state === 'slouch' ? 'M 18 34 Q 24 30 30 34' :
-    state === 'close' ? 'M 18 34 Q 24 32 30 34' :
-    'M 18 33 Q 24 36 30 33';
-  return (
-    <svg viewBox="0 0 48 48" width="100%" height="100%" aria-hidden style={{ display: 'block' }}>
-      {/* body — enlarged to fill the wrapper circle (r=22 vs old 16) */}
-      <circle cx="24" cy="24" r="22" fill={bodyColor} />
-      {/* ears */}
-      <circle cx="11" cy="13" r="6" fill={bodyColor} />
-      <circle cx="37" cy="13" r="6" fill={bodyColor} />
-      <circle cx="11" cy="13" r="3" fill="#3B82F6" opacity="0.6" />
-      <circle cx="37" cy="13" r="3" fill="#3B82F6" opacity="0.6" />
-      {/* eyes — pure dark, no white sparkle highlight (was creating
-          white-edge artefacts at small render sizes) */}
-      <circle cx="18" cy="24" r="2.6" fill="#0F172A" />
-      <circle cx="30" cy="24" r="2.6" fill="#0F172A" />
-      {/* cheeks — kept, but inside the body circle so they don't read
-          as a white edge */}
-      <circle cx="13" cy="30" r="2.4" fill={cheekColor} opacity="0.7" />
-      <circle cx="35" cy="30" r="2.4" fill={cheekColor} opacity="0.7" />
-      {/* mouth */}
-      <path d={mouthPath} stroke="#0F172A" strokeWidth="1.6" fill="none" strokeLinecap="round" />
-    </svg>
-  );
-};
+// Student dashboard (each context is expensive). Now extracted to its
+// own module (PetAvatarSVG.tsx) so FloatingPet can reuse it during
+// camera-active study sessions — see the comment there for why we
+// avoid a third WebGL context (Pose + FaceMesh + OliverPet) when the
+// camera is on.
+import { PetAvatarSVG } from './PetAvatarSVG';
+import type { PetState } from './OliverPet';
 
 export const StudentView: React.FC = () => {
   // Outer wrapper: decide mobile vs desktop BEFORE any of the inner

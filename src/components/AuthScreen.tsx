@@ -24,7 +24,7 @@ import styles from './AuthScreen.module.css';
 export interface AuthUser {
   /** Stable per-user identifier used to scope localStorage keys
       (oliver_user_stats:<id>, oliver_study_sessions:<id>, ...).
-      Supabase UUID when configured, the email/username string for
+      Supabase UUID when configured, the email string for
       local-only mode (still unique within `oliver_users`), or
       undefined for any pre-login state. */
   id?: string;
@@ -55,10 +55,9 @@ const generateVerificationCode = () => {
   return chars.join('');
 };
 
-const validateEmailOrUsername = (input: string) => {
+const validateEmail = (input: string) => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/;
-  return emailRegex.test(input) || usernameRegex.test(input);
+  return emailRegex.test(input);
 };
 
 /**
@@ -123,18 +122,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
     e.preventDefault();
     setError('');
 
-    const isEmailInput = email.includes('@');
-    // Supabase Auth only accepts real emails — usernames are not supported
-    // when the project is connected to Supabase. Reject early with a clear message.
-    if (supabase && !isEmailInput) {
-      const msg = 'Khi kết nối Supabase, vui lòng dùng Email hợp lệ để đăng ký/đăng nhập (không hỗ trợ tên đăng nhập).';
-      setError(msg);
-      toast.error(msg);
-      return;
-    }
-
     if (isLogin) {
-      const supabaseEmail = isEmailInput ? email : `${email}@antihunchback.local`;
+      const supabaseEmail = email;
 
       if (supabase) {
         const { data, error: signInError } = await supabase.auth.signInWithPassword({
@@ -169,11 +158,11 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
         if (users[email]) {
           if (users[email].password === password) {
             const { password: _pw, ...userWithoutPassword } = users[email];
-            // Local-only accounts are keyed by email/username in
-            // `oliver_users`, so the email string is a stable per-user
-            // identifier suitable for scoping localStorage keys. Add it
-            // here so user-scoped storage (`oliver_user_stats:<id>`)
-            // works the same as the Supabase UUID path.
+            // Local-only accounts are keyed by email in `oliver_users`,
+            // so the email string is a stable per-user identifier
+            // suitable for scoping localStorage keys. Add it here so
+            // user-scoped storage (`oliver_user_stats:<id>`) works the
+            // same as the Supabase UUID path.
             userWithoutPassword.id = userWithoutPassword.id || email;
             toast.success('Đăng nhập thành công (Local)! 🎉');
             onLogin(userWithoutPassword);
@@ -192,15 +181,13 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
         toast.error('Vui lòng điền đầy đủ thông tin!');
         return;
       }
-      if (!validateEmailOrUsername(email)) {
-        setError(
-          'Vui lòng nhập Email hợp lệ hoặc Tên đăng nhập (3-20 ký tự, không dấu, không khoảng trắng, chỉ dùng chữ, số và dấu gạch dưới).',
-        );
-        toast.error('Định dạng không hợp lệ!');
+      if (!validateEmail(email)) {
+        setError(t('auth.errInvalidEmail'));
+        toast.error(t('auth.errInvalidEmail'));
         return;
       }
 
-      const supabaseEmail = isEmailInput ? email : `${email}@antihunchback.local`;
+      const supabaseEmail = email;
 
       if (supabase) {
         const linkedCode = role === 'student' ? generateLinkCode() : undefined;
@@ -229,25 +216,22 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
           toast.success(
             t('auth.errEmailNotConfirmed') +
               ' — ' +
-              (isEmailInput
-                ? `Vui lòng kiểm tra email ${email} và bấm liên kết xác thực.`
-                : 'Vui lòng kiểm tra email xác thực.'),
+              `Vui lòng kiểm tra email ${email} và bấm liên kết xác thực.`,
             { duration: 8000 },
           );
         }
       } else {
         const users: Record<string, AuthUser & { password: string }> = getUsers();
         if (users[email]) {
-          const errMsg = isEmailInput ? 'Email này đã được sử dụng!' : 'Tên đăng nhập này đã được sử dụng!';
-          setError(errMsg);
-          toast.error(errMsg);
+          setError(t('auth.errUserAlreadyExists'));
+          toast.error(t('auth.errUserAlreadyExists'));
           return;
         }
         const otp = generateVerificationCode();
         setGeneratedOtp(otp);
         setPendingEmail(email);
         const newUser: AuthUser & { password: string } = {
-          id: email, // local-only: email/username is the stable user id
+          id: email, // local-only: email is the stable user id
           name,
           role,
           password,
@@ -256,13 +240,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
         setPendingUser(newUser);
         setIsVerifying(true);
         setOtpDigits(['', '', '', '', '', '']);
-        if (isEmailInput) {
-          console.log(`[MOCK EMAIL SERVICE] Sent verification code ${otp} to ${email}`);
-          toast.success(`Mã xác nhận đã gửi đến email ${email}!`, { duration: 6000 });
-        } else {
-          console.log(`[MOCK USERNAME SERVICE] Generated verification code ${otp} for username ${email}`);
-          toast.success(`Mã xác nhận đã được tạo cho tên đăng nhập ${email}!`, { duration: 6000 });
-        }
+        console.log(`[MOCK EMAIL SERVICE] Sent verification code ${otp} to ${email}`);
+        toast.success(`Mã xác nhận đã gửi đến email ${email}!`, { duration: 6000 });
         setShowMockEmailModal(true);
       }
     }
@@ -366,8 +345,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
             </motion.div>
             <h2 className={styles.otpTitle}>Xác Minh Tài Khoản</h2>
             <p className={styles.otpDesc}>
-              Chúng tôi đã gửi một mã xác nhận gồm 6 ký tự (3 chữ, 3 số) đến{' '}
-              {pendingEmail.includes('@') ? 'email' : 'tên đăng nhập'}{' '}
+              Chúng tôi đã gửi một mã xác nhận gồm 6 ký tự (3 chữ, 3 số) đến email{' '}
               <span className={styles.otpEmailTarget}>{pendingEmail}</span>.
             </p>
           </div>
@@ -424,7 +402,6 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
 
         {showMockEmailModal &&
           (() => {
-            const isEmailInput = pendingEmail.includes('@');
             return (
               <div className={styles.mockModal}>
                 <motion.div
@@ -437,13 +414,13 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
                     <X size={20} />
                   </button>
                   <div className={styles.mockIconWrap}>
-                    {isEmailInput ? <Mail size={30} /> : <User size={30} />}
+                    <Mail size={30} />
                   </div>
                   <h3 className={styles.mockTitle}>
-                    {isEmailInput ? t('auth.mockEmailTitle') : t('auth.mockAuthTitle')}
+                    {t('auth.mockEmailTitle')}
                   </h3>
                   <p className={styles.mockDesc}>
-                    {isEmailInput ? t('auth.mockEmailDesc') : t('auth.mockAuthDesc')}
+                    {t('auth.mockEmailDesc')}
                   </p>
                   <div className={styles.mockCode}>{generatedOtp}</div>
                   <motion.button
@@ -622,17 +599,17 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
             </AnimatePresence>
 
             <div className={styles.field}>
-              <label className={styles.label}>{t('auth.emailOrUsername')}</label>
+              <label className={styles.label}>{t('auth.email')}</label>
               <div className={styles.inputWrap}>
                 <span className={styles.inputIcon}>
-                  {email && !email.includes('@') ? <User size={18} /> : <Mail size={18} />}
+                  <Mail size={18} />
                 </span>
                 <input
-                  type="text"
+                  type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className={styles.input}
-                  placeholder={t('auth.emailOrUsername')}
+                  placeholder={t('auth.email')}
                   required
                 />
               </div>
