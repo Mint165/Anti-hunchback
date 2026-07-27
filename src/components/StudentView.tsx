@@ -26,7 +26,6 @@ import { broadcastStudentStatus, broadcastFatigueAlert, broadcastCameraOffAlert 
 import { usePostureContext } from '../contexts/PostureContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { voiceService } from '../services/voiceService';
-import type { PetState } from './OliverPet';
 import Calibration from './Calibration';
 import BackboneVisualizer from './BackboneVisualizer';
 import AuxSkeletonOverlay from './AuxSkeletonOverlay';
