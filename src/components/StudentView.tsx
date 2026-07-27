@@ -86,6 +86,24 @@ const PetAvatarSVG: React.FC<{ state: PetState }> = ({ state }) => {
 };
 
 export const StudentView: React.FC = () => {
+  // Outer wrapper: decide mobile vs desktop BEFORE any of the inner
+  // component's hooks run. The previous structure had
+  //   const isMobile = useMediaQuery(...);
+  //   ... lots of hooks ...
+  //   if (isMobile) return <MobileCameraView />;
+  // which violates the Rules of Hooks: when `isMobile` flips between
+  // renders (e.g. user rotates a hybrid device, or the media query
+  // resolves one frame later), the number of hooks React recorded
+  // changes mid-tree and React throws minified error #310 ("Rendered
+  // fewer hooks than expected"). Splitting the mobile/desktop decision
+  // into a hook-free wrapper keeps the inner component's hook order
+  // stable regardless of viewport changes.
+  const isMobile = useMediaQuery({ maxWidth: 768 });
+  if (isMobile) return <MobileCameraView />;
+  return <StudentViewInner />;
+};
+
+const StudentViewInner: React.FC = () => {
   const {
     metrics, healthScore, alertLevel, hasStarted, startSession, resetBreak,
     isModelReady, isLoading, error, calibration, setCalibration,
@@ -107,12 +125,10 @@ export const StudentView: React.FC = () => {
   } = usePostureContext();
   const { t } = useLanguage();
 
-  // Task D + E.3 — mobile: render only the focused Camera tab. The
-  // phone is passive: it broadcasts phone_camera_ready and waits for
-  // the desktop to issue an aux_pairing_request (handled inside
-  // MobileCameraView). The full student dashboard (hero, status table,
-  // break-time overlay) is skipped on mobile per the spec.
-  const isMobile = useMediaQuery({ maxWidth: 768 });
+  // Task D + E.3 — mobile is handled by the outer StudentView wrapper
+  // above; this inner component is desktop-only. The desktop pair
+  // prompt below is gated on `isDesktop` from context (which is always
+  // true here) so we don't need a separate useMediaQuery read.
   // Local dismiss flag so the user can hide the desktop pair prompt
   // without cancelling the underlying phone_camera_ready broadcast
   // (the phone is still ready; we just don't want to nag the user).
@@ -143,14 +159,6 @@ export const StudentView: React.FC = () => {
   useEffect(() => {
     if (!phoneCameraReady) setPairPromptDismissed(false);
   }, [phoneCameraReady]);
-
-  // Phone aux view replaces the entire dashboard — render it before
-  // any of the regular student UI so we short-circuit cleanly.
-  // (MobileCameraView handles both the unpaired standalone camera UI
-  // and the desktop-paired streaming mode internally.)
-  if (isMobile) {
-    return <MobileCameraView />;
-  }
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   // `showCamera` is now derived from the real camera state in context. We
