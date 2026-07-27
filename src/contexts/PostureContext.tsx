@@ -228,7 +228,14 @@ export const PostureProvider: React.FC<{ children: React.ReactNode }> = ({ child
       auxLastSeenRef.current = Date.now();
     }, userId);
     const expiry = setInterval(() => {
-      if (auxLastSeenRef.current && Date.now() - auxLastSeenRef.current > 5000) {
+      // Cheap early-out: if no aux device has ever been seen, skip the
+      // state setters entirely. This keeps the 2s tick from doing any
+      // React work in the common case where the student is studying
+      // alone (no second device paired) — the interval still fires but
+      // does nothing observable, so the React tree stays stable while
+      // MediaPipe is running the camera.
+      if (!auxLastSeenRef.current) return;
+      if (Date.now() - auxLastSeenRef.current > 5000) {
         setAuxPoseLandmarks(null);
         setAuxCameraDeviceId(null);
         auxLastSeenRef.current = 0;

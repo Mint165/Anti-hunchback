@@ -245,9 +245,13 @@ const StudentViewInner: React.FC = () => {
     syncStream();
     globalVideo.addEventListener('loadedmetadata', syncStream);
     globalVideo.addEventListener('play', syncStream);
-    // Poll less aggressively — events above cover most cases; the
-    // 2s interval is a safety net for stream re-attachments.
-    const interval = setInterval(syncStream, 2000);
+    // Safety-net poll for stream re-attachments. The `loadedmetadata` /
+    // `play` events above already cover the common camera-on path, so
+    // the interval only needs to catch rare edge cases — 5s is enough
+    // resolution for that and avoids firing a redundant srcObject
+    // comparison every 2s while the camera is running (each tick
+    // interrupts the main thread during MediaPipe inference).
+    const interval = setInterval(syncStream, 5000);
     return () => {
       globalVideo.removeEventListener('loadedmetadata', syncStream);
       globalVideo.removeEventListener('play', syncStream);
@@ -284,7 +288,7 @@ const StudentViewInner: React.FC = () => {
       broadcastFatigueAlert(t('student.fidgetAlert'), getUserIdSync());
     }
     const now = Date.now();
-    if (now - lastBroadcastRef.current >= 2000) {
+    if (now - lastBroadcastRef.current >= 5000) {
       const overallStatus = healthScore >= 85 ? 'good' : healthScore >= 70 ? 'warning' : 'danger';
       broadcastStudentStatus(overallStatus, {
         eyeDistanceCm: metrics.eyeDistanceCm,
