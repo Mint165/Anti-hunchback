@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { CalibrationData } from '../services/postureAI';
-import { loadUserStats, saveSessionRecord, addXP, getBadgesStatus, getUserIdSync } from '../services/db';
+import { loadUserStats, loadSettings, saveSettings, saveSessionRecord, addXP, getBadgesStatus, getUserIdSync } from '../services/db';
 import type { Badge } from '../services/db';
 import { broadcastStudentStatus, broadcastFatigueAlert, broadcastCameraOffAlert } from '../services/parentSync';
 import { usePostureContext } from '../contexts/PostureContext';
@@ -30,7 +30,7 @@ import type { PetState } from './OliverPet';
 import Calibration from './Calibration';
 import BackboneVisualizer from './BackboneVisualizer';
 import AuxSkeletonOverlay from './AuxSkeletonOverlay';
-import StudentAuxPhoneView from './StudentAuxPhoneView';
+import MobileCameraView from './MobileCameraView';
 import TiltCard from './ui/TiltCard';
 import StatRing from './ui/StatRing';
 import AnimatedCounter from './ui/AnimatedCounter';
@@ -41,6 +41,12 @@ import confetti from 'canvas-confetti';
 // Static SVG pet avatar — lightweight alternative to the 3D OliverPet
 // in the mini card. Avoids spawning a second WebGL context on the
 // Student dashboard (each context is expensive).
+//
+// The SVG fills its 56×56 wrapper entirely (no transparent margin) and
+// the body circle is enlarged to ~r=22 so the colored body covers the
+// full clipped circle — eliminating the previous "white edge" halo
+// caused by transparent viewBox area + white sparkle/cheek dots
+// anti-aliasing against the gradient wrapper background.
 const PetAvatarSVG: React.FC<{ state: PetState }> = ({ state }) => {
   // Body color shifts slightly per state to convey mood.
   const bodyColor =
@@ -57,24 +63,24 @@ const PetAvatarSVG: React.FC<{ state: PetState }> = ({ state }) => {
     state === 'close' ? 'M 18 34 Q 24 32 30 34' :
     'M 18 33 Q 24 36 30 33';
   return (
-    <svg viewBox="0 0 48 48" width="44" height="44" aria-hidden>
-      {/* body */}
-      <circle cx="24" cy="24" r="16" fill={bodyColor} />
+    <svg viewBox="0 0 48 48" width="100%" height="100%" aria-hidden style={{ display: 'block' }}>
+      {/* body — enlarged to fill the wrapper circle (r=22 vs old 16) */}
+      <circle cx="24" cy="24" r="22" fill={bodyColor} />
       {/* ears */}
-      <circle cx="12" cy="14" r="5" fill={bodyColor} />
-      <circle cx="36" cy="14" r="5" fill={bodyColor} />
-      <circle cx="12" cy="14" r="2.5" fill="#3B82F6" opacity="0.6" />
-      <circle cx="36" cy="14" r="2.5" fill="#3B82F6" opacity="0.6" />
-      {/* eyes */}
-      <circle cx="18" cy="24" r="2.4" fill="#0F172A" />
-      <circle cx="30" cy="24" r="2.4" fill="#0F172A" />
-      <circle cx="18.8" cy="23.2" r="0.8" fill="#fff" />
-      <circle cx="30.8" cy="23.2" r="0.8" fill="#fff" />
-      {/* cheeks */}
-      <circle cx="13" cy="29" r="2.2" fill={cheekColor} opacity="0.7" />
-      <circle cx="35" cy="29" r="2.2" fill={cheekColor} opacity="0.7" />
+      <circle cx="11" cy="13" r="6" fill={bodyColor} />
+      <circle cx="37" cy="13" r="6" fill={bodyColor} />
+      <circle cx="11" cy="13" r="3" fill="#3B82F6" opacity="0.6" />
+      <circle cx="37" cy="13" r="3" fill="#3B82F6" opacity="0.6" />
+      {/* eyes — pure dark, no white sparkle highlight (was creating
+          white-edge artefacts at small render sizes) */}
+      <circle cx="18" cy="24" r="2.6" fill="#0F172A" />
+      <circle cx="30" cy="24" r="2.6" fill="#0F172A" />
+      {/* cheeks — kept, but inside the body circle so they don't read
+          as a white edge */}
+      <circle cx="13" cy="30" r="2.4" fill={cheekColor} opacity="0.7" />
+      <circle cx="35" cy="30" r="2.4" fill={cheekColor} opacity="0.7" />
       {/* mouth */}
-      <path d={mouthPath} stroke="#0F172A" strokeWidth="1.4" fill="none" strokeLinecap="round" />
+      <path d={mouthPath} stroke="#0F172A" strokeWidth="1.6" fill="none" strokeLinecap="round" />
     </svg>
   );
 };
@@ -92,38 +98,59 @@ export const StudentView: React.FC = () => {
     resumeCamera,
     auxPoseLandmarks,
     auxCameraDeviceId,
+    phoneCameraReady,
+    auxPairingAccepted,
+    requestPhonePairing,
+    dismissPhonePairing,
     otherActiveDevices,
     isDesktop,
   } = usePostureContext();
   const { t } = useLanguage();
 
-  // Task F: aux camera UI. On a phone, when a desktop on the same
-  // account is detected via presence, we offer to switch into the
-  // aux-camera role (rear-facing camera streams landmarks to the
-  // desktop). On desktop we render the split-screen automatically
-  // when aux landmarks arrive.
+  // Task D + E.3 — mobile: render only the focused Camera tab. The
+  // phone is passive: it broadcasts phone_camera_ready and waits for
+  // the desktop to issue an aux_pairing_request (handled inside
+  // MobileCameraView). The full student dashboard (hero, status table,
+  // break-time overlay) is skipped on mobile per the spec.
   const isMobile = useMediaQuery({ maxWidth: 768 });
-  const desktopActiveOnAccount = otherActiveDevices.some((d) => d.isDesktop);
-  const [auxMode, setAuxMode] = useState<boolean>(false);
-  // Show the banner only when on phone, desktop detected, and user
-  // hasn't yet opted into aux mode (and hasn't opted out via dismiss).
-  const [auxBannerDismissed, setAuxBannerDismissed] = useState<boolean>(false);
-  const showAuxBanner =
-    isMobile && desktopActiveOnAccount && !auxMode && !auxBannerDismissed;
+  // Local dismiss flag so the user can hide the desktop pair prompt
+  // without cancelling the underlying phone_camera_ready broadcast
+  // (the phone is still ready; we just don't want to nag the user).
+  const [pairPromptDismissed, setPairPromptDismissed] = useState<boolean>(false);
+  // Show the desktop prompt only when: this is the desktop, a phone on
+  // the same account has its camera ready, the user hasn't already
+  // accepted (auxPairingAccepted flips true on the phone's ack), and
+  // the user hasn't dismissed the prompt for this phone-ready session.
+  // Also gate on `!auxPoseLandmarks` so once streaming is live we hide
+  // the prompt — the split-screen UI itself is the visible signal.
+  const showPairPrompt =
+    isDesktop && phoneCameraReady && !auxPairingAccepted &&
+    !pairPromptDismissed && !auxPoseLandmarks;
 
-  // If the desktop disappears, also drop aux mode — no point streaming
-  // into the void. Keep the banner state so we don't re-prompt forever
-  // if the desktop flaps on/off.
+  // Reset the local dismiss flag whenever a new phone becomes ready
+  // (different device id) so the prompt can re-appear for a new phone
+  // even if the user dismissed it for a previous one.
+  const lastPhoneDeviceRef = useRef<string | null>(null);
+  const { phoneCameraDeviceId } = usePostureContext();
   useEffect(() => {
-    if (!desktopActiveOnAccount && auxMode) {
-      setAuxMode(false);
+    if (phoneCameraDeviceId !== lastPhoneDeviceRef.current) {
+      lastPhoneDeviceRef.current = phoneCameraDeviceId;
+      setPairPromptDismissed(false);
     }
-  }, [desktopActiveOnAccount, auxMode]);
+  }, [phoneCameraDeviceId]);
+
+  // If the phone goes away or pairing is accepted, drop the dismiss
+  // flag so a future phone re-shows the prompt.
+  useEffect(() => {
+    if (!phoneCameraReady) setPairPromptDismissed(false);
+  }, [phoneCameraReady]);
 
   // Phone aux view replaces the entire dashboard — render it before
   // any of the regular student UI so we short-circuit cleanly.
-  if (isMobile && auxMode) {
-    return <StudentAuxPhoneView onExit={() => setAuxMode(false)} />;
+  // (MobileCameraView handles both the unpaired standalone camera UI
+  // and the desktop-paired streaming mode internally.)
+  if (isMobile) {
+    return <MobileCameraView />;
   }
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -132,7 +159,28 @@ export const StudentView: React.FC = () => {
   // element (which exists before the session starts) can still toggle its
   // own visibility without touching the global MediaPipe stream.
   const showCamera = isCameraActive;
-  const [isAudioEnabled, setIsAudioEnabled] = useState<boolean>(true);
+  // Initialize the audio-enable flag from the persisted Settings value
+  // so the Settings panel's "Warning Sound" toggle actually controls
+  // whether the STRONG_WARNING chime + voice reminder play. Previously
+  // this was hardcoded to `true` and the Settings toggle was a no-op.
+  const [isAudioEnabled, setIsAudioEnabled] = useState<boolean>(() => {
+    try {
+      return loadSettings().soundAlertEnabled;
+    } catch {
+      return true;
+    }
+  });
+  // Sync back to the persisted settings store (and Supabase via
+  // saveSettings) so the Settings panel's "Warning Sound" toggle stays
+  // in sync when the user toggles from the dashboard speaker button.
+  useEffect(() => {
+    try {
+      const s = loadSettings();
+      if (s.soundAlertEnabled !== isAudioEnabled) {
+        saveSettings({ ...s, soundAlertEnabled: isAudioEnabled });
+      }
+    } catch {}
+  }, [isAudioEnabled]);
   const [showTips, setShowTips] = useState<boolean>(false);
 
   // Track the previous camera state so we only broadcast on actual
@@ -443,39 +491,30 @@ export const StudentView: React.FC = () => {
   const ss = (sessionElapsedSeconds % 60).toString().padStart(2, '0');
 
   // Stat bar helpers
-  const distanceValue = metrics ? metrics.eyeDistanceCm : 60;
+  // The status table (Distance / Back Slouch / Neck Tilt) reads from
+  // `throttledMetrics` instead of `metrics` directly so the bars only
+  // repaint at ~2 Hz (every 2 s) instead of following the ~10 Hz
+  // MediaPipe frame loop. The raw `metrics` still feeds the alert
+  // engine and PHI score, so posture detection / warnings remain
+  // responsive — only the visible bar animation is throttled, which
+  // keeps the page visibly smoother. The CSS `transition: width 500ms`
+  // on each bar still produces a smooth slide between snapshots.
+  const [throttledMetrics, setThrottledMetrics] = useState(metrics);
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      setThrottledMetrics(metrics);
+    }, 2000);
+    return () => window.clearInterval(id);
+  }, [metrics]);
+  const distanceValue = throttledMetrics ? throttledMetrics.eyeDistanceCm : 60;
   const distancePass = distanceValue >= 50;
-  const slouchValue = metrics ? Math.round(metrics.slouchAngle) : 0;
+  const slouchValue = throttledMetrics ? Math.round(throttledMetrics.slouchAngle) : 0;
   const slouchPass = slouchValue <= 15;
-  const neckValue = metrics ? Math.round(metrics.neckAngle) : 0;
-  const neckPass = metrics ? (metrics.neckAngle <= 20 || metrics.isWritingMode) : true;
+  const neckValue = throttledMetrics ? Math.round(throttledMetrics.neckAngle) : 0;
+  const neckPass = throttledMetrics ? (throttledMetrics.neckAngle <= 20 || throttledMetrics.isWritingMode) : true;
 
   return (
     <div className={`${styles.container} ${alertLevel === 'MILD_WARNING' ? 'screen-alert-glow' : ''}`}>
-      {/* Task F — phone: banner inviting the user to switch into the
-          aux-camera role when a desktop on the same account is detected. */}
-      {showAuxBanner && (
-        <div className={styles.auxBanner} role="status">
-          <Smartphone size={18} aria-hidden="true" />
-          <span>{t('student.auxBannerText')}</span>
-          <button
-            type="button"
-            className={styles.auxBannerBtn}
-            onClick={() => setAuxMode(true)}
-          >
-            {t('student.auxStartBtn')}
-          </button>
-          <button
-            type="button"
-            className={styles.auxBannerBtn}
-            style={{ background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border-color)' }}
-            onClick={() => setAuxBannerDismissed(true)}
-            aria-label={t('student.auxDismiss')}
-          >
-            ✕
-          </button>
-        </div>
-      )}
       {/* ── Tips modal ──────────────────────────────────────────────── */}
       {showTips && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'var(--scrim)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)' }}>
@@ -660,13 +699,53 @@ export const StudentView: React.FC = () => {
               {showCamera ? t('student.off') : t('student.on')}
             </motion.button>
           </div>
+          {/* Task D — desktop-initiated camera pairing prompt. Shown
+              when a phone on the same account has its camera on and
+              ready, the user hasn't accepted/dismissed yet, and no aux
+              landmarks are already streaming. Tapping "Đồng ý ghép đôi"
+              broadcasts aux_pairing_request; the phone responds and
+              starts streaming, after which auxPoseLandmarks becomes
+              non-null and the split-view block below takes over. */}
+          {showPairPrompt && (
+            <div className={styles.pairPrompt} role="status">
+              <Smartphone size={18} aria-hidden="true" />
+              <span className={styles.pairPromptText}>
+                {auxPairingAccepted
+                  ? t('student.pairCameraPaired')
+                  : t('student.pairCameraPrompt')}
+              </span>
+              {!auxPairingAccepted && (
+                <>
+                  <button
+                    type="button"
+                    className={styles.pairPromptBtn}
+                    onClick={() => requestPhonePairing()}
+                  >
+                    {t('student.pairCameraAccept')}
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.pairPromptBtn}
+                    style={{ background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border-color)' }}
+                    onClick={() => {
+                      dismissPhonePairing();
+                      setPairPromptDismissed(true);
+                    }}
+                    aria-label={t('student.pairCameraDismiss')}
+                  >
+                    ✕
+                  </button>
+                </>
+              )}
+            </div>
+          )}
           {/* Task F — desktop: when an aux phone is streaming landmarks,
               split the camera card into two columns: front camera + spine
               overlay on the left, ghost aux skeleton on the right. The 5s
               aux-expiry watchdog in PostureContext will null out
               auxPoseLandmarks when the phone stops, which auto-reverts
               this to the single-column layout. Mobile never gets here
-              because the phone renders StudentAuxPhoneView instead. */}
+              because the phone renders MobileCameraView instead. */}
           {isDesktop && auxPoseLandmarks && auxCameraDeviceId ? (
             <div className={styles.cameraSplit}>
               <div className={styles.cameraWrapper}>
@@ -848,6 +927,7 @@ export const StudentView: React.FC = () => {
                 trackColor="rgba(124,58,237,0.1)"
                 progressColor="var(--accent)"
                 animateCount={false}
+                showCount={false}
               />
               <div className={styles.timerRingText}>{ss}</div>
             </div>

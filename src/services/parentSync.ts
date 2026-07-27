@@ -51,12 +51,47 @@ export interface AuxCameraLandmarksUpdate {
   timestamp: number;
 }
 
+// Task D — desktop-initiated camera pairing flow.
+// The phone broadcasts `phone_camera_ready` whenever it has the mobile
+// Camera tab open and the camera permission granted. The desktop
+// subscribes to that event to surface a "Pair camera?" prompt; when
+// the user accepts, the desktop broadcasts `aux_pairing_request`. The
+// phone listens for that and starts streaming aux landmarks (if it
+// hasn't already). The phone then sends `aux_pairing_response` with
+// accepted=true so the desktop can flip its split-screen layout on
+// even before the first landmark frame arrives.
+export interface PhoneCameraReadyUpdate {
+  type: 'phone_camera_ready';
+  deviceId: string;
+  /** True when the phone camera has been granted + is active. */
+  cameraActive: boolean;
+  timestamp: number;
+}
+
+export interface AuxPairingRequestUpdate {
+  type: 'aux_pairing_request';
+  /** Desktop device id that issued the request. */
+  deviceId: string;
+  timestamp: number;
+}
+
+export interface AuxPairingResponseUpdate {
+  type: 'aux_pairing_response';
+  /** Phone device id that responded. */
+  deviceId: string;
+  accepted: boolean;
+  timestamp: number;
+}
+
 type SyncMessage =
   | PostureStateUpdate
   | FatigueAlertUpdate
   | ParentMessageUpdate
   | CameraOffAlertUpdate
-  | AuxCameraLandmarksUpdate;
+  | AuxCameraLandmarksUpdate
+  | PhoneCameraReadyUpdate
+  | AuxPairingRequestUpdate
+  | AuxPairingResponseUpdate;
 
 // ─────────────────────────────────────────────────────────────────────────
 // Notification persistence (localStorage + optional Supabase table)
@@ -462,5 +497,210 @@ export function subscribeToParentMessage(
     if (sbChannel && supabase) {
       supabase.removeChannel(sbChannel);
     }
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Task D — desktop-initiated camera pairing (replaces the previous
+// phone-initiated aux banner flow). The phone is now passive: it just
+// reports "my camera is on and ready", and the desktop is the one that
+// decides whether to merge the side view in.
+// ─────────────────────────────────────────────────────────────────────────
+
+// Phone → desktop: announce the phone's aux camera is on / off. The
+// desktop uses this to decide whether to show the "Pair camera?" prompt.
+// Fire this whenever the phone starts or stops its camera, and also
+// heartbeated every ~5s while streaming so the desktop can expire a
+// phone that disappeared without sending a final off event.
+export function broadcastPhoneCameraReady(
+  deviceId: string,
+  cameraActive: boolean,
+  userId?: string
+): void {
+  try {
+    const msg: PhoneCameraReadyUpdate = {
+      type: 'phone_camera_ready',
+      deviceId,
+      cameraActive,
+      timestamp: Date.now(),
+    };
+    getChannel(userId).postMessage(msg);
+    const sbChannel = getSupabaseChannel(userId);
+    if (sbChannel) {
+      sbChannel.send({
+        type: 'broadcast',
+        event: 'phone_camera_ready',
+        payload: msg,
+      });
+    }
+  } catch (e) {
+    console.error('Failed to broadcast phone camera ready', e);
+  }
+}
+
+// Desktop → phone: request the phone to start streaming aux landmarks.
+// The phone's MobileCameraView subscribes to this; on receipt it calls
+// startCamera() if not already streaming, then sends back an
+// aux_pairing_response with accepted=true.
+export function requestAuxPairing(
+  deviceId: string,
+  userId?: string
+): void {
+  try {
+    const msg: AuxPairingRequestUpdate = {
+      type: 'aux_pairing_request',
+      deviceId,
+      timestamp: Date.now(),
+    };
+    getChannel(userId).postMessage(msg);
+    const sbChannel = getSupabaseChannel(userId);
+    if (sbChannel) {
+      sbChannel.send({
+        type: 'broadcast',
+        event: 'aux_pairing_request',
+        payload: msg,
+      });
+    }
+  } catch (e) {
+    console.error('Failed to request aux pairing', e);
+  }
+}
+
+// Phone → desktop: acknowledge the pairing request (accepted=true when
+// the phone was able to start its camera, false if permission denied).
+export function broadcastAuxPairingResponse(
+  deviceId: string,
+  accepted: boolean,
+  userId?: string
+): void {
+  try {
+    const msg: AuxPairingResponseUpdate = {
+      type: 'aux_pairing_response',
+      deviceId,
+      accepted,
+      timestamp: Date.now(),
+    };
+    getChannel(userId).postMessage(msg);
+    const sbChannel = getSupabaseChannel(userId);
+    if (sbChannel) {
+      sbChannel.send({
+        type: 'broadcast',
+        event: 'aux_pairing_response',
+        payload: msg,
+      });
+    }
+  } catch (e) {
+    console.error('Failed to broadcast aux pairing response', e);
+  }
+}
+
+// Desktop-side subscription: fires when a phone on the same account
+// announces its camera is ready (or just stopped). Includes a 6s
+// expiry watchdog so the desktop clears the prompt if the phone stops
+// heartbeating without an explicit off event.
+export function subscribePhoneCameraReady(
+  onPhoneReady: (deviceId: string, cameraActive: boolean, timestamp: number) => void,
+  userId?: string
+): () => void {
+  const syncChannel = getChannel(userId);
+  const lastSeenByDevice = new Map<string, number>();
+
+  const localListener = (event: MessageEvent<SyncMessage>) => {
+    const msg = event.data;
+    if (msg.type !== 'phone_camera_ready') return;
+    lastSeenByDevice.set(msg.deviceId, Date.now());
+    onPhoneReady(msg.deviceId, msg.cameraActive, msg.timestamp);
+  };
+  syncChannel.addEventListener('message', localListener);
+
+  let sbChannel: any = null;
+  if (isSupabaseConfigured && supabase) {
+    sbChannel = supabase
+      .channel(getChannelName(userId))
+      .on('broadcast', { event: 'phone_camera_ready' }, ({ payload }) => {
+        const msg = payload as PhoneCameraReadyUpdate;
+        lastSeenByDevice.set(msg.deviceId, Date.now());
+        onPhoneReady(msg.deviceId, msg.cameraActive, msg.timestamp);
+      })
+      .subscribe();
+  }
+
+  // Expire: if a phone hasn't heartbeated in 6s, treat it as offline
+  // (cameraActive=false) so the desktop drops the pair prompt.
+  const expiry = setInterval(() => {
+    const now = Date.now();
+    for (const [id, ts] of lastSeenByDevice.entries()) {
+      if (now - ts > 6000) {
+        lastSeenByDevice.delete(id);
+        onPhoneReady(id, false, now);
+      }
+    }
+  }, 3000);
+
+  return () => {
+    syncChannel.removeEventListener('message', localListener);
+    if (sbChannel && supabase) supabase.removeChannel(sbChannel);
+    clearInterval(expiry);
+  };
+}
+
+// Phone-side subscription: fires when the desktop requests pairing.
+export function subscribeAuxPairingRequest(
+  onRequest: (desktopDeviceId: string, timestamp: number) => void,
+  userId?: string
+): () => void {
+  const syncChannel = getChannel(userId);
+  const localListener = (event: MessageEvent<SyncMessage>) => {
+    const msg = event.data;
+    if (msg.type !== 'aux_pairing_request') return;
+    onRequest(msg.deviceId, msg.timestamp);
+  };
+  syncChannel.addEventListener('message', localListener);
+
+  let sbChannel: any = null;
+  if (isSupabaseConfigured && supabase) {
+    sbChannel = supabase
+      .channel(getChannelName(userId))
+      .on('broadcast', { event: 'aux_pairing_request' }, ({ payload }) => {
+        const msg = payload as AuxPairingRequestUpdate;
+        onRequest(msg.deviceId, msg.timestamp);
+      })
+      .subscribe();
+  }
+
+  return () => {
+    syncChannel.removeEventListener('message', localListener);
+    if (sbChannel && supabase) supabase.removeChannel(sbChannel);
+  };
+}
+
+// Desktop-side subscription: fires when the phone acknowledges the
+// pairing request (accepted/rejected).
+export function subscribeAuxPairingResponse(
+  onResponse: (phoneDeviceId: string, accepted: boolean, timestamp: number) => void,
+  userId?: string
+): () => void {
+  const syncChannel = getChannel(userId);
+  const localListener = (event: MessageEvent<SyncMessage>) => {
+    const msg = event.data;
+    if (msg.type !== 'aux_pairing_response') return;
+    onResponse(msg.deviceId, msg.accepted, msg.timestamp);
+  };
+  syncChannel.addEventListener('message', localListener);
+
+  let sbChannel: any = null;
+  if (isSupabaseConfigured && supabase) {
+    sbChannel = supabase
+      .channel(getChannelName(userId))
+      .on('broadcast', { event: 'aux_pairing_response' }, ({ payload }) => {
+        const msg = payload as AuxPairingResponseUpdate;
+        onResponse(msg.deviceId, msg.accepted, msg.timestamp);
+      })
+      .subscribe();
+  }
+
+  return () => {
+    syncChannel.removeEventListener('message', localListener);
+    if (sbChannel && supabase) supabase.removeChannel(sbChannel);
   };
 }

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Eye, Award, CheckCircle2 } from 'lucide-react';
-import { addXP } from '../services/db';
+import { addPetXP } from '../services/db';
 import { useLanguage } from '../contexts/LanguageContext';
 import styles from './EyeExercise.module.css';
 
@@ -76,7 +76,13 @@ export const EyeExercise: React.FC<EyeExerciseProps> = ({ isBlinking, poseLandma
     if (exerciseStatus === 'active' && blinksCount >= 4 && bambooCount >= 5) {
       setExerciseStatus('success');
       playSuccessFanfare();
-      addXP(300);
+      // Award PET XP (stats.petXp / pet_level) — the value the user
+      // actually sees on the PetProfile XP bar and the FloatingPet
+      // level pill. Previously this called addXP() which writes the
+      // *account* XP column (stats.xp / level), a value rarely shown
+      // in the UI, so the +300 badge appeared but the visible pet XP
+      // bar never moved.
+      addPetXP(300);
       setTimeout(() => {
         onComplete(300);
       }, 3000);

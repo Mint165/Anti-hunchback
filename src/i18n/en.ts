@@ -95,9 +95,22 @@ export const en: Record<string, string> = {
   'student.auxLabel': '📱 Side camera',
   'student.auxBannerText': 'A desktop on your account is active — use this phone as a side-view camera?',
   'student.auxDismiss': 'Dismiss',
+  // Task D — desktop-initiated camera pairing prompt
+  'student.pairCameraPrompt': 'A phone on your account was detected. Pair it as a side-view camera?',
+  'student.pairCameraAccept': 'Pair camera',
+  'student.pairCameraDismiss': 'Dismiss',
+  'student.pairCameraWaiting': 'Waiting for the phone to respond…',
+  'student.pairCameraPaired': 'Side camera paired',
+  // Mobile Camera tab
+  'student.mobileCameraTitle': 'Camera',
+  'student.mobileCameraDesc': 'Place your phone so its camera sees the side of your body. When the desktop initiates pairing, pose landmarks are streamed to it.',
+  'student.mobileCameraStartBtn': 'Start camera',
+  'student.mobileCameraStopBtn': 'Stop camera',
+  'student.mobileCameraPairWaiting': 'Waiting for the desktop to pair…',
 
   // Layout
   'layout.dashboard': 'Dashboard',
+  'layout.camera': 'Camera',
   'layout.pet': 'MediEdu Pet',
   'layout.parentSync': 'Parent Sync',
   'layout.settings': 'Settings',
@@ -234,6 +247,7 @@ export const en: Record<string, string> = {
   'pet.backHealth': 'Back Health',
   'pet.eyeHealth': 'Eye Health',
   'pet.posture': 'Posture',
+  'pet.noData': 'No session data yet',
   'pet.myBadges': 'Your Badges',
   'pet.goToShop': 'Go To Shop 🛒',
   // Pet states & dialogues (OliverPet)

@@ -331,12 +331,14 @@
 }
 
 /* ── Mobile bottom nav ────────────────────────────────────────── */
+/* Icon-only bar — text labels were removed in Layout.tsx so the bar
+   stays short and doesn't cover card content on small screens. */
 .bottomNav {
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
-  height: 68px;
+  height: 56px;
   background: var(--bg-card);
   display: flex;
   justify-content: space-around;
@@ -358,13 +360,13 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 0;
   background: transparent;
   border: none;
   color: var(--text-muted);
   font-size: 10px;
   font-weight: 700;
-  padding: 8px;
+  padding: 4px;
   flex: 1;
   cursor: pointer;
   transition: all 0.2s;
@@ -394,7 +396,13 @@
 .bottomNavItemActive .bottomNavIcon { transform: scale(1.15); }
 
 /* ── Mobile: layout override ───────────────────────────────────── */
+/* Bottom padding accounts for the 56px nav bar plus the iOS
+   safe-area-inset-bottom (already added to the bar via padding-bottom)
+   plus a 12px clearance so the last row of cards isn't tucked under
+   the nav. The previous 80px constant didn't include the safe-area
+   inset, so on notched devices the bar was effectively taller than
+   the reserved space and covered card content. */
 .mobile .main {
   margin-left: 0 !important;
-  padding: 16px 16px 80px 16px !important;
+  padding: 16px 16px calc(56px + env(safe-area-inset-bottom) + 12px) 16px !important;
 }

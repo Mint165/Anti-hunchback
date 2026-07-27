@@ -1,0 +1,277 @@
+/* MobileCameraView.module.css — Task D.3 + E.3 (phone-side Camera tab)
+   Reuses the same tokens as StudentAuxPhoneView so light/dark + theme
+   palettes stay in sync per the constitution. The layout is a focused
+   single-column (no dashboard chrome) so the camera frame fills the
+   phone width without the right-side gutter the user reported. */
+
+.container {
+  min-height: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ── Header ───────────────────────────────────────────────────── */
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 18px 20px;
+  background: linear-gradient(135deg, #2563EB 0%, #4F46E5 55%, #7C3AED 100%);
+  border-radius: var(--radius-2xl);
+  color: white;
+  box-shadow: 0 16px 48px rgba(37, 99, 235, 0.28);
+  position: relative;
+  overflow: hidden;
+}
+
+.header::before {
+  content: '';
+  position: absolute;
+  top: -60px; right: -60px;
+  width: 220px; height: 220px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.title {
+  font-family: var(--font-student-heading);
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1.15;
+  position: relative;
+  z-index: 1;
+}
+
+.desc {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+  line-height: 1.5;
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Camera card ──────────────────────────────────────────────── */
+.cameraCard {
+  background: var(--bg-card);
+  border-radius: var(--radius-xl);
+  padding: 12px;
+  border: 1px solid rgba(124, 58, 237, 0.08);
+  box-shadow: var(--shadow-md);
+}
+
+.cameraWrapper {
+  position: relative;
+  width: 100%;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: #111827;
+  border: 2px solid rgba(124, 58, 237, 0.12);
+  aspect-ratio: 4 / 3;
+}
+
+.cameraVideo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* Rear camera: do NOT mirror — the user wants to see what the
+     camera actually sees (their side profile from a tripod). */
+}
+
+.placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 16px;
+}
+
+.placeholderIcon { opacity: 0.5; }
+
+.placeholderText {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.errorBox {
+  position: absolute;
+  inset: 0;
+  background: rgba(127, 29, 29, 0.85);
+  backdrop-filter: blur(6px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 16px;
+  color: #FCA5A5;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* ── Action row ───────────────────────────────────────────────── */
+.actionRow {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+  align-items: stretch;
+}
+
+.btn {
+  flex: 1;
+  padding: 12px 16px;
+  border-radius: var(--radius-lg);
+  font-size: 14px;
+  font-weight: 800;
+  border: none;
+  cursor: pointer;
+  transition: transform 80ms ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.btn:active { transform: translateY(2px); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btnStart {
+  background: var(--secondary);
+  color: white;
+  border-bottom: 4px solid var(--secondary-dark);
+}
+.btnStart:active { border-bottom-width: 1px; }
+
+.btnStop {
+  background: var(--danger);
+  color: white;
+  border-bottom: 4px solid var(--danger-dark, #b91c1c);
+}
+.btnStop:active { border-bottom-width: 1px; }
+
+/* Round front/back switch button — circle with the SwitchCamera icon
+   (two arrows pointing at each other) per the spec. Sits next to the
+   Stop button while streaming. Uses the primary token so it harmonizes
+   with the rest of the student palette in both light and dark mode. */
+.btnSwitchRound {
+  flex: 0 0 auto;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-bottom: 4px solid var(--primary-dark, #4338CA);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 80ms ease;
+  align-self: center;
+}
+.btnSwitchRound:active {
+  transform: translateY(2px);
+  border-bottom-width: 1px;
+}
+
+/* Badge in the corner of the video showing which lens is live. Uses
+   backdrop-blur so it reads well over any camera frame. */
+.cameraFaceBadge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(6px);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  pointer-events: none;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+/* ── Mini stats card ──────────────────────────────────────────── */
+.statsCard {
+  background: var(--bg-card);
+  border-radius: var(--radius-xl);
+  padding: 16px;
+  border: 1px solid rgba(124, 58, 237, 0.08);
+  box-shadow: var(--shadow-md);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  background: var(--bg-page);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+}
+
+.statLabel {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.statValue {
+  font-size: 22px;
+  font-weight: 900;
+  color: var(--text-main);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.statSub {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.dot {
+  display: inline-block;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+.dotConnected { background: var(--secondary); box-shadow: 0 0 6px var(--secondary); }
+.dotIdle { background: var(--text-muted); }
+.dotWaiting { background: var(--accent); }
+
+/* ── Pairing hint ───────────────────────────────────────────────
+   Small nudge shown when a desktop is detected but the user hasn't
+   started the camera yet. Tapping "Bật camera" makes the phone
+   broadcast phone_camera_ready so the desktop can surface its
+   "Pair camera?" prompt. */
+.pairHint {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  background: var(--primary-light);
+  border: 1px solid var(--primary);
+  color: var(--primary-dark);
+  font-size: 13px;
+  font-weight: 700;
+}

@@ -1,6 +1,7 @@
 // Settings Component
 
 import React, { useState, useEffect } from 'react';
+import { useMediaQuery } from 'react-responsive';
 import { Save, RefreshCw, Volume2, Shield, Globe, Clock } from 'lucide-react';
 import { loadSettings, saveSettings, DEFAULT_SETTINGS } from '../services/db';
 import type { AppSettings } from '../services/db';
@@ -36,6 +37,10 @@ const Toggle: React.FC<{
 
 export const Settings: React.FC = () => {
   const { t, lang, setLang } = useLanguage();
+  // Mobile: only the Interface section (theme + language) is shown.
+  // The AI Threshold, Timers & Sound, and action buttons are desktop-
+  // only per the user's mobile feature-restriction request.
+  const isMobile = useMediaQuery({ maxWidth: 768 });
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [isSaved, setIsSaved] = useState<boolean>(false);
   const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
@@ -139,7 +144,12 @@ export const Settings: React.FC = () => {
           </div>
         </div>
 
-        {/* AI Threshold section */}
+        {/* AI Threshold section — desktop only. On mobile the user
+            only needs theme + language; the threshold sliders would
+            be unusable on a small touch screen and aren't part of the
+            mobile feature set. */}
+        {!isMobile && (
+          <>
         <h3 className={styles.sectionTitle}>
           <span className={styles.sectionIcon}><Shield size={20} /></span>
           {t('settings.aiThreshold')}
@@ -276,7 +286,10 @@ export const Settings: React.FC = () => {
           </div>
         </div>
 
-        {/* Buttons */}
+        {/* Buttons — desktop only. Mobile users have nothing to save
+            here (theme + language apply instantly), and the reset /
+            clear-history actions are too destructive to expose on a
+            small screen where they could be tapped accidentally. */}
         <div className={styles.btnRow}>
           <button onClick={handleSave} className={`${styles.btn} ${styles.btnPrimary} ${styles.btnSaveFull}`}>
             <Save size={18} /> {t('settings.saveBtn')}
@@ -290,6 +303,8 @@ export const Settings: React.FC = () => {
             {t('settings.clearHistory')}
           </button>
         </div>
+          </>
+        )}
 
         <AnimatePresence>
           {isSaved && (

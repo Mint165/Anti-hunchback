@@ -495,6 +495,15 @@ export async function pullStudentDataForParent(linkCode: string): Promise<Studen
       fidgetFlagsCount: s.fidget_flags_count,
       completedEyeExercises: s.completed_eye_exercises,
       streakAdded: s.streak_added,
+      // Analytics fields were previously dropped here, which silently
+      // killed the parent-side risk-prediction branch (it filters on
+      // averageShoulderTilt !== undefined and always got an empty
+      // array). Carry them through so ParentView's health prediction
+      // and any future per-session analytics work cross-device.
+      averageShoulderTilt: s.average_shoulder_tilt ?? undefined,
+      averageNeckAngle: s.average_neck_angle ?? undefined,
+      averageSlouchAngle: s.average_slouch_angle ?? undefined,
+      fatigueFlags: s.fatigue_flags ?? undefined,
     }));
 
     let userStats: UserStats | null = null;

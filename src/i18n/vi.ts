@@ -95,9 +95,22 @@ export const vi: Record<string, string> = {
   'student.auxLabel': '📱 Camera phụ',
   'student.auxBannerText': 'Phát hiện máy tính cùng tài khoản đang bật — dùng điện thoại này làm camera góc bên?',
   'student.auxDismiss': 'Bỏ qua',
+  // Task D — desktop-initiated camera pairing prompt
+  'student.pairCameraPrompt': 'Phát hiện điện thoại cùng tài khoản. Ghép đôi camera để dùng điện thoại làm camera góc bên?',
+  'student.pairCameraAccept': 'Đồng ý ghép đôi',
+  'student.pairCameraDismiss': 'Bỏ qua',
+  'student.pairCameraWaiting': 'Đang chờ điện thoại phản hồi…',
+  'student.pairCameraPaired': 'Đã ghép đôi camera phụ',
+  // Mobile Camera tab
+  'student.mobileCameraTitle': 'Camera',
+  'student.mobileCameraDesc': 'Đặt điện thoại sao cho camera nhìn rõ nửa bên thân người của bạn. Khi máy tính chủ động ghép đôi, landmark tư thế sẽ được truyền sang.',
+  'student.mobileCameraStartBtn': 'Bật camera',
+  'student.mobileCameraStopBtn': 'Tắt camera',
+  'student.mobileCameraPairWaiting': 'Đang chờ máy tính ghép đôi…',
 
   // Layout
   'layout.dashboard': 'Dashboard',
+  'layout.camera': 'Camera',
   'layout.pet': 'Thú cưng MediEdu',
   'layout.parentSync': 'Giám sát Từ xa',
   'layout.settings': 'Cài đặt',
@@ -228,6 +241,7 @@ export const vi: Record<string, string> = {
   'pet.backHealth': 'Sức khỏe lưng',
   'pet.eyeHealth': 'Sức khỏe mắt',
   'pet.posture': 'Tư thế',
+  'pet.noData': 'Chưa có dữ liệu phiên học',
   'pet.myBadges': 'Huy Hiệu Của Bạn',
   'pet.goToShop': 'Vào Cửa Hàng 🛒',
   // Pet states & dialogues (OliverPet)
@@ -345,12 +359,12 @@ export const vi: Record<string, string> = {
   // Eye Exercise (minigame overlay)
   'eyeExercise.title': 'Panda Bamboo Gym!',
   'eyeExercise.desc': 'Tới giờ giải lao rồi! Để bảo vệ mắt và cột sống cổ:',
-  'eyeExercise.step1': '1. Dùng đầu (mũi) của bạn di chuyển điểm xanh lá để ăn lá tre.',
+  'eyeExercise.step1': '1. Dùng đầu (mũi) của bạn di chuyển điểm xanh lá để ăn lá trúc.',
   'eyeExercise.step1Highlight': 'đầu (mũi)',
   'eyeExercise.step2': '2. Hãy chớp mắt 4 lần để thư giãn mắt.',
   'eyeExercise.step2Highlight': 'chớp mắt 4 lần',
   'eyeExercise.blinks': 'Chớp mắt',
-  'eyeExercise.bamboo': 'Ăn lá tre',
+  'eyeExercise.bamboo': 'Ăn lá trúc',
   'eyeExercise.skipBtn': 'Bỏ qua bài tập (Không nhận thưởng)',
   'eyeExercise.successTitle': 'Tuyệt Vời!',
   'eyeExercise.successDesc': 'Bạn đã tập luyện cổ và thư giãn mắt rất tốt! Cột sống và thị lực của bạn đang được bảo vệ.',

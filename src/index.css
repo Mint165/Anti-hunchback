@@ -930,11 +930,23 @@ html.motion-paused .gradient-mesh { animation: none !important; }
 .calibration-card { max-width: 672px; width: 100%; text-align: center; padding: 48px; }
 .calibration-title { font-size: 28px; font-weight: 900; color: var(--text-main); margin-bottom: 8px; }
 .calibration-desc { color: var(--text-secondary); margin-bottom: 32px; font-weight: 600; }
-.calibration-video-wrapper { position: relative; width: 320px; height: 224px; background: #111827; border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow-xl); margin: 0 auto 24px; border: 2px solid rgba(124, 58, 237, 0.1); }
+/* Mobile: camera frame fills available width (was fixed 320×224 with
+   extra right-side gutter on narrow phones). aspect-ratio keeps the
+   4:3 framing so the video stays undistorted, max-width caps it on
+   larger phones / tablets. */
+.calibration-video-wrapper { position: relative; width: 100%; max-width: 320px; aspect-ratio: 4 / 3; height: auto; background: #111827; border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow-xl); margin: 0 auto 24px; border: 2px solid rgba(124, 58, 237, 0.1); }
 .calibration-video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
 .calibration-loading { position: absolute; inset: 0; background: var(--scrim); display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text-light); gap: 12px; }
 .spinner { width: 32px; height: 32px; border: 3px solid var(--secondary); border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* Mobile: shrink the calibration card padding so the form fits without
+   scroll on small phones, and reduce the side gutters that were making
+   the right edge of the camera frame look "stuck" against the card. */
+@media (max-width: 768px) {
+  .calibration-card { padding: 20px; }
+  .calibration-container { padding: 16px; }
+}
 
 /* Custom gradient text */
 .text-gradient-purple {

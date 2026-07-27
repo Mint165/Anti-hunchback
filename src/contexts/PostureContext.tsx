@@ -4,7 +4,7 @@ import { useMediaPipe } from '../hooks/useMediaPipe';
 import { useAlertEngine } from '../services/useAlertEngine';
 import { analyzePosture, calculateHealthScore, type PostureMetrics, type CalibrationData, type CameraMode, type Landmark } from '../services/postureAI';
 import { loadCalibration, loadSettings, addPetXP, getUserIdSync } from '../services/db';
-import { broadcastFatigueAlert, subscribeToParentMessage, subscribeToAuxCameraLandmarks } from '../services/parentSync';
+import { broadcastFatigueAlert, subscribeToParentMessage, subscribeToAuxCameraLandmarks, subscribePhoneCameraReady, subscribeAuxPairingResponse, requestAuxPairing } from '../services/parentSync';
 import { subscribePresence } from '../services/presence';
 import { voiceService } from '../services/voiceService';
 import type { PresenceState } from '../services/presence';
@@ -52,6 +52,27 @@ interface PostureContextType {
   // this; the PostureContext itself uses it to refine shoulderTilt below.
   auxPoseLandmarks: Landmark[] | null;
   auxCameraDeviceId: string | null;
+  // Task D — desktop-initiated camera pairing state.
+  // `phoneCameraReady` flips true when a phone on the same account
+  // broadcasts phone_camera_ready with cameraActive=true (and back to
+  // false on a 6s heartbeat expiry). StudentView uses this to show the
+  // "Pair camera?" prompt on the desktop.
+  // `phoneCameraDeviceId` is the device id of the ready phone (so the
+  // desktop can target its pairing request at the right phone if more
+  // than one is on the account).
+  // `auxPairingAccepted` flips true once the phone acknowledges the
+  // request — the desktop uses this to switch its split-screen layout
+  // on before the first landmark frame arrives.
+  phoneCameraReady: boolean;
+  phoneCameraDeviceId: string | null;
+  auxPairingAccepted: boolean;
+  /** Desktop-only: request the ready phone to start streaming aux
+      landmarks. No-op when no phone is ready. */
+  requestPhonePairing: () => void;
+  /** Dismiss the current pairing (called when the user clicks "Bỏ qua"
+      on the desktop prompt, or when the phone goes offline). Resets
+      auxPairingAccepted + clears the prompt. */
+  dismissPhonePairing: () => void;
   // Task F: presence — list of OTHER devices currently active on the
   // same user account. The phone uses this to detect the desktop
   // before offering the "Start aux camera" button; the desktop uses
@@ -198,6 +219,73 @@ export const PostureProvider: React.FC<{ children: React.ReactNode }> = ({ child
   // re-running the effect on every aux update (which would be very noisy).
   const auxPoseRef = useRef<Landmark[] | null>(null);
   useEffect(() => { auxPoseRef.current = auxPoseLandmarks; }, [auxPoseLandmarks]);
+
+  // Task D — desktop-initiated camera pairing state. The phone
+  // broadcasts phone_camera_ready whenever its mobile Camera tab is
+  // active and the camera is on; the desktop subscribes here so the
+  // StudentView can surface a "Pair camera?" prompt. We also subscribe
+  // to aux_pairing_response so the desktop knows the phone has
+  // acknowledged the request (the phone auto-starts its camera on
+  // receipt of aux_pairing_request, which MobileCameraView subscribes
+  // to directly — the context doesn't need to coordinate that side).
+  const [phoneCameraReady, setPhoneCameraReady] = useState<boolean>(false);
+  const [phoneCameraDeviceId, setPhoneCameraDeviceId] = useState<string | null>(null);
+  const [auxPairingAccepted, setAuxPairingAccepted] = useState<boolean>(false);
+  const phoneReadyDeviceRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const userId = getUserIdSync();
+    const unsubReady = subscribePhoneCameraReady((deviceId, cameraActive) => {
+      // Only the desktop cares about the prompt; on the phone itself
+      // phoneCameraReady stays false (the phone is the source, not the
+      // sink). This guard also prevents a phone from prompting itself.
+      if (!isDesktop) return;
+      if (cameraActive) {
+        phoneReadyDeviceRef.current = deviceId;
+        setPhoneCameraDeviceId(deviceId);
+        setPhoneCameraReady(true);
+      } else {
+        // The phone that was ready just stopped — clear the prompt
+        // unless a different phone is still ready (rare but possible).
+        if (phoneReadyDeviceRef.current === deviceId) {
+          phoneReadyDeviceRef.current = null;
+          setPhoneCameraDeviceId(null);
+          setPhoneCameraReady(false);
+          setAuxPairingAccepted(false);
+        }
+      }
+    }, userId);
+
+    const unsubResp = subscribeAuxPairingResponse((deviceId, accepted) => {
+      if (!isDesktop) return;
+      if (accepted && phoneReadyDeviceRef.current === deviceId) {
+        setAuxPairingAccepted(true);
+      } else if (!accepted) {
+        setAuxPairingAccepted(false);
+      }
+    }, userId);
+
+    return () => {
+      unsubReady();
+      unsubResp();
+    };
+  }, [isDesktop]);
+
+  // Desktop-only: ask the ready phone to start streaming. No-op when
+  // no phone is currently ready.
+  const requestPhonePairing = useCallback(() => {
+    if (!isDesktop) return;
+    const target = phoneReadyDeviceRef.current;
+    if (!target) return;
+    requestAuxPairing(target, getUserIdSync());
+  }, [isDesktop]);
+
+  const dismissPhonePairing = useCallback(() => {
+    setAuxPairingAccepted(false);
+    // Don't clear phoneCameraReady here — the phone is still ready,
+    // we just don't want the prompt visible. StudentView's local
+    // dismiss flag handles hiding the prompt UI.
+  }, []);
 
   // Task F: announce this device on the user's presence channel + subscribe
   // to presence updates from other devices. The announcement is done once
@@ -448,6 +536,11 @@ export const PostureProvider: React.FC<{ children: React.ReactNode }> = ({ child
       resumeCamera,
       auxPoseLandmarks,
       auxCameraDeviceId,
+      phoneCameraReady,
+      phoneCameraDeviceId,
+      auxPairingAccepted,
+      requestPhonePairing,
+      dismissPhonePairing,
       otherActiveDevices,
       ownDeviceId: ownDeviceIdRef.current,
       isDesktop
@@ -512,6 +605,11 @@ const NULL_POSTURE_CONTEXT: PostureContextType = {
   resumeCamera: () => {},
   auxPoseLandmarks: null,
   auxCameraDeviceId: null,
+  phoneCameraReady: false,
+  phoneCameraDeviceId: null,
+  auxPairingAccepted: false,
+  requestPhonePairing: () => {},
+  dismissPhonePairing: () => {},
   otherActiveDevices: [],
   ownDeviceId: '',
   isDesktop: false,

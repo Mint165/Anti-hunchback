@@ -28,6 +28,11 @@ export interface StatRingProps {
   className?: string;
   /** Animate the number counting up. Default true. */
   animateCount?: boolean;
+  /** Show the numeric count inside the ring. Default true. Set to false
+   *  when the caller renders its own overlay text on top of the ring
+   *  (e.g. the Student dashboard timer card) to avoid two stacked digit
+   *  layers producing a "ghosted" overlapping effect. */
+  showCount?: boolean;
 }
 
 const StatRingBase: React.FC<StatRingProps> = ({
@@ -43,6 +48,7 @@ const StatRingBase: React.FC<StatRingProps> = ({
   roundValue = true,
   className = '',
   animateCount = true,
+  showCount = true,
 }) => {
   const clamped = Math.max(0, Math.min(max, value));
   const pct = max > 0 ? clamped / max : 0;
@@ -157,18 +163,20 @@ const StatRingBase: React.FC<StatRingProps> = ({
             {label}
           </span>
         )}
-        <span
-          style={{
-            fontSize: size * (label ? 0.28 : 0.32),
-            fontWeight: 900,
-            color: 'var(--text-main)',
-            lineHeight: 1,
-            letterSpacing: '-0.03em',
-            fontVariantNumeric: 'tabular-nums',
-          }}
-        >
-          {displayStr}
-        </span>
+        {showCount && (
+          <span
+            style={{
+              fontSize: size * (label ? 0.28 : 0.32),
+              fontWeight: 900,
+              color: 'var(--text-main)',
+              lineHeight: 1,
+              letterSpacing: '-0.03em',
+              fontVariantNumeric: 'tabular-nums',
+            }}
+          >
+            {displayStr}
+          </span>
+        )}
       </div>
     </div>
   );

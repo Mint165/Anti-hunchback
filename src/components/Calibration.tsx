@@ -1,6 +1,7 @@
 // Calibration Component for setting baseline student landmarks
 
 import React, { useState, useEffect } from 'react';
+import { useMediaQuery } from 'react-responsive';
 import { Camera, CheckCircle, HelpCircle } from 'lucide-react';
 import type { Landmark, CalibrationData } from '../services/postureAI';
 import { saveCalibration } from '../services/db';
@@ -20,6 +21,7 @@ export const Calibration: React.FC<CalibrationProps> = ({
   isModelReady,
 }) => {
   const { t } = useLanguage();
+  const isMobile = useMediaQuery({ maxWidth: 768 });
   const [step, setStep] = useState<'idle' | 'counting' | 'saving' | 'complete'>('idle');
   const [countdown, setCountdown] = useState<number>(3);
   const [error, setError] = useState<string | null>(null);
@@ -264,23 +266,28 @@ export const Calibration: React.FC<CalibrationProps> = ({
         </div>
       )}
 
-      <div
-        style={{
-          marginTop: '24px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          fontSize: '12px',
-          color: 'var(--text-muted)',
-          background: 'var(--bg-card-hover)',
-          padding: '12px',
-          borderRadius: 'var(--radius-lg)',
-          textAlign: 'left',
-        }}
-      >
-        <HelpCircle size={16} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
-        <span>{t('calibration.privacyNote')}</span>
-      </div>
+      {/* Privacy note — hidden on mobile per the spec (space is tight on
+          a small phone and the note is repeated in the desktop Settings /
+          parent-sync guide). The step1/step2 instructions above stay. */}
+      {!isMobile && (
+        <div
+          style={{
+            marginTop: '24px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            fontSize: '12px',
+            color: 'var(--text-muted)',
+            background: 'var(--bg-card-hover)',
+            padding: '12px',
+            borderRadius: 'var(--radius-lg)',
+            textAlign: 'left',
+          }}
+        >
+          <HelpCircle size={16} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+          <span>{t('calibration.privacyNote')}</span>
+        </div>
+      )}
     </div>
   );
 };

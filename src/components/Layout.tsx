@@ -10,6 +10,7 @@ import {
   Globe,
   Bell,
   User,
+  Camera,
 } from 'lucide-react';
 import { useMediaQuery } from 'react-responsive';
 import { motion } from 'framer-motion';
@@ -40,12 +41,26 @@ export const Layout: React.FC<LayoutProps> = ({
   const { t, lang, setLang } = useLanguage();
   const isParent = (user?.role ?? appMode) === 'parent';
 
+  // Full menu — used for the desktop sidebar. On mobile the bottom
+  // nav uses a trimmed list (see `mobileItems` below) that drops the
+  // parent/notifications tabs entirely, regardless of role, and
+  // renames the student tab to "Camera" since the mobile student view
+  // is camera-focused.
   const menuItems: { id: AppTab; name: string; icon: typeof Bell }[] = [
     { id: 'student', name: t('layout.dashboard'), icon: LayoutDashboard },
     { id: 'pet', name: t('layout.pet'), icon: PawPrint },
     { id: 'parent', name: t('layout.parentSync'), icon: Shield },
     // Notifications tab is parent-only — filtered into visibleItems below.
     { id: 'notifications', name: t('layout.notifications'), icon: Bell },
+    { id: 'settings', name: t('layout.settings'), icon: SettingsIcon },
+  ];
+
+  // Mobile-only list: only student (renamed "Camera" with a Camera
+  // icon), pet, settings — parent sync and notifications are dropped
+  // on phones per the user's mobile feature-restriction request.
+  const mobileItems: { id: AppTab; name: string; icon: typeof Bell }[] = [
+    { id: 'student', name: t('layout.camera'), icon: Camera },
+    { id: 'pet', name: t('layout.pet'), icon: PawPrint },
     { id: 'settings', name: t('layout.settings'), icon: SettingsIcon },
   ];
 
@@ -62,6 +77,12 @@ export const Layout: React.FC<LayoutProps> = ({
     if (item.id === 'parent' || item.id === 'notifications') return false;
     return true;
   });
+
+  // Mobile bottom-nav list — role-aware: parents still need their own
+  // tabs on mobile, students get the trimmed Camera/Pet/Settings list.
+  const mobileNavItems = displayUser.role === 'parent'
+    ? visibleItems // parent sync, notifications, settings
+    : mobileItems; // camera, pet, settings
 
   return (
     <div className={`${styles.appShell} ${isMobile ? styles.mobile : ''}`}>
@@ -155,15 +176,16 @@ export const Layout: React.FC<LayoutProps> = ({
       </main>
 
       {/* ─── Mobile bottom nav ─────────────────────────────────────── */}
-      {/* Now shown for BOTH student and parent on mobile. visibleItems already
-          filters out parent-only tabs for students and vice versa, so each
-          role gets the right short list of icons. A trailing Profile button
-          (not a tab — calls onAvatarClick to open the UserProfile drawer) is
-          appended so parents on mobile can reach the link-code input + logout
-          that desktop exposes via the sidebar avatar. */}
+      {/* Mobile uses a trimmed tab list (mobileNavItems) and icon-only
+          buttons (no text labels under the icons) to keep the bar
+          short so it doesn't cover card content. A trailing Profile
+          button (not a tab — calls onAvatarClick to open the
+          UserProfile drawer) is appended so users can reach the
+          profile drawer / logout that desktop exposes via the
+          sidebar avatar. */}
       {isMobile && (
         <div className={styles.bottomNav}>
-          {visibleItems.map((item) => {
+          {mobileNavItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
             return (
@@ -172,11 +194,11 @@ export const Layout: React.FC<LayoutProps> = ({
                 onClick={() => setActiveTab(item.id)}
                 className={`${styles.bottomNavItem} ${isActive ? styles.bottomNavItemActive : ''}`}
                 whileTap={{ scale: 0.9 }}
+                aria-label={item.name}
               >
                 <div className={styles.bottomNavIcon}>
                   <Icon size={22} strokeWidth={isActive ? 2.5 : 2} />
                 </div>
-                <span>{item.name}</span>
               </motion.button>
             );
           })}
@@ -189,7 +211,6 @@ export const Layout: React.FC<LayoutProps> = ({
             <div className={styles.bottomNavIcon}>
               <User size={22} strokeWidth={2} />
             </div>
-            <span>{t('layout.profile')}</span>
           </motion.button>
         </div>
       )}
