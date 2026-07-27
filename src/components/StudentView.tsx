@@ -99,10 +99,10 @@ export const StudentView: React.FC = () => {
     auxPoseLandmarks,
     auxCameraDeviceId,
     phoneCameraReady,
+    phoneCameraDeviceId,
     auxPairingAccepted,
     requestPhonePairing,
     dismissPhonePairing,
-    otherActiveDevices,
     isDesktop,
   } = usePostureContext();
   const { t } = useLanguage();
@@ -131,7 +131,6 @@ export const StudentView: React.FC = () => {
   // (different device id) so the prompt can re-appear for a new phone
   // even if the user dismissed it for a previous one.
   const lastPhoneDeviceRef = useRef<string | null>(null);
-  const { phoneCameraDeviceId } = usePostureContext();
   useEffect(() => {
     if (phoneCameraDeviceId !== lastPhoneDeviceRef.current) {
       lastPhoneDeviceRef.current = phoneCameraDeviceId;
