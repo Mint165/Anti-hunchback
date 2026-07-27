@@ -325,7 +325,12 @@ export async function syncFromSupabase(): Promise<boolean> {
     if (userId === 'default') return false;
 
     // 1. Fetch Calibration
-    const { data: calibrationData } = await supabase.from('calibration').select('*').eq('user_id', userId).single();
+    // `.maybeSingle()` instead of `.single()` so a brand-new account
+    // with no row yet returns `{ data: null, error: null }` instead
+    // of a 406 (PGRST116) error that spams the console every time
+    // `syncFromSupabase` runs. `.single()` requires exactly one row;
+    // `.maybeSingle()` accepts zero or one.
+    const { data: calibrationData } = await supabase.from('calibration').select('*').eq('user_id', userId).maybeSingle();
     if (calibrationData) {
       const calibration: CalibrationData = {
         baseEyeDistance: calibrationData.base_eye_distance,
@@ -345,8 +350,9 @@ export async function syncFromSupabase(): Promise<boolean> {
       localStorage.removeItem(storageKey('calibration_data', userId));
     }
 
-    // 2. Fetch Settings
-    const { data: settingsData } = await supabase.from('settings').select('*').eq('user_id', userId).single();
+    // 2. Fetch Settings (`.maybeSingle()` — see note above; new
+    // accounts have no settings row yet and `.single()` would 406).
+    const { data: settingsData } = await supabase.from('settings').select('*').eq('user_id', userId).maybeSingle();
     if (settingsData) {
       const settings: AppSettings = {
         screenDistanceThreshold: settingsData.screen_distance_threshold,
@@ -366,11 +372,14 @@ export async function syncFromSupabase(): Promise<boolean> {
       localStorage.removeItem(storageKey('app_settings', userId));
     }
 
-    // 3. Fetch Stats
-    const { data: statsData } = await supabase.from('user_stats').select('*').eq('user_id', userId).single();
+    // 3. Fetch Stats (`.maybeSingle()` — same rationale as above).
+    const { data: statsData } = await supabase.from('user_stats').select('*').eq('user_id', userId).maybeSingle();
     if (statsData) {
       const localStatsRaw = localStorage.getItem(storageKey('user_stats', userId));
-      const localStats = localStatsRaw ? JSON.parse(localStatsRaw) : null;
+      // `safeJsonParse` tolerates the legacy `encodeURIComponent`-
+      // encoded rows that crash plain `JSON.parse`. (Same guard as the
+      // other load functions below.)
+      const localStats = localStatsRaw ? safeJsonParse<Partial<UserStats>>(localStatsRaw) : null;
       const stats: UserStats = {
         xp: statsData.xp,
         level: statsData.level,
@@ -605,9 +614,38 @@ export function saveCalibration(data: CalibrationData): void {
   pushCalibrationToSupabase(data);
 }
 
+/**
+ * Defensive JSON parser for legacy / Supabase-pulled strings.
+ *
+ * Some users have rows in Supabase whose JSON columns were written by
+ * an older code path that did `encodeURIComponent(JSON.stringify(x))`
+ * (URL-encoded twice) instead of `JSON.stringify(x)`. When the new
+ * code reads those rows back and calls `JSON.parse` directly on the
+ * URL-encoded payload, it throws `SyntaxError: Unexpected token 'J',
+ * "JTdCJTIyeH"...` because `%7B` (= `{`) is not valid JSON. This
+ * helper tries, in order:
+ *   1. Plain `JSON.parse(raw)`
+ *   2. `JSON.parse(decodeURIComponent(raw))`   (URL-encoded once)
+ *   3. `JSON.parse(atob(raw))`                 (base64 — last resort)
+ * and returns `null` if none succeed so the caller can fall back to
+ * the type's default. Used by `loadCalibration`, `loadSettings`,
+ * `loadUserStats`, `getSessionRecords`, and the Supabase pull
+ * mapping in `syncFromSupabase`.
+ */
+function safeJsonParse<T>(raw: unknown): T | null {
+  if (raw == null) return null;
+  if (typeof raw !== 'string') return raw as T;
+  try { return JSON.parse(raw) as T; } catch {}
+  try { return JSON.parse(decodeURIComponent(raw)) as T; } catch {}
+  try { return JSON.parse(atob(raw)) as T; } catch {}
+  return null;
+}
+
 export function loadCalibration(): CalibrationData {
   const data = localStorage.getItem(sk.CALIBRATION());
-  return data ? JSON.parse(data) : { ...DEFAULT_CALIBRATION };
+  if (!data) return { ...DEFAULT_CALIBRATION };
+  const parsed = safeJsonParse<CalibrationData>(data);
+  return parsed ?? { ...DEFAULT_CALIBRATION };
 }
 
 // --- Settings ---
@@ -618,7 +656,9 @@ export function saveSettings(settings: AppSettings): void {
 
 export function loadSettings(): AppSettings {
   const settings = localStorage.getItem(sk.SETTINGS());
-  return settings ? JSON.parse(settings) : { ...DEFAULT_SETTINGS };
+  if (!settings) return { ...DEFAULT_SETTINGS };
+  const parsed = safeJsonParse<AppSettings>(settings);
+  return parsed ?? { ...DEFAULT_SETTINGS };
 }
 
 // --- Stats & Gamification ---
@@ -639,14 +679,18 @@ export function loadUserStats(): UserStats {
     equippedItems: {},
   };
   if (!statsStr) return defaultStats;
-  
+
   let stats;
   try {
     const decrypted = decryptData(statsStr);
     if (decrypted) {
       stats = decrypted;
     } else {
-      stats = JSON.parse(statsStr); // fallback
+      // Fall back to a plain (possibly URL-encoded) JSON parse.
+      // `safeJsonParse` handles both the normal `JSON.stringify`
+      // output and the legacy `encodeURIComponent(JSON.stringify(x))`
+      // rows that crash plain `JSON.parse`.
+      stats = safeJsonParse<Partial<UserStats>>(statsStr) ?? {};
     }
   } catch {
     stats = {};
@@ -790,7 +834,8 @@ export function saveSessionRecord(record: SessionRecord): void {
 
 export function getSessionRecords(): SessionRecord[] {
   const sessions = localStorage.getItem(sk.SESSIONS());
-  return sessions ? JSON.parse(sessions) : [];
+  if (!sessions) return [];
+  return safeJsonParse<SessionRecord[]>(sessions) ?? [];
 }
 
 // Badge lists

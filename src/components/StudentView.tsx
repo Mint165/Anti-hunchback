@@ -411,6 +411,23 @@ const StudentViewInner: React.FC = () => {
 
   const [showOnboarding, setShowOnboarding] = useState<boolean>(!localStorage.getItem('oliver_onboarded'));
 
+  // ⚠️ Rules of Hooks: throttledMetrics MUST be declared BEFORE the
+  // `if (!calibration)` early return below. Previously it sat *after*
+  // the early return, which meant React saw a different hook count
+  // before vs. after calibration completed — and the moment the user
+  // finished their first calibration, the hook tree changed mid-flight
+  // and React threw minified error #300 ("Rendered fewer hooks than
+  // expected"). Declaring it here, alongside the other dashboard
+  // state, keeps the hook order stable across the calibration →
+  // dashboard transition.
+  const [throttledMetrics, setThrottledMetrics] = useState(metrics);
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      setThrottledMetrics(metrics);
+    }, 2000);
+    return () => window.clearInterval(id);
+  }, [metrics]);
+
   const handleFinishOnboarding = () => {
     localStorage.setItem('oliver_onboarded', 'true');
     setShowOnboarding(false);
@@ -499,20 +516,14 @@ const StudentViewInner: React.FC = () => {
 
   // Stat bar helpers
   // The status table (Distance / Back Slouch / Neck Tilt) reads from
-  // `throttledMetrics` instead of `metrics` directly so the bars only
-  // repaint at ~2 Hz (every 2 s) instead of following the ~10 Hz
-  // MediaPipe frame loop. The raw `metrics` still feeds the alert
-  // engine and PHI score, so posture detection / warnings remain
-  // responsive — only the visible bar animation is throttled, which
-  // keeps the page visibly smoother. The CSS `transition: width 500ms`
-  // on each bar still produces a smooth slide between snapshots.
-  const [throttledMetrics, setThrottledMetrics] = useState(metrics);
-  useEffect(() => {
-    const id = window.setInterval(() => {
-      setThrottledMetrics(metrics);
-    }, 2000);
-    return () => window.clearInterval(id);
-  }, [metrics]);
+  // `throttledMetrics` (declared above, before the calibration early
+  // return) so the bars only repaint at ~0.5 Hz (every 2 s) instead
+  // of following the ~2 Hz PostureContext metrics state. The raw
+  // `metrics` still feeds the alert engine and PHI score, so posture
+  // detection / warnings remain responsive — only the visible bar
+  // animation is throttled further, which keeps the page visibly
+  // smoother. The CSS `transition: width 500ms` on each bar still
+  // produces a smooth slide between snapshots.
   const distanceValue = throttledMetrics ? throttledMetrics.eyeDistanceCm : 60;
   const distancePass = distanceValue >= 50;
   const slouchValue = throttledMetrics ? Math.round(throttledMetrics.slouchAngle) : 0;

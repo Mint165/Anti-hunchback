@@ -124,10 +124,19 @@ export const PostureProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, [startCamera]);
 
   const { alertLevel, startSession, resetBreak, hasStarted } = useAlertEngine(metrics?.state || 'GOOD_POSTURE');
-  
+
   const movementHistoryRef = useRef<{ x: number; y: number }[]>([]);
   const autoWritingTimerRef = useRef<number>(0);
   const autoWritingEndTimerRef = useRef<number>(0);
+
+  // Real-time metrics ref + throttle flush timestamp. `metricsRef` is
+  // updated on every analyze frame (~10 Hz) so internal logic (the
+  // 1-second tick effect below) sees the freshest posture without
+  // waiting for the throttled `setMetrics` state update. The flush
+  // timestamp gates `setMetrics`/`setHealthScore` to ~2 Hz so the
+  // React tree only re-renders twice per second instead of 10×.
+  const metricsRef = useRef<PostureMetrics | null>(null);
+  const lastMetricsFlushRef = useRef<number>(0);
 
   // --- Eye Exercise (20-20-20 Rule) ---
   const [eyeExerciseTriggered, setEyeExerciseTriggered] = useState<boolean>(false);
@@ -399,14 +408,37 @@ export const PostureProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
     }
 
-    setMetrics(calculatedMetrics);
-    setHealthScore(calculateHealthScore(calculatedMetrics));
+    // ⚡ Throttle STATE updates to ~2 Hz (every 500 ms).
+    //
+    // The analyze effect itself still runs at the full ~10 Hz pose
+    // frame rate (it re-fires whenever `poseLandmarks` changes), so
+    // `metricsRef.current` below stays real-time for the 1-second
+    // tick effect (fatigue screening, angle accumulator, auto
+    // writing-mode detection, pet XP). But the React *tree* — every
+    // consumer of `metrics` and `healthScore` from this context
+    // (StudentView, BackboneVisualizer, AuxSkeletonOverlay, pet
+    // state, hero card, status table, PHI ring) — only re-renders at
+    // 2 Hz instead of 10 Hz. That removes the re-render storm that
+    // was making the dashboard feel laggy even after the visible
+    // status bars were throttled, without slowing down posture
+    // detection itself (alert thresholds are 30 s / 120 s, so a
+    // ≤500 ms latency in state propagation is invisible).
+    metricsRef.current = calculatedMetrics;
+    const now = Date.now();
+    if (now - lastMetricsFlushRef.current >= 500) {
+      lastMetricsFlushRef.current = now;
+      setMetrics(calculatedMetrics);
+      setHealthScore(calculateHealthScore(calculatedMetrics));
+    }
 
   }, [poseLandmarks, faceLandmarks, isModelReady, calibration, cameraMode, isManualWritingMode]);
 
-  // Keep a ref to latest metrics to avoid reading via setState callback
-  const metricsRef = useRef<PostureMetrics | null>(null);
-  useEffect(() => { metricsRef.current = metrics; }, [metrics]);
+  // `metricsRef` and `lastMetricsFlushRef` are declared above (near
+  // the other refs, before the analyze effect) so the analyze closure
+  // captures them cleanly. The previously separate
+  //   useEffect(() => { metricsRef.current = metrics; }, [metrics])
+  // is removed — it would overwrite the ref with the throttled
+  // (up to 500 ms stale) state value, defeating the real-time ref.
 
   // Angle accumulator ref – only flush to state every 10 seconds
   const angleAccumRef = useRef({ shoulderTiltSum: 0, neckAngleSum: 0, slouchAngleSum: 0, tickCount: 0 });
