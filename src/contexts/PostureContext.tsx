@@ -2,7 +2,7 @@ import React, { createContext, useContext, useRef, useState, useEffect, useCallb
 import { useMediaQuery } from 'react-responsive';
 import { useMediaPipe } from '../hooks/useMediaPipe';
 import { useAlertEngine } from '../services/useAlertEngine';
-import { analyzePosture, calculateHealthScore, type PostureMetrics, type CalibrationData, type CameraMode, type Landmark } from '../services/postureAI';
+import { analyzePosture, calculateHealthScore, fusePostureMetrics, type PostureMetrics, type CalibrationData, type CameraMode, type Landmark } from '../services/postureAI';
 import { loadCalibration, loadSettings, addPetXP, getUserIdSync } from '../services/db';
 import { broadcastFatigueAlert, subscribeToParentMessage, subscribeToAuxCameraLandmarks, subscribePhoneCameraReady, subscribeAuxPairingResponse, requestAuxPairing } from '../services/parentSync';
 import { subscribePresence } from '../services/presence';
@@ -216,31 +216,40 @@ export const PostureProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return () => unsubscribe();
   }, []);
 
-  // Task 6d: subscribe to aux-camera landmarks from a second device.
-  // We expire the aux data after 5s of silence so the merge doesn't keep
-  // using stale landmarks after the aux device goes offline.
+  // Subscribe to aux-camera landmarks from paired mobile device.
+  // When the phone disconnects or packet stream stops (>1.5s), immediately
+  // fall back 100% to desktop PC camera with 0ms delay.
   useEffect(() => {
     const userId = getUserIdSync();
     const unsubscribe = subscribeToAuxCameraLandmarks((deviceId, pose) => {
       if (deviceId === ownDeviceIdRef.current) return; // ignore self
-      setAuxCameraDeviceId(deviceId);
-      setAuxPoseLandmarks(pose);
-      auxLastSeenRef.current = Date.now();
-    }, userId);
-    const expiry = setInterval(() => {
-      // Cheap early-out: if no aux device has ever been seen, skip the
-      // state setters entirely. This keeps the 2s tick from doing any
-      // React work in the common case where the student is studying
-      // alone (no second device paired) — the interval still fires but
-      // does nothing observable, so the React tree stays stable while
-      // MediaPipe is running the camera.
-      if (!auxLastSeenRef.current) return;
-      if (Date.now() - auxLastSeenRef.current > 8000) {
+
+      if (!pose) {
+        // Explicit disconnect or stop signal from mobile device -> instant fallback
         setAuxPoseLandmarks(null);
         setAuxCameraDeviceId(null);
+        auxPoseRef.current = null;
+        auxLastSeenRef.current = 0;
+        return;
+      }
+
+      setAuxCameraDeviceId(deviceId);
+      setAuxPoseLandmarks(pose);
+      auxPoseRef.current = pose;
+      auxLastSeenRef.current = Date.now();
+    }, userId);
+
+    const expiry = setInterval(() => {
+      if (!auxLastSeenRef.current) return;
+      // Fast watchdog: if no frame received for >1500ms, instantly drop aux camera and fall back 100% to desktop camera
+      if (Date.now() - auxLastSeenRef.current > 1500) {
+        setAuxPoseLandmarks(null);
+        setAuxCameraDeviceId(null);
+        auxPoseRef.current = null;
         auxLastSeenRef.current = 0;
       }
-    }, 2000);
+    }, 300);
+
     return () => {
       unsubscribe();
       clearInterval(expiry);
@@ -464,7 +473,7 @@ export const PostureProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
     }
 
-    const calculatedMetrics = analyzePosture(
+    const frontMetrics = analyzePosture(
       poseLandmarks,
       faceLandmarks,
       calibration,
@@ -475,35 +484,30 @@ export const PostureProvider: React.FC<{ children: React.ReactNode }> = ({ child
       isManualWritingMode
     );
 
-    // Task 6d: merge aux-camera analysis. The aux device (e.g. a side-angled
-    // phone) is better at detecting lateral shoulder tilt and rotation than
-    // the front camera, so when an aux view is live and reports a HIGHER
-    // shoulderTilt than the front camera, trust the aux value. We deliberately
-    // keep this conservative — the front camera stays authoritative for eye
-    // distance, neck angle, and slouch (which the front view measures more
-    // reliably). This is a "prefer aux when it sees worse" merge, not a full
-    // replacement of the primary AI.
+    // Multi-Sensor Fusion Engine:
+    // Combines front PC camera (authoritative for distance, tilt, baseline calibration)
+    // with aux phone side camera (accurate for sagittal back slouch & forward head posture).
+    // If phone camera is disconnected, auxPose is null -> falls back 100% to front camera instantly (0ms delay).
     const auxPose = auxPoseRef.current;
+    let auxMetrics: PostureMetrics | null = null;
     if (auxPose && auxPose.length > 12) {
-      const auxMetrics = analyzePosture(
+      auxMetrics = analyzePosture(
         auxPose,
-        null, // aux device may not stream face landmarks; we don't merge eye data
+        null, // Aux side camera streams pose only
         calibration,
         640,
         480,
-        [], // movement history isn't tracked for the aux view; pass empty
+        [],
         'side',
         isManualWritingMode
       );
-      if (auxMetrics.shoulderTilt > calculatedMetrics.shoulderTilt + 2) {
-        calculatedMetrics.shoulderTilt = auxMetrics.shoulderTilt;
-      }
-      // If aux sees a markedly worse slouch angle, surface it too —
-      // side views catch forward hunching the front camera can miss.
-      if (auxMetrics.slouchAngle > calculatedMetrics.slouchAngle + 3) {
-        calculatedMetrics.slouchAngle = auxMetrics.slouchAngle;
-      }
     }
+
+    const calculatedMetrics = fusePostureMetrics(
+      frontMetrics,
+      auxMetrics,
+      Boolean(auxPose && auxPose.length > 12)
+    );
 
     // ⚡ Throttle STATE updates to ~2 Hz (every 500 ms).
     //

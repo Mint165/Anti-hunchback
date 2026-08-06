@@ -33,6 +33,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useAuxCamera } from '../hooks/useAuxCamera';
 import {
   broadcastPhoneCameraReady,
+  broadcastAuxCameraLandmarks,
   broadcastAuxPairingResponse,
   subscribeAuxPairingRequest,
 } from '../services/parentSync';
@@ -157,12 +158,23 @@ export const MobileCameraView: React.FC = () => {
     return () => unsub();
   }, [ownDeviceId, isModelReady, startCamera]);
 
-  // Cleanup on unmount: stop camera tracks + broadcast off so the
-  // desktop's pair prompt disappears promptly.
+  // Cleanup on unmount / tab hide: stop camera tracks + broadcast off so the
+  // desktop immediately falls back to PC camera without waiting.
   useEffect(() => {
-    return () => {
+    const handleUnload = () => {
       stopCamera();
-      broadcastPhoneCameraReady(ownDeviceId, false, getUserIdSync());
+      const uid = getUserIdSync();
+      broadcastAuxCameraLandmarks(ownDeviceId, null, null, uid);
+      broadcastPhoneCameraReady(ownDeviceId, false, uid);
+    };
+
+    window.addEventListener('pagehide', handleUnload);
+    window.addEventListener('beforeunload', handleUnload);
+
+    return () => {
+      window.removeEventListener('pagehide', handleUnload);
+      window.removeEventListener('beforeunload', handleUnload);
+      handleUnload();
     };
   }, [stopCamera, ownDeviceId]);
 

@@ -479,16 +479,16 @@ export function subscribePhoneCameraReady(
 
   const unsubMux = subscribeToMuxEvent<PhoneCameraReadyUpdate>('phone_camera_ready', handlePhoneReady, userId);
 
-  // Expire: 8s watchdog
+  // Fast watchdog: detect disconnect in 2.5s (checked every 500ms)
   const expiry = setInterval(() => {
     const now = Date.now();
     for (const [id, ts] of lastSeenByDevice.entries()) {
-      if (now - ts > 8000) {
+      if (now - ts > 2500) {
         lastSeenByDevice.delete(id);
         onPhoneReady(id, false, now);
       }
     }
-  }, 2000);
+  }, 500);
 
   return () => {
     syncChannel.removeEventListener('message', localListener);

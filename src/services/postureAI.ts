@@ -182,17 +182,12 @@ export function analyzePosture(
     const currentNeckOffset = (shoulderMid.y - nose.y) * canvasHeight;
     
     if (cameraMode === 'side') {
-      // Side Profile Logic
+      // Side Profile Logic with Visibility & Saliency Check
       const leftEar = poseLandmarks[7];
       const rightEar = poseLandmarks[8];
       const leftHip = poseLandmarks[23];
       const rightHip = poseLandmarks[24];
-      
-      // Determine which side is facing the camera (closer to center or more visible)
-      // Since MediaPipe normalizes x to [0,1], we can use visibility or simply assume the points that form a larger area are visible, or average them.
-      // Usually, the side facing the camera has points closer together in z space, but x-distance between ear/shoulder/hip is what we want.
-      // To simplify, we calculate the angle for both sides and pick the one that represents a larger, more realistic angle (closer to 180).
-      
+
       const calcAngle = (A: Landmark, B: Landmark, C: Landmark) => {
          const AB = Math.sqrt(Math.pow(B.x - A.x, 2) + Math.pow(B.y - A.y, 2));
          const BC = Math.sqrt(Math.pow(C.x - B.x, 2) + Math.pow(C.y - B.y, 2));
@@ -204,23 +199,30 @@ export function analyzePosture(
 
       const leftAngle = calcAngle(leftEar, leftShoulder, leftHip);
       const rightAngle = calcAngle(rightEar, rightShoulder, rightHip);
-      
-      // Use the angle that is more pronounced. If the person is facing right, the right side will be clearly visible.
-      // We take the average or the sharper angle if one side is obscured.
-      const sideAngle = (leftAngle + rightAngle) / 2;
-      
-      // A perfect straight back implies Ear, Shoulder, and Hip are aligned (angle ~170-180)
-      // Slouching makes this angle smaller (e.g. 140-150)
-      // We map this to slouchAngle (0 = straight, 90 = heavily slouched)
-      const maxStraight = 175;
+
+      // Check visibility scores if provided by pose landmark detector
+      const leftVis = ((leftEar as any)?.visibility ?? 1) * ((leftShoulder as any)?.visibility ?? 1) * ((leftHip as any)?.visibility ?? 1);
+      const rightVis = ((rightEar as any)?.visibility ?? 1) * ((rightShoulder as any)?.visibility ?? 1) * ((rightHip as any)?.visibility ?? 1);
+
+      let sideAngle: number;
+      if (leftVis > rightVis * 1.5) {
+        sideAngle = leftAngle;
+      } else if (rightVis > leftVis * 1.5) {
+        sideAngle = rightAngle;
+      } else {
+        sideAngle = (leftAngle + rightAngle) / 2;
+      }
+
+      // Straight back: ~170-175 deg. Slouching: drops to 135-150 deg.
+      const maxStraight = 172;
       metrics.slouchAngle = Math.max(0, Math.min(90, maxStraight - sideAngle));
-      
+
       // Neck angle for side mode: Angle between Nose-Ear-Shoulder
       const leftNeck = calcAngle(nose, leftEar, leftShoulder);
       const rightNeck = calcAngle(nose, rightEar, rightShoulder);
-      const sideNeckAngle = (leftNeck + rightNeck) / 2;
+      const sideNeckAngle = leftVis > rightVis ? leftNeck : rightNeck;
       metrics.neckAngle = Math.max(0, Math.min(90, 160 - sideNeckAngle));
-      
+
     } else {
       // Front Profile Logic
       // Neck angle proxy: comparing current vertical neck length with base neck length
@@ -249,7 +251,6 @@ export function analyzePosture(
     }
 
     // Context Awareness: Check if eye orientation is looking down AND neck is bent
-    // An average iris-to-lower-lid ratio > 0.60 indicates eyes looking downwards.
     const avgIrisYRatio = (leftIrisRatio + rightIrisRatio) / 2;
     if (avgIrisYRatio > 0.60 && metrics.neckAngle > 20) {
       metrics.isWritingMode = true;
@@ -272,6 +273,70 @@ export function analyzePosture(
   }
 
   return metrics;
+}
+
+// Multi-Sensor Fusion Engine: Combines Front (PC) and Aux Side (Phone) camera metrics
+export function fusePostureMetrics(
+  frontMetrics: PostureMetrics,
+  auxMetrics: PostureMetrics | null,
+  isAuxActive: boolean
+): PostureMetrics {
+  // If phone camera is disconnected, inactive, or null, fall back 100% to PC front camera instantly
+  if (!isAuxActive || !auxMetrics) {
+    return { ...frontMetrics };
+  }
+
+  // 1. Fused Slouch Angle (Góc Lưng):
+  // Front camera detects vertical torso foreshortening (compression).
+  // Phone side camera measures true thoracic spine curvature (ear-shoulder-hip angle).
+  // Blend with adaptive weights:
+  let fusedSlouch: number;
+  if (auxMetrics.slouchAngle > 15 || frontMetrics.slouchAngle > 15) {
+    fusedSlouch = frontMetrics.slouchAngle * 0.35 + auxMetrics.slouchAngle * 0.65;
+  } else {
+    fusedSlouch = frontMetrics.slouchAngle * 0.45 + auxMetrics.slouchAngle * 0.55;
+  }
+
+  // 2. Fused Neck Angle (Góc Cổ):
+  // Front camera detects chin-drop / vertical shortening.
+  // Phone side camera detects forward head posture (craniocervical flexion).
+  let fusedNeck: number;
+  if (frontMetrics.isWritingMode || auxMetrics.isWritingMode) {
+    fusedNeck = Math.min(frontMetrics.neckAngle, auxMetrics.neckAngle);
+  } else {
+    fusedNeck = frontMetrics.neckAngle * 0.45 + auxMetrics.neckAngle * 0.55;
+  }
+
+  // 3. Fused Shoulder Tilt (Nghiêng Vai):
+  // Front camera is coronal plane (authoritative for 2D height diff: 80% weight).
+  // Side camera provides minor rotation guidance (20% weight).
+  const fusedShoulder = frontMetrics.shoulderTilt * 0.8 + auxMetrics.shoulderTilt * 0.2;
+
+  // 4. Writing Mode Context:
+  const isWriting = frontMetrics.isWritingMode || (auxMetrics.isWritingMode && frontMetrics.neckAngle > 15);
+
+  // 5. Posture State Classification from Fused Metrics:
+  let state: PostureState = 'GOOD_POSTURE';
+  if (isWriting) {
+    state = 'WRITING';
+  } else if (
+    fusedNeck > 20 ||
+    fusedShoulder > 7 ||
+    fusedSlouch > 15 ||
+    frontMetrics.eyeDistanceCm < 45
+  ) {
+    state = 'BAD_POSTURE';
+  }
+
+  return {
+    ...frontMetrics, // maintains eyeDistanceCm, earValue, isBlinking, fidgetFactor from Front FaceMesh
+    neckAngle: Math.round(fusedNeck * 10) / 10,
+    slouchAngle: Math.round(fusedSlouch * 10) / 10,
+    shoulderTilt: Math.round(fusedShoulder * 10) / 10,
+    isWritingMode: isWriting,
+    state,
+    timestamp: Date.now(),
+  };
 }
 
 // Posture health score logic (0 - 100)

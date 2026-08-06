@@ -18,7 +18,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import type { Landmark } from '../services/postureAI';
-import { broadcastAuxCameraLandmarks } from '../services/parentSync';
+import { broadcastAuxCameraLandmarks, broadcastPhoneCameraReady } from '../services/parentSync';
 import { getUserIdSync } from '../services/db';
 
 declare global {
@@ -82,7 +82,12 @@ export function useAuxCamera(deviceId: string): UseAuxCameraResult {
     }
     videoElementRef.current = null;
     setIsStreaming(false);
-  }, []);
+
+    // Broadcast instant disconnect event so desktop immediately switches to 100% PC camera
+    const userId = getUserIdSync();
+    broadcastAuxCameraLandmarks(deviceId, null, null, userId);
+    broadcastPhoneCameraReady(deviceId, false, userId);
+  }, [deviceId]);
 
   // Initialize Pose model on mount.
   useEffect(() => {
