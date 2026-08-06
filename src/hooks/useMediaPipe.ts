@@ -151,6 +151,8 @@ export function useMediaPipe(): UseMediaPipeResult {
   //     to 2 Hz in PostureContext) are unaffected.
   // If a future feature needs higher frame rate (e.g. real-time motion
   // games), add a separate fast-path hook rather than re-raising this.
+  const isProcessingRef = useRef<boolean>(false);
+
   const startCamera = useCallback(
     (videoElement: HTMLVideoElement) => {
       if (!isModelReady || !poseRef.current || !faceMeshRef.current) {
@@ -169,14 +171,20 @@ export function useMediaPipe(): UseMediaPipeResult {
       const camera = new window.Camera(videoElement, {
         onFrame: async () => {
           if (!videoElementRef.current) return;
+          // When the browser tab is in background, pause AI execution entirely to save CPU/battery
+          if (typeof document !== 'undefined' && document.hidden) return;
 
           const now = performance.now();
           // Throttling: run AI inference once every 250 ms (~4 FPS).
-          // See the rationale in the comment above this hook.
           if (now - lastProcessedTime < 250) {
             return;
           }
+          if (isProcessingRef.current) {
+            return;
+          }
+
           lastProcessedTime = now;
+          isProcessingRef.current = true;
 
           try {
             if (poseRef.current) {
@@ -187,6 +195,8 @@ export function useMediaPipe(): UseMediaPipeResult {
             }
           } catch (e) {
             console.error('Error sending frame to MediaPipe:', e);
+          } finally {
+            isProcessingRef.current = false;
           }
         },
         width: 640,

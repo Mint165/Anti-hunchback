@@ -327,13 +327,11 @@ function StudentExtras({ activeTab }: { activeTab: AppTab }) {
         )}
       </Suspense>
       <Suspense fallback={null}>
-        {/* Skip the corner pet overlay while the Pet tab is open —
-            PetProfile already renders a larger OliverPet in the page
-            body, so mounting FloatingPet there would spawn a redundant
-            WebGL context (3 simultaneous Canvases: FloatingPet +
-            PetProfile + PetShop). Unmounting here also clears the
-            overlay's 30s stats refresh interval via useEffect cleanup. */}
-        {activeTab !== 'pet' && <FloatingPet />}
+        {/* Skip the corner pet overlay while the Pet tab is open or while
+            the Panda Bamboo Gym eye exercise is active — this completely tears
+            down the 3D WebGL context, requestAnimationFrame loop, and background
+            timers to guarantee 60 FPS for the minigame. */}
+        {activeTab !== 'pet' && !eyeExerciseTriggered && <FloatingPet />}
       </Suspense>
     </>
   );

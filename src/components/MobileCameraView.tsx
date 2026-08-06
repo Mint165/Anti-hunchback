@@ -80,20 +80,13 @@ export const MobileCameraView: React.FC = () => {
   // `isStreaming` was true, so any camera start failure left the
   // desktop with `phoneCameraReady=false` and the prompt never shown.
   useEffect(() => {
-    // Only heartbeat when there's a desktop to hear us — otherwise
-    // it's pure noise on the user's sync channel.
-    if (!desktopActive && !isStreaming) return;
     const cameraActive = isStreaming;
     broadcastPhoneCameraReady(ownDeviceId, cameraActive, getUserIdSync());
     const hb = window.setInterval(() => {
       broadcastPhoneCameraReady(ownDeviceId, isStreamingRef.current, getUserIdSync());
-    }, 5000);
+    }, 1500);
     return () => {
       clearInterval(hb);
-      // Send an explicit off only when we were actually streaming;
-      // if we were just announcing "online but camera off", the
-      // desktop's 6s expiry watchdog will drop us naturally and we
-      // don't want to clobber a different phone's ready state.
       if (isStreamingRef.current) {
         broadcastPhoneCameraReady(ownDeviceId, false, getUserIdSync());
       }

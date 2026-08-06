@@ -34,50 +34,31 @@ export interface CameraOffAlertUpdate {
   timestamp: number;
 }
 
-// Task 6d: auxiliary-camera landmarks. A second device (e.g. a phone on a
-// tripod, angled from the side) logs in with the SAME student account and
-// streams only its pose landmarks — not video — over the existing realtime
-// channel. The primary device merges them into its posture analysis to get
-// a second angle of view, improving detection of lateral slouching and
-// shoulder rotation that the front camera can miss.
+// Auxiliary-camera landmarks. A second device (e.g. phone on a tripod)
+// streams its pose landmarks over realtime channel.
 export interface AuxCameraLandmarksUpdate {
   type: 'aux_camera_landmarks';
-  /** Sender device id so the receiver can ignore its own echoes. */
   deviceId: string;
-  /** Raw poseLandmarks array from MediaPipe Pose (normalized 0..1). */
   poseLandmarks: any[] | null;
-  /** Optional face landmarks (also normalized). */
   faceLandmarks: any[] | null;
   timestamp: number;
 }
 
-// Task D — desktop-initiated camera pairing flow.
-// The phone broadcasts `phone_camera_ready` whenever it has the mobile
-// Camera tab open and the camera permission granted. The desktop
-// subscribes to that event to surface a "Pair camera?" prompt; when
-// the user accepts, the desktop broadcasts `aux_pairing_request`. The
-// phone listens for that and starts streaming aux landmarks (if it
-// hasn't already). The phone then sends `aux_pairing_response` with
-// accepted=true so the desktop can flip its split-screen layout on
-// even before the first landmark frame arrives.
 export interface PhoneCameraReadyUpdate {
   type: 'phone_camera_ready';
   deviceId: string;
-  /** True when the phone camera has been granted + is active. */
   cameraActive: boolean;
   timestamp: number;
 }
 
 export interface AuxPairingRequestUpdate {
   type: 'aux_pairing_request';
-  /** Desktop device id that issued the request. */
   deviceId: string;
   timestamp: number;
 }
 
 export interface AuxPairingResponseUpdate {
   type: 'aux_pairing_response';
-  /** Phone device id that responded. */
   deviceId: string;
   accepted: boolean;
   timestamp: number;
@@ -96,11 +77,6 @@ type SyncMessage =
 // ─────────────────────────────────────────────────────────────────────────
 // Notification persistence (localStorage + optional Supabase table)
 // ─────────────────────────────────────────────────────────────────────────
-// The parent may be offline (app closed / different device) when the student
-// turns off the camera. BroadcastChannel + Realtime only deliver to live
-// subscribers, so we also persist a notification record that the parent's
-// Notifications tab can hydrate from on next open.
-
 export interface ParentNotification {
   id: string;
   kind: 'camera_off' | 'fatigue' | 'camera_on';
@@ -119,7 +95,6 @@ export function loadNotifications(): ParentNotification[] {
     if (!raw) return [];
     const parsed = JSON.parse(raw) as ParentNotification[];
     if (!Array.isArray(parsed)) return [];
-    // Newest first
     return parsed.sort((a, b) => b.timestamp - a.timestamp).slice(0, MAX_NOTIFICATIONS);
   } catch {
     return [];
@@ -137,7 +112,6 @@ export function saveNotifications(list: ParentNotification[]): void {
 
 export function addNotification(notif: ParentNotification): ParentNotification[] {
   const list = loadNotifications();
-  // Avoid duplicates within a 5s window for the same kind+message
   const dup = list.find(
     (n) =>
       n.kind === notif.kind &&
@@ -160,27 +134,17 @@ export function clearNotifications(): void {
   saveNotifications([]);
 }
 
-// Per-user channel name. The previous global channel name
-// `oliver_parent_student_sync` meant two different student accounts on
-// the same browser (or two parent accounts watching different students)
-// would cross-talk: parent A would receive student B's posture updates
-// and aux-camera landmarks. Scoping the channel to the user id keeps
-// each family's sync isolated. Falls back to the legacy global name
-// when no user is signed in (pre-login) so the broadcast primitives
-// don't no-op during app bootstrap.
+// ─────────────────────────────────────────────────────────────────────────
+// Channel & Realtime Multiplexing Infrastructure
+// ─────────────────────────────────────────────────────────────────────────
 function getChannelName(userId?: string): string {
   if (!userId || userId === 'default') return 'oliver_parent_student_sync';
   return `oliver_parent_student_sync:user_${userId}`;
 }
 
-// Per-user cached BroadcastChannel + Supabase channel. A module-level
-// singleton keyed by user id so we don't re-create the channel on every
-// call (BroadcastChannel construction is cheap but Supabase channel
-// subscription is async + counted against the concurrent-channel limit).
 const broadcastChannels = new Map<string, BroadcastChannel>();
-const supabaseChannels = new Map<string, any>();
 
-function getChannel(userId?: string): BroadcastChannel {
+function getBroadcastChannel(userId?: string): BroadcastChannel {
   const name = getChannelName(userId);
   const existing = broadcastChannels.get(name);
   if (existing) return existing;
@@ -189,518 +153,386 @@ function getChannel(userId?: string): BroadcastChannel {
   return ch;
 }
 
-function getSupabaseChannel(userId?: string) {
-  const name = getChannelName(userId);
-  if (!isSupabaseConfigured || !supabase) return null;
-  const existing = supabaseChannels.get(name);
-  if (existing) return existing;
-  const ch = supabase.channel(name);
-  ch.subscribe();
-  supabaseChannels.set(name, ch);
-  return ch;
+type EventListener<T = any> = (payload: T) => void;
+
+interface RealtimeMultiplexer {
+  channel: any;
+  listeners: Map<string, Set<EventListener>>;
 }
 
-// Broadcast student posture and indicators to parent dashboard.
-// `userId` scopes the channel so two students on the same browser
-// don't cross-talk; pass getUserIdSync() from the caller.
+const supabaseMultiplexers = new Map<string, RealtimeMultiplexer>();
+
+function getSupabaseMultiplexer(userId?: string): RealtimeMultiplexer | null {
+  if (!isSupabaseConfigured || !supabase) return null;
+  const channelName = getChannelName(userId);
+  const existing = supabaseMultiplexers.get(channelName);
+  if (existing) return existing;
+
+  const listeners = new Map<string, Set<EventListener>>();
+  const knownEvents = [
+    'status_update',
+    'fatigue_alert',
+    'camera_off_alert',
+    'parent_message',
+    'aux_camera_landmarks',
+    'phone_camera_ready',
+    'aux_pairing_request',
+    'aux_pairing_response',
+  ];
+
+  const ch = supabase.channel(channelName);
+
+  // Register all event listeners BEFORE subscribing
+  for (const ev of knownEvents) {
+    listeners.set(ev, new Set());
+    ch.on('broadcast', { event: ev }, ({ payload }: { payload: any }) => {
+      const set = listeners.get(ev);
+      if (set) {
+        set.forEach((fn) => {
+          try {
+            fn(payload);
+          } catch (err) {
+            console.error(`[realtime] listener error on ${ev}:`, err);
+          }
+        });
+      }
+    });
+  }
+
+  ch.subscribe((status: string) => {
+    if (status === 'SUBSCRIBED') {
+      console.info(`[realtime] subscribed to ${channelName}`);
+    }
+  });
+
+  const mux: RealtimeMultiplexer = { channel: ch, listeners };
+  supabaseMultiplexers.set(channelName, mux);
+  return mux;
+}
+
+function subscribeToMuxEvent<T>(
+  event: string,
+  listener: EventListener<T>,
+  userId?: string
+): () => void {
+  const mux = getSupabaseMultiplexer(userId);
+  if (!mux) return () => {};
+
+  let set = mux.listeners.get(event);
+  if (!set) {
+    set = new Set();
+    mux.listeners.set(event, set);
+  }
+  set.add(listener);
+
+  return () => {
+    set?.delete(listener);
+  };
+}
+
+function sendBroadcast(event: string, msg: SyncMessage, userId?: string): void {
+  try {
+    getBroadcastChannel(userId).postMessage(msg);
+  } catch {}
+
+  try {
+    const mux = getSupabaseMultiplexer(userId);
+    if (mux?.channel) {
+      mux.channel.send({
+        type: 'broadcast',
+        event,
+        payload: msg,
+      });
+    }
+  } catch (e) {
+    console.error(`[realtime] failed to send ${event}`, e);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Public Broadcast & Subscription APIs
+// ─────────────────────────────────────────────────────────────────────────
+
 export function broadcastStudentStatus(
   status: 'good' | 'warning' | 'danger' | 'offline',
   details: PostureStateUpdate['details'],
   userId?: string
 ): void {
-  try {
-    const msg: PostureStateUpdate = {
-      type: 'status_update',
-      status,
-      details,
-    };
-
-    // Broadcast locally
-    getChannel(userId).postMessage(msg);
-
-    // Broadcast via Supabase
-    const sbChannel = getSupabaseChannel(userId);
-    if (sbChannel) {
-      sbChannel.send({
-        type: 'broadcast',
-        event: 'status_update',
-        payload: msg
-      });
-    }
-  } catch (e) {
-    console.error('Failed to broadcast status', e);
-  }
+  const msg: PostureStateUpdate = {
+    type: 'status_update',
+    status,
+    details,
+  };
+  sendBroadcast('status_update', msg, userId);
 }
 
-// Broadcast fatigue flags / push alert messages to parent
 export function broadcastFatigueAlert(message: string, userId?: string): void {
-  try {
-    const msg: FatigueAlertUpdate = {
-      type: 'fatigue_alert',
-      message,
-      timestamp: Date.now(),
-    };
+  const msg: FatigueAlertUpdate = {
+    type: 'fatigue_alert',
+    message,
+    timestamp: Date.now(),
+  };
+  sendBroadcast('fatigue_alert', msg, userId);
 
-    // Broadcast locally
-    getChannel(userId).postMessage(msg);
-
-    // Broadcast via Supabase
-    const sbChannel = getSupabaseChannel(userId);
-    if (sbChannel) {
-      sbChannel.send({
-        type: 'broadcast',
-        event: 'fatigue_alert',
-        payload: msg
-      });
-    }
-
-    // Persist as a parent notification so an offline parent still sees it.
-    addNotification({
-      id: `fatigue_${msg.timestamp}_${Math.random().toString(36).slice(2, 8)}`,
-      kind: 'fatigue',
-      title: 'Fatigue alert',
-      message,
-      timestamp: msg.timestamp,
-      read: false,
-    });
-  } catch (e) {
-    console.error('Failed to broadcast fatigue alert', e);
-  }
+  addNotification({
+    id: `fatigue_${msg.timestamp}_${Math.random().toString(36).slice(2, 8)}`,
+    kind: 'fatigue',
+    title: 'Fatigue alert',
+    message,
+    timestamp: msg.timestamp,
+    read: false,
+  });
 }
 
-// Broadcast a camera toggle event (off or on) from the student to the parent.
-// Persisted as a notification so the parent sees it even if they were offline.
 export function broadcastCameraOffAlert(message: string, action: 'off' | 'on' = 'off', userId?: string): void {
-  try {
-    const msg: CameraOffAlertUpdate = {
-      type: 'camera_off_alert',
-      action,
-      message,
-      timestamp: Date.now(),
-    };
+  const msg: CameraOffAlertUpdate = {
+    type: 'camera_off_alert',
+    action,
+    message,
+    timestamp: Date.now(),
+  };
+  sendBroadcast('camera_off_alert', msg, userId);
 
-    getChannel(userId).postMessage(msg);
-
-    const sbChannel = getSupabaseChannel(userId);
-    if (sbChannel) {
-      sbChannel.send({
-        type: 'broadcast',
-        event: 'camera_off_alert',
-        payload: msg
-      });
-    }
-
-    addNotification({
-      id: `camera_${msg.timestamp}_${Math.random().toString(36).slice(2, 8)}`,
-      kind: action === 'off' ? 'camera_off' : 'camera_on',
-      title: action === 'off' ? 'Camera turned off' : 'Camera turned back on',
-      message,
-      timestamp: msg.timestamp,
-      read: false,
-    });
-  } catch (e) {
-    console.error('Failed to broadcast camera alert', e);
-  }
+  addNotification({
+    id: `camera_${msg.timestamp}_${Math.random().toString(36).slice(2, 8)}`,
+    kind: action === 'off' ? 'camera_off' : 'camera_on',
+    title: action === 'off' ? 'Camera turned off' : 'Camera turned back on',
+    message,
+    timestamp: msg.timestamp,
+    read: false,
+  });
 }
 
-// Broadcast message from parent to student
 export function broadcastParentMessage(text: string, userId?: string): void {
-  try {
-    const msg: ParentMessageUpdate = {
-      type: 'parent_message',
-      text,
-      timestamp: Date.now(),
-    };
-
-    getChannel(userId).postMessage(msg);
-
-    const sbChannel = getSupabaseChannel(userId);
-    if (sbChannel) {
-      sbChannel.send({
-        type: 'broadcast',
-        event: 'parent_message',
-        payload: msg
-      });
-    }
-  } catch (e) {
-    console.error('Failed to send parent message', e);
-  }
+  const msg: ParentMessageUpdate = {
+    type: 'parent_message',
+    text,
+    timestamp: Date.now(),
+  };
+  sendBroadcast('parent_message', msg, userId);
 }
 
-// Task 6d: Broadcast aux-camera pose landmarks from a second device running
-// the same student account. Only the lightweight landmark JSON is sent (no
-// video frames), so bandwidth stays low (~2 KB per sample at ~3 FPS). The
-// primary device subscribes via subscribeToAuxCameraLandmarks() and merges.
-//
-// `deviceId` should be a stable per-device id (e.g. crypto.randomUUID() in
-// sessionStorage) so the receiver can filter out its own broadcasts if the
-// user happens to open two tabs on the same machine.
+// Compress landmarks: round coordinates to 3 decimal places to reduce payload size by ~90%
+function compressLandmarks(landmarks: any[] | null): any[] | null {
+  if (!landmarks || !Array.isArray(landmarks)) return null;
+  return landmarks.map((l) => ({
+    x: Math.round(l.x * 1000) / 1000,
+    y: Math.round(l.y * 1000) / 1000,
+    z: l.z !== undefined ? Math.round(l.z * 1000) / 1000 : 0,
+    visibility: l.visibility !== undefined ? Math.round(l.visibility * 100) / 100 : undefined,
+  }));
+}
+
 export function broadcastAuxCameraLandmarks(
   deviceId: string,
   poseLandmarks: any[] | null,
   faceLandmarks: any[] | null,
   userId?: string
 ): void {
-  try {
-    const msg: AuxCameraLandmarksUpdate = {
-      type: 'aux_camera_landmarks',
-      deviceId,
-      poseLandmarks,
-      faceLandmarks,
-      timestamp: Date.now(),
-    };
-
-    getChannel(userId).postMessage(msg);
-
-    const sbChannel = getSupabaseChannel(userId);
-    if (sbChannel) {
-      sbChannel.send({
-        type: 'broadcast',
-        event: 'aux_camera_landmarks',
-        payload: msg
-      });
-    }
-  } catch (e) {
-    // Don't spam the console on every frame if the channel is broken —
-    // landmark broadcasting is best-effort and degrades gracefully.
-    if (!(e instanceof Error)) console.error('Failed to broadcast aux landmarks', e);
-  }
+  const msg: AuxCameraLandmarksUpdate = {
+    type: 'aux_camera_landmarks',
+    deviceId,
+    poseLandmarks: compressLandmarks(poseLandmarks),
+    faceLandmarks: compressLandmarks(faceLandmarks),
+    timestamp: Date.now(),
+  };
+  sendBroadcast('aux_camera_landmarks', msg, userId);
 }
 
-// Subscribe to aux-camera landmarks (called on the primary student device).
-// `onLandmarks` is invoked with the latest landmarks + the sender deviceId;
-// the caller is responsible for ignoring its own deviceId and for merging
-// the data into its posture analysis (e.g. preferring the aux view's
-// shoulderTilt when it detects lateral lean the front camera missed).
-//
-// The receiver also auto-throttles: if the same deviceId sends more than
-// once per 250ms, the older sample is dropped to avoid queueing stale
-// landmarks on a slow channel.
 export function subscribeToAuxCameraLandmarks(
   onLandmarks: (deviceId: string, poseLandmarks: any[] | null, faceLandmarks: any[] | null, timestamp: number) => void,
   userId?: string
 ): () => void {
-  const syncChannel = getChannel(userId);
+  const syncChannel = getBroadcastChannel(userId);
   const lastSeenByDevice = new Map<string, number>();
 
-  const localListener = (event: MessageEvent<SyncMessage>) => {
-    const msg = event.data;
-    if (msg.type !== 'aux_camera_landmarks') return;
+  const handleLandmarks = (msg: AuxCameraLandmarksUpdate) => {
     const last = lastSeenByDevice.get(msg.deviceId) ?? 0;
     if (msg.timestamp < last) return; // drop out-of-order
     lastSeenByDevice.set(msg.deviceId, msg.timestamp);
     onLandmarks(msg.deviceId, msg.poseLandmarks, msg.faceLandmarks, msg.timestamp);
   };
+
+  const localListener = (event: MessageEvent<SyncMessage>) => {
+    if (event.data.type === 'aux_camera_landmarks') {
+      handleLandmarks(event.data);
+    }
+  };
   syncChannel.addEventListener('message', localListener);
 
-  let sbChannel: any = null;
-  if (isSupabaseConfigured && supabase) {
-    sbChannel = supabase
-      .channel(getChannelName(userId))
-      .on('broadcast', { event: 'aux_camera_landmarks' }, ({ payload }) => {
-        const msg = payload as AuxCameraLandmarksUpdate;
-        const last = lastSeenByDevice.get(msg.deviceId) ?? 0;
-        if (msg.timestamp < last) return;
-        lastSeenByDevice.set(msg.deviceId, msg.timestamp);
-        onLandmarks(msg.deviceId, msg.poseLandmarks, msg.faceLandmarks, msg.timestamp);
-      })
-      .subscribe();
-  }
+  const unsubMux = subscribeToMuxEvent<AuxCameraLandmarksUpdate>('aux_camera_landmarks', handleLandmarks, userId);
 
   return () => {
     syncChannel.removeEventListener('message', localListener);
-    if (sbChannel && supabase) {
-      supabase.removeChannel(sbChannel);
-    }
+    unsubMux();
   };
 }
 
-// Subscribe to status updates (for Parent Dashboard)
 export function subscribeToStudentSync(
   onStatusChange: (status: 'good' | 'warning' | 'danger' | 'offline', details: PostureStateUpdate['details']) => void,
   onFatigueAlert: (message: string, timestamp: number) => void,
   onCameraAlert?: (action: 'off' | 'on', message: string, timestamp: number) => void,
   userId?: string
 ): () => void {
-  // Listen locally
-  const syncChannel = getChannel(userId);
+  const syncChannel = getBroadcastChannel(userId);
+
+  const handleStatus = (msg: PostureStateUpdate) => onStatusChange(msg.status, msg.details);
+  const handleFatigue = (msg: FatigueAlertUpdate) => onFatigueAlert(msg.message, msg.timestamp);
+  const handleCamera = (msg: CameraOffAlertUpdate) => onCameraAlert?.(msg.action, msg.message, msg.timestamp);
+
   const localListener = (event: MessageEvent<SyncMessage>) => {
     const msg = event.data;
-    if (msg.type === 'status_update') {
-      onStatusChange(msg.status, msg.details);
-    } else if (msg.type === 'fatigue_alert') {
-      onFatigueAlert(msg.message, msg.timestamp);
-    } else if (msg.type === 'camera_off_alert' && onCameraAlert) {
-      onCameraAlert(msg.action, msg.message, msg.timestamp);
-    }
+    if (msg.type === 'status_update') handleStatus(msg);
+    else if (msg.type === 'fatigue_alert') handleFatigue(msg);
+    else if (msg.type === 'camera_off_alert' && onCameraAlert) handleCamera(msg);
   };
   syncChannel.addEventListener('message', localListener);
 
-  // Listen via Supabase Realtime
-  let sbChannel: any = null;
-  if (isSupabaseConfigured && supabase) {
-    const chan = supabase.channel(getChannelName(userId))
-      .on('broadcast', { event: 'status_update' }, ({ payload }) => {
-        const msg = payload as PostureStateUpdate;
-        onStatusChange(msg.status, msg.details);
-      })
-      .on('broadcast', { event: 'fatigue_alert' }, ({ payload }) => {
-        const msg = payload as FatigueAlertUpdate;
-        onFatigueAlert(msg.message, msg.timestamp);
-      });
+  const unsubStatus = subscribeToMuxEvent<PostureStateUpdate>('status_update', handleStatus, userId);
+  const unsubFatigue = subscribeToMuxEvent<FatigueAlertUpdate>('fatigue_alert', handleFatigue, userId);
+  const unsubCamera = onCameraAlert ? subscribeToMuxEvent<CameraOffAlertUpdate>('camera_off_alert', handleCamera, userId) : () => {};
 
-    if (onCameraAlert) {
-      chan.on('broadcast', { event: 'camera_off_alert' }, ({ payload }) => {
-        const msg = payload as CameraOffAlertUpdate;
-        onCameraAlert(msg.action, msg.message, msg.timestamp);
-      });
-    }
-
-    sbChannel = chan.subscribe();
-  }
-
-  // Return unsubscribe cleanup function
   return () => {
     syncChannel.removeEventListener('message', localListener);
-    if (sbChannel && supabase) {
-      supabase.removeChannel(sbChannel);
-    }
+    unsubStatus();
+    unsubFatigue();
+    unsubCamera();
   };
 }
 
-// Subscribe to parent messages (for Student Dashboard)
 export function subscribeToParentMessage(
   onMessageReceived: (text: string) => void,
   userId?: string
 ): () => void {
-  const syncChannel = getChannel(userId);
+  const syncChannel = getBroadcastChannel(userId);
+  const handleMsg = (msg: ParentMessageUpdate) => onMessageReceived(msg.text);
+
   const localListener = (event: MessageEvent<SyncMessage>) => {
-    const msg = event.data;
-    if (msg.type === 'parent_message') {
-      onMessageReceived(msg.text);
-    }
+    if (event.data.type === 'parent_message') handleMsg(event.data);
   };
   syncChannel.addEventListener('message', localListener);
 
-  let sbChannel: any = null;
-  if (isSupabaseConfigured && supabase) {
-    sbChannel = supabase.channel(getChannelName(userId))
-      .on('broadcast', { event: 'parent_message' }, ({ payload }) => {
-        const msg = payload as ParentMessageUpdate;
-        onMessageReceived(msg.text);
-      })
-      .subscribe();
-  }
+  const unsubMux = subscribeToMuxEvent<ParentMessageUpdate>('parent_message', handleMsg, userId);
 
   return () => {
     syncChannel.removeEventListener('message', localListener);
-    if (sbChannel && supabase) {
-      supabase.removeChannel(sbChannel);
-    }
+    unsubMux();
   };
 }
 
-// ─────────────────────────────────────────────────────────────────────────
-// Task D — desktop-initiated camera pairing (replaces the previous
-// phone-initiated aux banner flow). The phone is now passive: it just
-// reports "my camera is on and ready", and the desktop is the one that
-// decides whether to merge the side view in.
-// ─────────────────────────────────────────────────────────────────────────
-
-// Phone → desktop: announce the phone's aux camera is on / off. The
-// desktop uses this to decide whether to show the "Pair camera?" prompt.
-// Fire this whenever the phone starts or stops its camera, and also
-// heartbeated every ~5s while streaming so the desktop can expire a
-// phone that disappeared without sending a final off event.
 export function broadcastPhoneCameraReady(
   deviceId: string,
   cameraActive: boolean,
   userId?: string
 ): void {
-  try {
-    const msg: PhoneCameraReadyUpdate = {
-      type: 'phone_camera_ready',
-      deviceId,
-      cameraActive,
-      timestamp: Date.now(),
-    };
-    getChannel(userId).postMessage(msg);
-    const sbChannel = getSupabaseChannel(userId);
-    if (sbChannel) {
-      sbChannel.send({
-        type: 'broadcast',
-        event: 'phone_camera_ready',
-        payload: msg,
-      });
-    }
-  } catch (e) {
-    console.error('Failed to broadcast phone camera ready', e);
-  }
+  const msg: PhoneCameraReadyUpdate = {
+    type: 'phone_camera_ready',
+    deviceId,
+    cameraActive,
+    timestamp: Date.now(),
+  };
+  sendBroadcast('phone_camera_ready', msg, userId);
 }
 
-// Desktop → phone: request the phone to start streaming aux landmarks.
-// The phone's MobileCameraView subscribes to this; on receipt it calls
-// startCamera() if not already streaming, then sends back an
-// aux_pairing_response with accepted=true.
 export function requestAuxPairing(
   deviceId: string,
   userId?: string
 ): void {
-  try {
-    const msg: AuxPairingRequestUpdate = {
-      type: 'aux_pairing_request',
-      deviceId,
-      timestamp: Date.now(),
-    };
-    getChannel(userId).postMessage(msg);
-    const sbChannel = getSupabaseChannel(userId);
-    if (sbChannel) {
-      sbChannel.send({
-        type: 'broadcast',
-        event: 'aux_pairing_request',
-        payload: msg,
-      });
-    }
-  } catch (e) {
-    console.error('Failed to request aux pairing', e);
-  }
+  const msg: AuxPairingRequestUpdate = {
+    type: 'aux_pairing_request',
+    deviceId,
+    timestamp: Date.now(),
+  };
+  sendBroadcast('aux_pairing_request', msg, userId);
 }
 
-// Phone → desktop: acknowledge the pairing request (accepted=true when
-// the phone was able to start its camera, false if permission denied).
 export function broadcastAuxPairingResponse(
   deviceId: string,
   accepted: boolean,
   userId?: string
 ): void {
-  try {
-    const msg: AuxPairingResponseUpdate = {
-      type: 'aux_pairing_response',
-      deviceId,
-      accepted,
-      timestamp: Date.now(),
-    };
-    getChannel(userId).postMessage(msg);
-    const sbChannel = getSupabaseChannel(userId);
-    if (sbChannel) {
-      sbChannel.send({
-        type: 'broadcast',
-        event: 'aux_pairing_response',
-        payload: msg,
-      });
-    }
-  } catch (e) {
-    console.error('Failed to broadcast aux pairing response', e);
-  }
+  const msg: AuxPairingResponseUpdate = {
+    type: 'aux_pairing_response',
+    deviceId,
+    accepted,
+    timestamp: Date.now(),
+  };
+  sendBroadcast('aux_pairing_response', msg, userId);
 }
 
-// Desktop-side subscription: fires when a phone on the same account
-// announces its camera is ready (or just stopped). Includes a 6s
-// expiry watchdog so the desktop clears the prompt if the phone stops
-// heartbeating without an explicit off event.
 export function subscribePhoneCameraReady(
   onPhoneReady: (deviceId: string, cameraActive: boolean, timestamp: number) => void,
   userId?: string
 ): () => void {
-  const syncChannel = getChannel(userId);
+  const syncChannel = getBroadcastChannel(userId);
   const lastSeenByDevice = new Map<string, number>();
 
-  const localListener = (event: MessageEvent<SyncMessage>) => {
-    const msg = event.data;
-    if (msg.type !== 'phone_camera_ready') return;
+  const handlePhoneReady = (msg: PhoneCameraReadyUpdate) => {
     lastSeenByDevice.set(msg.deviceId, Date.now());
     onPhoneReady(msg.deviceId, msg.cameraActive, msg.timestamp);
   };
+
+  const localListener = (event: MessageEvent<SyncMessage>) => {
+    if (event.data.type === 'phone_camera_ready') handlePhoneReady(event.data);
+  };
   syncChannel.addEventListener('message', localListener);
 
-  let sbChannel: any = null;
-  if (isSupabaseConfigured && supabase) {
-    sbChannel = supabase
-      .channel(getChannelName(userId))
-      .on('broadcast', { event: 'phone_camera_ready' }, ({ payload }) => {
-        const msg = payload as PhoneCameraReadyUpdate;
-        lastSeenByDevice.set(msg.deviceId, Date.now());
-        onPhoneReady(msg.deviceId, msg.cameraActive, msg.timestamp);
-      })
-      .subscribe();
-  }
+  const unsubMux = subscribeToMuxEvent<PhoneCameraReadyUpdate>('phone_camera_ready', handlePhoneReady, userId);
 
-  // Expire: if a phone hasn't heartbeated in 6s, treat it as offline
-  // (cameraActive=false) so the desktop drops the pair prompt.
+  // Expire: 8s watchdog
   const expiry = setInterval(() => {
     const now = Date.now();
     for (const [id, ts] of lastSeenByDevice.entries()) {
-      if (now - ts > 6000) {
+      if (now - ts > 8000) {
         lastSeenByDevice.delete(id);
         onPhoneReady(id, false, now);
       }
     }
-  }, 3000);
+  }, 2000);
 
   return () => {
     syncChannel.removeEventListener('message', localListener);
-    if (sbChannel && supabase) supabase.removeChannel(sbChannel);
+    unsubMux();
     clearInterval(expiry);
   };
 }
 
-// Phone-side subscription: fires when the desktop requests pairing.
 export function subscribeAuxPairingRequest(
   onRequest: (desktopDeviceId: string, timestamp: number) => void,
   userId?: string
 ): () => void {
-  const syncChannel = getChannel(userId);
+  const syncChannel = getBroadcastChannel(userId);
+  const handleReq = (msg: AuxPairingRequestUpdate) => onRequest(msg.deviceId, msg.timestamp);
+
   const localListener = (event: MessageEvent<SyncMessage>) => {
-    const msg = event.data;
-    if (msg.type !== 'aux_pairing_request') return;
-    onRequest(msg.deviceId, msg.timestamp);
+    if (event.data.type === 'aux_pairing_request') handleReq(event.data);
   };
   syncChannel.addEventListener('message', localListener);
 
-  let sbChannel: any = null;
-  if (isSupabaseConfigured && supabase) {
-    sbChannel = supabase
-      .channel(getChannelName(userId))
-      .on('broadcast', { event: 'aux_pairing_request' }, ({ payload }) => {
-        const msg = payload as AuxPairingRequestUpdate;
-        onRequest(msg.deviceId, msg.timestamp);
-      })
-      .subscribe();
-  }
+  const unsubMux = subscribeToMuxEvent<AuxPairingRequestUpdate>('aux_pairing_request', handleReq, userId);
 
   return () => {
     syncChannel.removeEventListener('message', localListener);
-    if (sbChannel && supabase) supabase.removeChannel(sbChannel);
+    unsubMux();
   };
 }
 
-// Desktop-side subscription: fires when the phone acknowledges the
-// pairing request (accepted/rejected).
 export function subscribeAuxPairingResponse(
   onResponse: (phoneDeviceId: string, accepted: boolean, timestamp: number) => void,
   userId?: string
 ): () => void {
-  const syncChannel = getChannel(userId);
+  const syncChannel = getBroadcastChannel(userId);
+  const handleResp = (msg: AuxPairingResponseUpdate) => onResponse(msg.deviceId, msg.accepted, msg.timestamp);
+
   const localListener = (event: MessageEvent<SyncMessage>) => {
-    const msg = event.data;
-    if (msg.type !== 'aux_pairing_response') return;
-    onResponse(msg.deviceId, msg.accepted, msg.timestamp);
+    if (event.data.type === 'aux_pairing_response') handleResp(event.data);
   };
   syncChannel.addEventListener('message', localListener);
 
-  let sbChannel: any = null;
-  if (isSupabaseConfigured && supabase) {
-    sbChannel = supabase
-      .channel(getChannelName(userId))
-      .on('broadcast', { event: 'aux_pairing_response' }, ({ payload }) => {
-        const msg = payload as AuxPairingResponseUpdate;
-        onResponse(msg.deviceId, msg.accepted, msg.timestamp);
-      })
-      .subscribe();
-  }
+  const unsubMux = subscribeToMuxEvent<AuxPairingResponseUpdate>('aux_pairing_response', handleResp, userId);
 
   return () => {
     syncChannel.removeEventListener('message', localListener);
-    if (sbChannel && supabase) supabase.removeChannel(sbChannel);
+    unsubMux();
   };
 }

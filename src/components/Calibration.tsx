@@ -137,16 +137,19 @@ export const Calibration: React.FC<CalibrationProps> = ({
 
   return (
     <div
-      className="glass-card fade-in"
+      className="fade-in"
       style={{
-        padding: '32px',
+        padding: '24px',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
         textAlign: 'center',
         maxWidth: '512px',
-        margin: '24px auto',
+        margin: '16px auto 0',
+        background: 'var(--bg-card-subtle)',
+        border: '1px solid var(--border-color)',
+        borderRadius: 'var(--radius-xl)',
       }}
     >
       <div

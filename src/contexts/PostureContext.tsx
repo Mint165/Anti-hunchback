@@ -235,7 +235,7 @@ export const PostureProvider: React.FC<{ children: React.ReactNode }> = ({ child
       // does nothing observable, so the React tree stays stable while
       // MediaPipe is running the camera.
       if (!auxLastSeenRef.current) return;
-      if (Date.now() - auxLastSeenRef.current > 5000) {
+      if (Date.now() - auxLastSeenRef.current > 8000) {
         setAuxPoseLandmarks(null);
         setAuxCameraDeviceId(null);
         auxLastSeenRef.current = 0;
@@ -558,6 +558,9 @@ export const PostureProvider: React.FC<{ children: React.ReactNode }> = ({ child
         if (timeSinceLastExercise >= eyeExerciseIntervalMs) {
           setEyeExerciseTriggered(true);
         }
+      } else {
+        // While eye exercise is active, suspend all posture fatigue screening and accumulators
+        return;
       }
 
       if (!currentMetrics) return;

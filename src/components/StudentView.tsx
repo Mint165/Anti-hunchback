@@ -85,6 +85,7 @@ const StudentViewInner: React.FC = () => {
     dismissPhonePairing,
     otherActiveDevices,
     isDesktop,
+    eyeExerciseTriggered,
   } = usePostureContext();
   const { t } = useLanguage();
 
@@ -269,12 +270,13 @@ const StudentViewInner: React.FC = () => {
   }, [sessionStartTime, hasStarted]);
 
   useEffect(() => {
+    if (eyeExerciseTriggered) return;
     if (alertLevel === 'STRONG_WARNING') {
       warningsCountRef.current += 1;
       if (isAudioEnabled) playBeepSound();
       if ('vibrate' in navigator) navigator.vibrate([200, 100, 200]);
     }
-  }, [alertLevel, isAudioEnabled]);
+  }, [alertLevel, isAudioEnabled, eyeExerciseTriggered]);
 
   const lastBroadcastRef = useRef<number>(0);
 
@@ -480,9 +482,9 @@ const StudentViewInner: React.FC = () => {
 
     return (
       <div className="calibration-container">
-        <div className="premium-card calibration-card dark:bg-slate-800">
-          <h2 className="calibration-title dark:text-white">{t('student.startSessionTitle')}</h2>
-          <p className="calibration-desc dark:text-gray-300">{t('student.startSessionDesc')}</p>
+        <div className="calibration-card">
+          <h2 className="calibration-title">{t('student.startSessionTitle')}</h2>
+          <p className="calibration-desc">{t('student.startSessionDesc')}</p>
           <div className="calibration-video-wrapper relative">
             <video ref={videoRef} className="calibration-video" autoPlay playsInline muted />
             {error ? (
